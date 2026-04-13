@@ -1,33 +1,88 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:viper_delivery/src/modules/onboarding/services/upload_service.dart';
 
 class VehicleController extends ChangeNotifier {
   final SupabaseClient _supabase = Supabase.instance.client;
-  final ImagePicker _picker = ImagePicker();
+  final UploadService _uploadService = UploadService();
 
   bool isLoading = false;
   String? errorMessage;
 
-  File? documentPhoto;
-  File? vehiclePhoto;
+  // Document URLs
+  String? cnhUrl;
+  String? criminalRecordUrl;
+  String? addressProofUrl;
+  String? crlvUrl;
 
-  Future<void> pickDocumentPhoto() async {
-    final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
-    if (pickedFile != null) {
-      documentPhoto = File(pickedFile.path);
+  // Vehicle URLs and Info
+  String? vehicleModel;
+  String? vehicleColor;
+  String? vehicleFrontUrl;
+  String? vehicleSideRightUrl;
+  String? vehicleSideLeftUrl;
+  String? vehicleRearUrl;
+
+  Future<void> uploadDocument(String type, File file) async {
+    _setLoading(true);
+    try {
+      final user = _supabase.auth.currentUser;
+      if (user == null) throw Exception('Usuário não autenticado.');
+
+      final url = await _uploadService.uploadDocument(
+        userId: user.id,
+        docType: type,
+        file: file,
+      );
+
+      switch (type) {
+        case 'cnh':
+          cnhUrl = url;
+          break;
+        case 'criminal':
+          criminalRecordUrl = url;
+          break;
+        case 'address':
+          addressProofUrl = url;
+          break;
+        case 'crlv':
+          crlvUrl = url;
+          break;
+      }
       notifyListeners();
+    } catch (e) {
+      errorMessage = 'Falha no upload do documento: $e';
+      rethrow;
+    } finally {
+      _setLoading(false);
     }
   }
 
-  Future<void> pickVehiclePhoto() async {
-    final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
-    if (pickedFile != null) {
-      vehiclePhoto = File(pickedFile.path);
-      notifyListeners();
-    }
+  void setVehicleInspectionData({
+    required String model,
+    required String color,
+    required String frontUrl,
+    required String sideRightUrl,
+    required String sideLeftUrl,
+    required String rearUrl,
+  }) {
+    vehicleModel = model;
+    vehicleColor = color;
+    vehicleFrontUrl = frontUrl;
+    vehicleSideRightUrl = sideRightUrl;
+    vehicleSideLeftUrl = sideLeftUrl;
+    vehicleRearUrl = rearUrl;
+    notifyListeners();
   }
+
+  bool get isInspectionComplete =>
+      vehicleModel != null &&
+      vehicleColor != null &&
+      vehicleFrontUrl != null &&
+      vehicleSideRightUrl != null &&
+      vehicleSideLeftUrl != null &&
+      vehicleRearUrl != null;
 
   Future<void> submitVehicleData({
     required String vehicleType,
@@ -36,32 +91,33 @@ class VehicleController extends ChangeNotifier {
     _setLoading(true);
     try {
       final user = _supabase.auth.currentUser;
-      if (user == null) {
-        throw Exception('Usuário não autenticado.');
-      }
-      
-      if (documentPhoto == null || vehiclePhoto == null) {
-        throw Exception('Ambas as fotos são obrigatórias.');
+      if (user == null) throw Exception('Usuário não autenticado.');
+
+      if (cnhUrl == null || criminalRecordUrl == null || addressProofUrl == null || crlvUrl == null || !isInspectionComplete) {
+        throw Exception('Todos os documentos e fotos da vistoria são obrigatórios.');
       }
 
-      final docExt = documentPhoto!.path.split('.').last;
-      final docPath = '${user.id}/document_${DateTime.now().millisecondsSinceEpoch}.$docExt';
-      await _supabase.storage.from('driver_documents').upload(docPath, documentPhoto!);
-      final docUrl = _supabase.storage.from('driver_documents').getPublicUrl(docPath);
-
-      final vehExt = vehiclePhoto!.path.split('.').last;
-      final vehPath = '${user.id}/vehicle_${DateTime.now().millisecondsSinceEpoch}.$vehExt';
-      await _supabase.storage.from('driver_documents').upload(vehPath, vehiclePhoto!);
-      final vehUrl = _supabase.storage.from('driver_documents').getPublicUrl(vehPath);
-
+      // Final insert into vehicles table
       await _supabase.from('vehicles').insert({
         'driver_id': user.id,
         'vehicle_type': vehicleType.toLowerCase(),
         'plate': plate,
-        'doc_url': docUrl,
-        'photo_url': vehUrl,
+        'model': vehicleModel,
+        'color': vehicleColor,
+        'cnh_url': cnhUrl,
+        'criminal_record_url': criminalRecordUrl,
+        'address_proof_url': addressProofUrl,
+        'crlv_url': crlvUrl,
+        'photo_front_url': vehicleFrontUrl,
+        'photo_side_right_url': vehicleSideRightUrl,
+        'photo_side_left_url': vehicleSideLeftUrl,
+        'photo_rear_url': vehicleRearUrl,
+        // Legacy column fallback
+        'photo_url': vehicleFrontUrl,
+        'doc_url': crlvUrl,
       });
 
+      // Update profile status
       await _supabase.from('profiles').update({
         'status': 'pending_approval'
       }).eq('id', user.id);

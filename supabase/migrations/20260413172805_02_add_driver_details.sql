@@ -1,0 +1,4 @@
+ALTER TABLE public.profiles
+ADD COLUMN IF NOT EXISTS cnh_number TEXT,
+ADD COLUMN IF NOT EXISTS cnh_category TEXT,
+ADD COLUMN IF NOT EXISTS pix_key TEXT;

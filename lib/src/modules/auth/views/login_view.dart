@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:validatorless/validatorless.dart';
 import 'package:viper_delivery/src/modules/auth/controllers/auth_controller.dart';
-import 'package:viper_delivery/src/modules/auth/views/register_view.dart';
 import 'package:viper_delivery/src/modules/onboarding/views/vehicle_registration_view.dart';
 
 class LoginView extends StatefulWidget {
@@ -20,6 +19,7 @@ class _LoginViewState extends State<LoginView> {
 
   bool _keepLoggedIn = false;
   bool _saveEmail = false;
+  bool _obscurePassword = true;
 
   @override
   void initState() {
@@ -56,7 +56,16 @@ class _LoginViewState extends State<LoginView> {
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Erro ao fazer login: ${_authController.errorMessage}')),
+            SnackBar(
+              content: Text(
+                _authController.errorMessage ?? 'Erro ao fazer login',
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              ),
+              backgroundColor: Colors.redAccent.withValues(alpha: 0.9),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              margin: const EdgeInsets.all(16),
+            ),
           );
         }
       }
@@ -72,7 +81,7 @@ class _LoginViewState extends State<LoginView> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('Informe seu e-mail para receber as instruÃ§Ãµes de recuperaÃ§Ã£o.'),
+            const Text('Informe seu e-mail para receber as instruções de recuperação.'),
             const SizedBox(height: 16),
             TextField(
               controller: emailResetController,
@@ -98,7 +107,7 @@ class _LoginViewState extends State<LoginView> {
                   if (mounted) {
                     Navigator.pop(context);
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('E-mail de recuperaÃ§Ã£o enviado com sucesso!')),
+                      const SnackBar(content: Text('E-mail de recuperação enviado com sucesso!')),
                     );
                   }
                 } catch (e) {
@@ -120,6 +129,9 @@ class _LoginViewState extends State<LoginView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        title: const Text('Login'),
+      ),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -144,21 +156,32 @@ class _LoginViewState extends State<LoginView> {
                     ),
                     keyboardType: TextInputType.emailAddress,
                     validator: Validatorless.multiple([
-                      Validatorless.required('E-mail obrigatÃ³rio'),
-                      Validatorless.email('E-mail invÃ¡lido'),
+                      Validatorless.required('E-mail obrigatório'),
+                      Validatorless.email('E-mail inválido'),
                     ]),
                   ),
                   const SizedBox(height: 16),
                   TextFormField(
                     controller: _passwordController,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: 'Senha',
-                      border: OutlineInputBorder(),
+                      border: const OutlineInputBorder(),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _obscurePassword ? Icons.visibility : Icons.visibility_off,
+                          color: Colors.blue[700],
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _obscurePassword = !_obscurePassword;
+                          });
+                        },
+                      ),
                     ),
-                    obscureText: true,
+                    obscureText: _obscurePassword,
                     validator: Validatorless.multiple([
-                      Validatorless.required('Senha obrigatÃ³ria'),
-                      Validatorless.min(6, 'Senha deve ter no mÃ­nimo 6 caracteres'),
+                      Validatorless.required('Senha obrigatória'),
+                      Validatorless.min(6, 'Senha deve ter no mínimo 6 caracteres'),
                     ]),
                   ),
                   Align(
@@ -211,24 +234,11 @@ class _LoginViewState extends State<LoginView> {
                     builder: (context, child) {
                       return ElevatedButton(
                         onPressed: _authController.isLoading ? null : _login,
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                        ),
                         child: _authController.isLoading
-                            ? const CircularProgressIndicator()
-                            : const Text('Entrar', style: TextStyle(fontSize: 18)),
+                            ? const CircularProgressIndicator(color: Colors.white)
+                            : const Text('Entrar', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                       );
                     },
-                  ),
-                  const SizedBox(height: 16),
-                  TextButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => const RegisterView()),
-                      );
-                    },
-                    child: const Text('NÃ£o possui conta? Cadastrar'),
                   ),
                 ],
               ),

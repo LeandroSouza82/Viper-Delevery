@@ -19,8 +19,17 @@ class AuthController extends ChangeNotifier {
       await prefs.setBool('keep_logged_in', keepLoggedIn);
 
       await _supabase.auth.signInWithPassword(email: email, password: password);
+    } on AuthException catch (e) {
+      if (e.message.toLowerCase().contains('invalid login credentials') || e.code == 'invalid_credentials') {
+        errorMessage = 'E-mail ou senha incorretos. Verifique e tente novamente.';
+      } else if (e.message.toLowerCase().contains('user not found') || e.code == 'user_not_found') {
+        errorMessage = 'Este usuário ainda não está cadastrado.';
+      } else {
+        errorMessage = 'Ops! Tivemos um problema técnico. Tente novamente em instantes.';
+      }
+      rethrow;
     } catch (e) {
-      errorMessage = e.toString();
+      errorMessage = 'Ops! Tivemos um problema técnico. Tente novamente em instantes.';
       rethrow;
     } finally {
       _setLoading(false);
@@ -37,6 +46,9 @@ class AuthController extends ChangeNotifier {
     required String city,
     required String neighborhood,
     required String state,
+    required String cnhNumber,
+    required String cnhCategory,
+    required String pixKey,
   }) async {
     _setLoading(true);
     try {
@@ -51,6 +63,9 @@ class AuthController extends ChangeNotifier {
           'city': city,
           'neighborhood': neighborhood,
           'state': state,
+          'cnh_number': cnhNumber,
+          'cnh_category': cnhCategory,
+          'pix_key': pixKey,
         },
         emailRedirectTo: 'viperdelivery://login-callback',
       );
@@ -76,7 +91,7 @@ class AuthController extends ChangeNotifier {
     try {
       await _supabase.auth.resetPasswordForEmail(
         email,
-        redirectTo: 'viperdelivery://callback',
+        redirectTo: 'viperdelivery://login-callback',
       );
     } catch (e) {
       errorMessage = e.toString();
