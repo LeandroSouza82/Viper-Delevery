@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bem-vindo à Viper Delivery</title>
+    <style>
+        body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 0; }
+        .wrapper { width: 100%; table-layout: fixed; background-color: #f4f4f4; padding-bottom: 40px; }
+        .main { background-color: #ffffff; margin: 0 auto; width: 100%; max-width: 600px; border-spacing: 0; color: #333333; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .header { background-color: #000000; padding: 40px 20px; text-align: center; }
+        .header h1 { color: #ffffff; margin: 0; font-size: 28px; letter-spacing: 2px; text-transform: uppercase; }
+        .content { padding: 40px 30px; text-align: center; }
+        .content h2 { color: #000000; font-size: 24px; margin-bottom: 20px; }
+        .content p { font-size: 16px; line-height: 1.6; color: #555555; margin-bottom: 30px; }
+        .button { display: inline-block; padding: 18px 36px; background-color: #0284c7; color: #ffffff !important; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px; letter-spacing: 1px; }
+        .footer { padding: 20px; text-align: center; font-size: 12px; color: #999999; }
+        .blue-bar { height: 4px; background-color: #0284c7; }
+    </style>
+</head>
+<body>
+    <div class="wrapper">
+        <table class="main">
+            <tr><td class="blue-bar"></td></tr>
+            <tr>
+                <td class="header">
+                    <h1>VIPER DELIVERY</h1>
+                </td>
+            </tr>
+            <tr>
+                <td class="content">
+                    <h2>Bem-vindo à Viper Delivery, {{ .Data.first_name }}!</h2>
+                    <p>Falta pouco para você começar a faturar. Clique no botão abaixo para confirmar seu e-mail e completar seu cadastro.</p>
+                    <a href="{{ .ConfirmationURL }}" class="button">CONFIRMAR MEU E-MAIL</a>
+                </td>
+            </tr>
+            <tr>
+                <td class="footer">
+                    Viper Delivery - Palhoça e Região
+                </td>
+            </tr>
+        </table>
+    </div>
+</body>
+</html>

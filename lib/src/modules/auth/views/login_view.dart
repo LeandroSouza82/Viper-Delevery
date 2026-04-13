@@ -1,0 +1,241 @@
+import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:validatorless/validatorless.dart';
+import 'package:viper_delivery/src/modules/auth/controllers/auth_controller.dart';
+import 'package:viper_delivery/src/modules/auth/views/register_view.dart';
+import 'package:viper_delivery/src/modules/onboarding/views/vehicle_registration_view.dart';
+
+class LoginView extends StatefulWidget {
+  const LoginView({super.key});
+
+  @override
+  State<LoginView> createState() => _LoginViewState();
+}
+
+class _LoginViewState extends State<LoginView> {
+  final _formKey = GlobalKey<FormState>();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _authController = AuthController();
+
+  bool _keepLoggedIn = false;
+  bool _saveEmail = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPreferences();
+  }
+
+  Future<void> _loadPreferences() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedEmail = prefs.getString('saved_email');
+    if (savedEmail != null && savedEmail.isNotEmpty) {
+      setState(() {
+        _emailController.text = savedEmail;
+        _saveEmail = true;
+      });
+    }
+  }
+
+  void _login() async {
+    if (_formKey.currentState?.validate() ?? false) {
+      try {
+        await _authController.signIn(
+          _emailController.text,
+          _passwordController.text,
+          _keepLoggedIn,
+          _saveEmail,
+        );
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const VehicleRegistrationView()),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Erro ao fazer login: ${_authController.errorMessage}')),
+          );
+        }
+      }
+    }
+  }
+
+  void _showForgotPasswordDialog() {
+    final emailResetController = TextEditingController(text: _emailController.text);
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Recuperar Senha'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Informe seu e-mail para receber as instruÃ§Ãµes de recuperaÃ§Ã£o.'),
+            const SizedBox(height: 16),
+            TextField(
+              controller: emailResetController,
+              decoration: const InputDecoration(
+                labelText: 'E-mail',
+                border: OutlineInputBorder(),
+              ),
+              keyboardType: TextInputType.emailAddress,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final email = emailResetController.text.trim();
+              if (email.isNotEmpty) {
+                try {
+                  await _authController.resetPassword(email);
+                  if (mounted) {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('E-mail de recuperaÃ§Ã£o enviado com sucesso!')),
+                    );
+                  }
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Erro: ${_authController.errorMessage}')),
+                    );
+                  }
+                }
+              }
+            },
+            child: const Text('Enviar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24.0),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Text(
+                    'Viper Delivery',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 48),
+                  TextFormField(
+                    controller: _emailController,
+                    decoration: const InputDecoration(
+                      labelText: 'E-mail',
+                      border: OutlineInputBorder(),
+                    ),
+                    keyboardType: TextInputType.emailAddress,
+                    validator: Validatorless.multiple([
+                      Validatorless.required('E-mail obrigatÃ³rio'),
+                      Validatorless.email('E-mail invÃ¡lido'),
+                    ]),
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _passwordController,
+                    decoration: const InputDecoration(
+                      labelText: 'Senha',
+                      border: OutlineInputBorder(),
+                    ),
+                    obscureText: true,
+                    validator: Validatorless.multiple([
+                      Validatorless.required('Senha obrigatÃ³ria'),
+                      Validatorless.min(6, 'Senha deve ter no mÃ­nimo 6 caracteres'),
+                    ]),
+                  ),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: _showForgotPasswordDialog,
+                      child: const Text('Esqueci minha senha'),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8.0,
+                    runSpacing: 8.0,
+                    alignment: WrapAlignment.spaceBetween,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Checkbox(
+                            value: _keepLoggedIn,
+                            onChanged: (val) {
+                              setState(() {
+                                _keepLoggedIn = val ?? false;
+                              });
+                            },
+                          ),
+                          const Flexible(child: Text('Manter-se logado')),
+                        ],
+                      ),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Checkbox(
+                            value: _saveEmail,
+                            onChanged: (val) {
+                              setState(() {
+                                _saveEmail = val ?? false;
+                              });
+                            },
+                          ),
+                          const Flexible(child: Text('Salvar e-mail')),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  AnimatedBuilder(
+                    animation: _authController,
+                    builder: (context, child) {
+                      return ElevatedButton(
+                        onPressed: _authController.isLoading ? null : _login,
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                        ),
+                        child: _authController.isLoading
+                            ? const CircularProgressIndicator()
+                            : const Text('Entrar', style: TextStyle(fontSize: 18)),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  TextButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const RegisterView()),
+                      );
+                    },
+                    child: const Text('NÃ£o possui conta? Cadastrar'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
