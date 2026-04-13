@@ -18,9 +18,15 @@ class _VehicleInspectionViewState extends State<VehicleInspectionView> {
   final _picker = ImagePicker();
   
   String? _frontUrl;
-  String? _rightUrl;
+  String? _backUrl;
   String? _leftUrl;
-  String? _rearUrl;
+  String? _rightUrl;
+  
+  File? _frontFile;
+  File? _backFile;
+  File? _leftFile;
+  File? _rightFile;
+  
   String? _selectedColor;
   
   bool _isUploading = false;
@@ -29,9 +35,9 @@ class _VehicleInspectionViewState extends State<VehicleInspectionView> {
       _modelController.text.isNotEmpty &&
       _selectedColor != null &&
       _frontUrl != null &&
-      _rightUrl != null &&
+      _backUrl != null &&
       _leftUrl != null &&
-      _rearUrl != null;
+      _rightUrl != null;
 
   Future<void> _pickAndUpload(String angle) async {
     final pickedFile = await showModalBottomSheet<XFile>(
@@ -45,9 +51,9 @@ class _VehicleInspectionViewState extends State<VehicleInspectionView> {
               onTap: () async {
                 final file = await _picker.pickImage(
                   source: ImageSource.camera,
-                  imageQuality: 50,
-                  maxWidth: 1920,
-                  maxHeight: 1080,
+                  imageQuality: 70,
+                  maxWidth: 1280,
+                  maxHeight: 1280,
                 );
                 if (mounted) Navigator.pop(context, file);
               },
@@ -58,9 +64,9 @@ class _VehicleInspectionViewState extends State<VehicleInspectionView> {
               onTap: () async {
                 final file = await _picker.pickImage(
                   source: ImageSource.gallery,
-                  imageQuality: 50,
-                  maxWidth: 1920,
-                  maxHeight: 1080,
+                  imageQuality: 70,
+                  maxWidth: 1280,
+                  maxHeight: 1280,
                 );
                 if (mounted) Navigator.pop(context, file);
               },
@@ -83,11 +89,24 @@ class _VehicleInspectionViewState extends State<VehicleInspectionView> {
         );
 
         setState(() {
+          final file = File(pickedFile.path);
           switch (angle) {
-            case 'front': _frontUrl = url; break;
-            case 'right': _rightUrl = url; break;
-            case 'left': _leftUrl = url; break;
-            case 'rear': _rearUrl = url; break;
+            case 'front': 
+              _frontFile = file;
+              _frontUrl = url; 
+              break;
+            case 'back': 
+              _backFile = file;
+              _backUrl = url; 
+              break;
+            case 'left': 
+              _leftFile = file;
+              _leftUrl = url; 
+              break;
+            case 'right': 
+              _rightFile = file;
+              _rightUrl = url; 
+              break;
           }
         });
       } catch (e) {
@@ -102,19 +121,19 @@ class _VehicleInspectionViewState extends State<VehicleInspectionView> {
     }
   }
 
-  Widget _buildPhotoSlot(String label, String? url, String angle, IconData guideIcon) {
+  Widget _buildPhotoSlot(String label, File? localFile, String angle, IconData guideIcon) {
     return GestureDetector(
       onTap: _isUploading ? null : () => _pickAndUpload(angle),
       child: Container(
         decoration: BoxDecoration(
           color: Colors.grey.shade100,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: url != null ? Colors.blue.shade700 : Colors.grey.shade300, width: 2),
+          border: Border.all(color: localFile != null ? Colors.blue.shade700 : Colors.grey.shade300, width: 2),
         ),
         child: Stack(
           alignment: Alignment.center,
           children: [
-            if (url == null)
+            if (localFile == null)
               Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -126,9 +145,18 @@ class _VehicleInspectionViewState extends State<VehicleInspectionView> {
             else
               ClipRRect(
                 borderRadius: BorderRadius.circular(10),
-                child: Image.network(url, fit: BoxFit.cover, width: double.infinity, height: double.infinity),
+                child: Image.file(
+                  localFile,
+                  fit: BoxFit.cover,
+                  width: double.infinity,
+                  height: double.infinity,
+                  errorBuilder: (context, error, stackTrace) => Container(
+                    color: Colors.grey.shade200,
+                    child: const Icon(Icons.error_outline, color: Colors.red),
+                  ),
+                ),
               ),
-            if (url != null)
+            if (localFile != null)
               Positioned(
                 top: 8,
                 right: 8,
@@ -207,10 +235,10 @@ class _VehicleInspectionViewState extends State<VehicleInspectionView> {
                       mainAxisSpacing: 16,
                       childAspectRatio: 1,
                       children: [
-                        _buildPhotoSlot('Frente', _frontUrl, 'front', Icons.directions_car),
-                        _buildPhotoSlot('Traseira', _rearUrl, 'rear', Icons.back_hand),
-                        _buildPhotoSlot('Lado Direito', _rightUrl, 'right', Icons.arrow_forward),
-                        _buildPhotoSlot('Lado Esquerdo', _leftUrl, 'left', Icons.arrow_back),
+                        _buildPhotoSlot('Frente', _frontFile, 'front', Icons.directions_car),
+                        _buildPhotoSlot('Traseira', _backFile, 'back', Icons.back_hand),
+                        _buildPhotoSlot('Lado Esquerdo', _leftFile, 'left', Icons.arrow_back),
+                        _buildPhotoSlot('Lado Direito', _rightFile, 'right', Icons.arrow_forward),
                       ],
                     ),
                   ],
@@ -226,9 +254,9 @@ class _VehicleInspectionViewState extends State<VehicleInspectionView> {
                           'model': _modelController.text,
                           'color': _selectedColor,
                           'front': _frontUrl,
-                          'right': _rightUrl,
+                          'back': _backUrl,
                           'left': _leftUrl,
-                          'rear': _rearUrl,
+                          'right': _rightUrl,
                         });
                       }
                     : null,

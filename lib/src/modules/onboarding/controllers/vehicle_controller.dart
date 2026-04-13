@@ -10,19 +10,19 @@ class VehicleController extends ChangeNotifier {
   bool isLoading = false;
   String? errorMessage;
 
-  // Document URLs
-  String? cnhUrl;
+  // Document URLs (Profiles Table)
+  String? cnhFrontUrl;
   String? criminalRecordUrl;
   String? addressProofUrl;
-  String? crlvUrl;
 
-  // Vehicle URLs and Info
+  // Vehicle URLs and Info (Vehicles Table)
   String? vehicleModel;
   String? vehicleColor;
-  String? vehicleFrontUrl;
-  String? vehicleSideRightUrl;
-  String? vehicleSideLeftUrl;
-  String? vehicleRearUrl;
+  String? crlvUrl;
+  String? inspectionFrontUrl;
+  String? inspectionBackUrl;
+  String? inspectionLeftUrl;
+  String? inspectionRightUrl;
 
   Future<void> uploadDocument(String type, File file) async {
     _setLoading(true);
@@ -38,7 +38,7 @@ class VehicleController extends ChangeNotifier {
 
       switch (type) {
         case 'cnh':
-          cnhUrl = url;
+          cnhFrontUrl = url;
           break;
         case 'criminal':
           criminalRecordUrl = url;
@@ -63,26 +63,26 @@ class VehicleController extends ChangeNotifier {
     required String model,
     required String color,
     required String frontUrl,
-    required String sideRightUrl,
-    required String sideLeftUrl,
-    required String rearUrl,
+    required String backUrl,
+    required String leftUrl,
+    required String rightUrl,
   }) {
     vehicleModel = model;
     vehicleColor = color;
-    vehicleFrontUrl = frontUrl;
-    vehicleSideRightUrl = sideRightUrl;
-    vehicleSideLeftUrl = sideLeftUrl;
-    vehicleRearUrl = rearUrl;
+    inspectionFrontUrl = frontUrl;
+    inspectionBackUrl = backUrl;
+    inspectionLeftUrl = leftUrl;
+    inspectionRightUrl = rightUrl;
     notifyListeners();
   }
 
   bool get isInspectionComplete =>
       vehicleModel != null &&
       vehicleColor != null &&
-      vehicleFrontUrl != null &&
-      vehicleSideRightUrl != null &&
-      vehicleSideLeftUrl != null &&
-      vehicleRearUrl != null;
+      inspectionFrontUrl != null &&
+      inspectionBackUrl != null &&
+      inspectionLeftUrl != null &&
+      inspectionRightUrl != null;
 
   Future<void> submitVehicleData({
     required String vehicleType,
@@ -93,34 +93,33 @@ class VehicleController extends ChangeNotifier {
       final user = _supabase.auth.currentUser;
       if (user == null) throw Exception('Usuário não autenticado.');
 
-      if (cnhUrl == null || criminalRecordUrl == null || addressProofUrl == null || crlvUrl == null || !isInspectionComplete) {
+      if (cnhFrontUrl == null || criminalRecordUrl == null || addressProofUrl == null || crlvUrl == null || !isInspectionComplete) {
         throw Exception('Todos os documentos e fotos da vistoria são obrigatórios.');
       }
 
-      // Final insert into vehicles table
+      // 1. Update Profile with Personal Documents
+      await _supabase.from('profiles').update({
+        'cnh_front_url': cnhFrontUrl,
+        'criminal_record_url': criminalRecordUrl,
+        'address_proof_url': addressProofUrl,
+        'status': 'pending_approval' // Update status here or later
+      }).eq('id', user.id);
+
+      // 2. Insert into Vehicles Table
       await _supabase.from('vehicles').insert({
         'driver_id': user.id,
         'vehicle_type': vehicleType.toLowerCase(),
         'plate': plate,
         'model': vehicleModel,
         'color': vehicleColor,
-        'cnh_url': cnhUrl,
-        'criminal_record_url': criminalRecordUrl,
-        'address_proof_url': addressProofUrl,
         'crlv_url': crlvUrl,
-        'photo_front_url': vehicleFrontUrl,
-        'photo_side_right_url': vehicleSideRightUrl,
-        'photo_side_left_url': vehicleSideLeftUrl,
-        'photo_rear_url': vehicleRearUrl,
-        // Legacy column fallback
-        'photo_url': vehicleFrontUrl,
-        'doc_url': crlvUrl,
+        'inspection_front_url': inspectionFrontUrl,
+        'inspection_back_url': inspectionBackUrl,
+        'inspection_left_url': inspectionLeftUrl,
+        'inspection_right_url': inspectionRightUrl,
       });
 
-      // Update profile status
-      await _supabase.from('profiles').update({
-        'status': 'pending_approval'
-      }).eq('id', user.id);
+      // Removed standalone status update as it's part of the profile update above
 
     } catch (e) {
       errorMessage = e.toString();

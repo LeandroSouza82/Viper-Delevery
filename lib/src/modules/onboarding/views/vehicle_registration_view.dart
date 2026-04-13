@@ -34,9 +34,9 @@ class _VehicleRegistrationViewState extends State<VehicleRegistrationView> {
               onTap: () async {
                 final file = await _picker.pickImage(
                   source: ImageSource.camera,
-                  imageQuality: 50,
-                  maxWidth: 1920,
-                  maxHeight: 1080,
+                  imageQuality: 70,
+                  maxWidth: 1280,
+                  maxHeight: 1280,
                 );
                 if (mounted) Navigator.pop(context, file);
               },
@@ -47,9 +47,9 @@ class _VehicleRegistrationViewState extends State<VehicleRegistrationView> {
               onTap: () async {
                 final file = await _picker.pickImage(
                   source: ImageSource.gallery,
-                  imageQuality: 50,
-                  maxWidth: 1920,
-                  maxHeight: 1080,
+                  imageQuality: 70,
+                  maxWidth: 1280,
+                  maxHeight: 1280,
                 );
                 if (mounted) Navigator.pop(context, file);
               },
@@ -79,7 +79,7 @@ class _VehicleRegistrationViewState extends State<VehicleRegistrationView> {
 
   void _submit() async {
     if (_formKey.currentState?.validate() ?? false) {
-      if (_vehicleController.cnhUrl == null ||
+      if (_vehicleController.cnhFrontUrl == null ||
           _vehicleController.criminalRecordUrl == null ||
           _vehicleController.addressProofUrl == null ||
           _vehicleController.crlvUrl == null ||
@@ -212,7 +212,7 @@ class _VehicleRegistrationViewState extends State<VehicleRegistrationView> {
                     const SizedBox(height: 16),
                     _buildDocCard(
                         title: 'Foto da CNH (Frente)',
-                        url: _vehicleController.cnhUrl,
+                        url: _vehicleController.cnhFrontUrl,
                         type: 'cnh',
                         icon: Icons.contact_page),
                     _buildDocCard(
@@ -301,9 +301,9 @@ class _VehicleRegistrationViewState extends State<VehicleRegistrationView> {
                               model: result['model'],
                               color: result['color'],
                               frontUrl: result['front'],
-                              sideRightUrl: result['right'],
-                              sideLeftUrl: result['left'],
-                              rearUrl: result['rear'],
+                              backUrl: result['back'],
+                              leftUrl: result['left'],
+                              rightUrl: result['right'],
                             );
                           }
                         },
