@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:validatorless/validatorless.dart';
 import 'package:viper_delivery/src/modules/onboarding/controllers/vehicle_controller.dart';
@@ -147,8 +148,16 @@ class _VehicleRegistrationViewState extends State<VehicleRegistrationView> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Cadastro de Veículo')),
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.light,
+        statusBarBrightness: Brightness.dark,
+        systemNavigationBarColor: Colors.black,
+        systemNavigationBarIconBrightness: Brightness.light,
+      ),
+      child: Scaffold(
+        appBar: AppBar(title: const Text('Cadastro de Veículo')),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
@@ -343,6 +352,7 @@ class _VehicleRegistrationViewState extends State<VehicleRegistrationView> {
             ),
           ),
         ),
+      ),
       ),
     );
   }

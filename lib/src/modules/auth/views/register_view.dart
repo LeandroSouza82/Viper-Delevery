@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
 import 'package:validatorless/validatorless.dart';
 import 'package:viper_delivery/src/modules/auth/controllers/auth_controller.dart';
@@ -139,8 +140,16 @@ class _RegisterViewState extends State<RegisterView> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.light,
+        statusBarBrightness: Brightness.dark,
+        systemNavigationBarColor: Colors.black,
+        systemNavigationBarIconBrightness: Brightness.light,
+      ),
+      child: Scaffold(
+        appBar: AppBar(
         title: const Text('Cadastro do Motorista'),
       ),
       body: SafeArea(
@@ -372,6 +381,7 @@ class _RegisterViewState extends State<RegisterView> {
             ),
           ),
         ),
+      ),
       ),
     );
   }

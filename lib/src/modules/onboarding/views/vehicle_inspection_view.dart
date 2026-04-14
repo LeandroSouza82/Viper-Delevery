@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:validatorless/validatorless.dart';
@@ -174,8 +175,16 @@ class _VehicleInspectionViewState extends State<VehicleInspectionView> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Vistoria 360º')),
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.light,
+        statusBarBrightness: Brightness.dark,
+        systemNavigationBarColor: Colors.black,
+        systemNavigationBarIconBrightness: Brightness.light,
+      ),
+      child: Scaffold(
+        appBar: AppBar(title: const Text('Vistoria 360º')),
       body: SafeArea(
         child: Column(
           children: [
@@ -270,6 +279,7 @@ class _VehicleInspectionViewState extends State<VehicleInspectionView> {
             ),
           ],
         ),
+      ),
       ),
     );
   }

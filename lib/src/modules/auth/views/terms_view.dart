@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:viper_delivery/src/modules/auth/views/register_view.dart';
 
 class TermsView extends StatefulWidget {
@@ -16,8 +17,16 @@ class _TermsViewState extends State<TermsView> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.light,
+        statusBarBrightness: Brightness.dark,
+        systemNavigationBarColor: Colors.black,
+        systemNavigationBarIconBrightness: Brightness.light,
+      ),
+      child: Scaffold(
+        appBar: AppBar(
         title: const Text('Termos de Uso'),
       ),
       body: SingleChildScrollView(
@@ -127,6 +136,7 @@ class _TermsViewState extends State<TermsView> {
             ],
           ),
         ),
+      ),
       ),
     );
   }

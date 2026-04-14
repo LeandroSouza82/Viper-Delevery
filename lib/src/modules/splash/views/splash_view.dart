@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:viper_delivery/src/modules/splash/views/welcome_view.dart';
 
 class SplashView extends StatefulWidget {
@@ -40,8 +41,16 @@ class _SplashViewState extends State<SplashView> with SingleTickerProviderStateM
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.blue[700],
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.light,
+        statusBarBrightness: Brightness.dark,
+        systemNavigationBarColor: Colors.black,
+        systemNavigationBarIconBrightness: Brightness.light,
+      ),
+      child: Scaffold(
+        backgroundColor: Colors.blue[700],
       body: Center(
         child: FadeTransition(
           opacity: _fadeAnimation,
@@ -83,6 +92,7 @@ class _SplashViewState extends State<SplashView> with SingleTickerProviderStateM
             ],
           ),
         ),
+      ),
       ),
     );
   }
