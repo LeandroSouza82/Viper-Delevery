@@ -29,12 +29,23 @@ class WeeklyPerformanceChart extends StatelessWidget {
           alignment: BarChartAlignment.spaceAround,
           maxY: _getMaxY(),
           barTouchData: BarTouchData(
+            enabled: true,
             touchTooltipData: BarTouchTooltipData(
-              getTooltipColor: (group) => isDark ? Colors.blueGrey[900]! : Colors.blueGrey[50]!,
+              getTooltipColor: (group) => isDark ? Colors.black : Colors.white,
+              tooltipBorder: BorderSide(
+                color: isDark ? Colors.white24 : Colors.black,
+                width: 1.5,
+              ),
+              tooltipPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              tooltipMargin: 8,
               getTooltipItem: (group, groupIndex, rod, rodIndex) {
                 return BarTooltipItem(
                   'R\$ ${rod.toY.toStringAsFixed(2)}',
-                  TextStyle(color: isDark ? Colors.white : Colors.black87, fontWeight: FontWeight.bold),
+                  TextStyle(
+                    color: isDark ? const Color(0xFF00FF88) : Colors.black,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
                 );
               },
             ),
@@ -65,7 +76,7 @@ class WeeklyPerformanceChart extends StatelessWidget {
     for (var value in earnings) {
       if (value > max) max = value;
     }
-    return max == 0 ? 100 : max * 1.2;
+    return max == 0 ? 100 : max * 1.8; // Aumentado significativamente para dar respiro aos tooltips
   }
 
   List<BarChartGroupData> _generateGroups() {
@@ -80,7 +91,7 @@ class WeeklyPerformanceChart extends StatelessWidget {
             borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
             backDrawRodData: BackgroundBarChartRodData(
               show: true,
-              toY: _getMaxY(),
+              toY: _getMaxY() * 0.8,
               color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05),
             ),
           ),
