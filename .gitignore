@@ -46,3 +46,7 @@ app.*.map.json
 
 # Configurações de Ambiente
 .env
+*.properties
+android/local.properties
+android/key.properties
+ios/Flutter/Generated.xcconfig

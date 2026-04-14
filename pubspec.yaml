@@ -42,6 +42,10 @@ dependencies:
   google_fonts: ^8.0.2
   shared_preferences: ^2.5.5
   mask_text_input_formatter: ^2.9.0
+  mapbox_maps_flutter: ^2.3.0
+  wakelock_plus: ^1.2.11
+  flutter_foreground_task: ^6.1.1
+  permission_handler: ^11.3.1
   url_launcher: ^6.3.2
 
 dev_dependencies:

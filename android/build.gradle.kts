@@ -2,6 +2,27 @@ allprojects {
     repositories {
         google()
         mavenCentral()
+        
+        // Configurao segura do Mapbox
+        val localProperties = java.util.Properties()
+        val localPropertiesFile = rootProject.file("local.properties")
+        if (localPropertiesFile.exists()) {
+            localPropertiesFile.inputStream().use { localProperties.load(it) }
+        }
+        val mapboxToken = localProperties.getProperty("MAPBOX_DOWNLOADS_TOKEN") ?: ""
+        
+        if (mapboxToken.isNotEmpty()) {
+            maven {
+                url = uri("https://api.mapbox.com/downloads/v2/releases/maven")
+                authentication {
+                    create<BasicAuthentication>("basic")
+                }
+                credentials {
+                    username = "mapbox"
+                    password = mapboxToken
+                }
+            }
+        }
     }
 }
 

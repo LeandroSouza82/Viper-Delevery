@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:validatorless/validatorless.dart';
 import 'package:viper_delivery/src/modules/auth/controllers/auth_controller.dart';
-import 'package:viper_delivery/src/modules/onboarding/views/vehicle_registration_view.dart';
+import 'package:viper_delivery/src/modules/auth/guards/auth_guard_view.dart';
 
 class LoginView extends StatefulWidget {
   const LoginView({super.key});
@@ -30,10 +30,15 @@ class _LoginViewState extends State<LoginView> {
   Future<void> _loadPreferences() async {
     final prefs = await SharedPreferences.getInstance();
     final savedEmail = prefs.getString('saved_email');
-    if (savedEmail != null && savedEmail.isNotEmpty) {
+    final keepLoggedIn = prefs.getBool('keep_logged_in') ?? false;
+    
+    if (mounted) {
       setState(() {
-        _emailController.text = savedEmail;
-        _saveEmail = true;
+        if (savedEmail != null && savedEmail.isNotEmpty) {
+          _emailController.text = savedEmail;
+          _saveEmail = true;
+        }
+        _keepLoggedIn = keepLoggedIn;
       });
     }
   }
@@ -50,7 +55,7 @@ class _LoginViewState extends State<LoginView> {
         if (mounted) {
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (context) => const VehicleRegistrationView()),
+            MaterialPageRoute(builder: (context) => const AuthGuardView()),
           );
         }
       } catch (e) {
