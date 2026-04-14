@@ -19,7 +19,10 @@ class WeeklyPerformanceChart extends StatelessWidget {
       decoration: BoxDecoration(
         color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey[50],
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: isDark ? Colors.white12 : Colors.black12),
+        border: Border.all(
+          color: isDark ? Colors.white12 : Colors.black, 
+          width: isDark ? 1.0 : 2.0,
+        ),
       ),
       child: BarChart(
         BarChartData(
@@ -95,10 +98,10 @@ class WeeklyPerformanceChart extends StatelessWidget {
   }
 
   Widget _getBottomTitles(double value, TitleMeta meta) {
-    const style = TextStyle(
-      color: Colors.grey,
+    final style = TextStyle(
+      color: isDark ? Colors.white.withValues(alpha: 0.5) : Colors.black.withValues(alpha: 0.5),
       fontWeight: FontWeight.bold,
-      fontSize: 10,
+      fontSize: 12,
     );
     String text;
     switch (value.toInt()) {

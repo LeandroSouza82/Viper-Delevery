@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:viper_delivery/src/modules/home/controllers/settings_controller.dart';
 import 'package:viper_delivery/src/modules/home/controllers/viper_menu_controller.dart';
 import 'package:viper_delivery/src/modules/home/widgets/weekly_performance_chart.dart';
+import 'package:viper_delivery/src/modules/home/views/settings_view.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ViperMenuCentral extends StatefulWidget {
@@ -134,12 +135,13 @@ class _ViperMenuCentralState extends State<ViperMenuCentral> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '$firstName $lastName',
+                  firstName.split(' ').first,
                   style: TextStyle(
                     color: textColor,
                     fontSize: 20,
                     fontWeight: FontWeight.w900,
                   ),
+                  maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 4),
@@ -190,11 +192,14 @@ class _ViperMenuCentralState extends State<ViperMenuCentral> {
     final cat = _menuController.driverProfile?['cnh_category'] ?? 'A/B';
 
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: isDark ? Colors.white.withValues(alpha: 0.03) : Colors.black.withValues(alpha: 0.03),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: isDark ? Colors.white12 : Colors.black12),
+        border: Border.all(
+          color: isDark ? Colors.white12 : Colors.black, 
+          width: isDark ? 1.0 : 2.0,
+        ),
       ),
       child: Column(
         children: [
@@ -233,11 +238,14 @@ class _ViperMenuCentralState extends State<ViperMenuCentral> {
 
   Widget _buildMissionStatic(bool isDark, Color textColor) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: const Color(0xFF0055FF).withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFF0055FF).withValues(alpha: 0.2)),
+        border: Border.all(
+          color: isDark ? Colors.white12 : Colors.black, 
+          width: isDark ? 1.0 : 2.0,
+        ),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min, // Fix de Overflow
@@ -270,17 +278,22 @@ class _ViperMenuCentralState extends State<ViperMenuCentral> {
   Widget _buildFooter(BuildContext context, bool isDark, Color textColor) {
     return Padding(
       padding: const EdgeInsets.all(24),
-      child: OutlinedButton.icon(
-        onPressed: () => Supabase.instance.client.auth.signOut(),
-        icon: const Icon(Icons.logout, size: 20),
-        label: const Text('SAIR DO APP'),
-        style: OutlinedButton.styleFrom(
-          foregroundColor: Colors.redAccent,
-          side: const BorderSide(color: Colors.redAccent, width: 1.5),
-          minimumSize: const Size(double.infinity, 50),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-        ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          OutlinedButton.icon(
+            onPressed: () => Supabase.instance.client.auth.signOut(),
+            icon: const Icon(Icons.logout, size: 20),
+            label: const Text('SAIR DO APP'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: Colors.redAccent,
+              side: const BorderSide(color: Colors.redAccent, width: 1.5),
+              minimumSize: const Size(double.infinity, 50),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+            ),
+          ),
+        ],
       ),
     );
-    }
+  }
 }
