@@ -1,5 +1,5 @@
-import 'dart:io';
 import 'dart:isolate';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 
 @pragma('vm:entry-point')
@@ -10,7 +10,7 @@ void startCallback() {
 class MyTaskHandler extends TaskHandler {
   @override
   void onStart(DateTime timestamp, SendPort? sendPort) async {
-    print('Foreground Service Started');
+    debugPrint('Foreground Service Started');
   }
 
   @override
@@ -20,7 +20,7 @@ class MyTaskHandler extends TaskHandler {
 
   @override
   void onDestroy(DateTime timestamp, SendPort? sendPort) async {
-    print('Foreground Service Destroyed');
+    debugPrint('Foreground Service Destroyed');
   }
 }
 

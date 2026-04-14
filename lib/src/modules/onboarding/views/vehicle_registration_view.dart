@@ -39,7 +39,8 @@ class _VehicleRegistrationViewState extends State<VehicleRegistrationView> {
                   maxWidth: 1280,
                   maxHeight: 1280,
                 );
-                if (mounted) Navigator.pop(context, file);
+                if (!mounted) return;
+                Navigator.pop(context, file);
               },
             ),
             ListTile(
@@ -52,7 +53,8 @@ class _VehicleRegistrationViewState extends State<VehicleRegistrationView> {
                   maxWidth: 1280,
                   maxHeight: 1280,
                 );
-                if (mounted) Navigator.pop(context, file);
+                if (!mounted) return;
+                Navigator.pop(context, file);
               },
             ),
           ],
