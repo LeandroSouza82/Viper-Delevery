@@ -25,12 +25,15 @@ void main() async {
   // Inicializa o serviço de primeiro plano
   await ForegroundServiceManager.init();
   
+  // Habilita o modo Edge-to-Edge para desenho por baixo das barras
+  await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-    statusBarColor: Colors.black,
+    statusBarColor: Colors.transparent,
     statusBarIconBrightness: Brightness.light,
-    systemNavigationBarColor: Colors.black,
+    systemNavigationBarColor: Colors.transparent,
     systemNavigationBarIconBrightness: Brightness.light,
-    systemNavigationBarDividerColor: Colors.black,
+    systemNavigationBarDividerColor: Colors.transparent,
   ));
 
   await dotenv.load(fileName: ".env");

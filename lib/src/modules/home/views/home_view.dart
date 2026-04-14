@@ -11,6 +11,10 @@ class HomeView extends StatefulWidget {
 
 class _HomeViewState extends State<HomeView> {
   final _homeController = HomeController();
+  final ValueNotifier<double> _sheetExtent = ValueNotifier<double>(0.1);
+
+  static const double _minExtent = 0.1;
+  static const double _fadeLimit = 0.5;
 
   @override
   void initState() {
@@ -22,42 +26,132 @@ class _HomeViewState extends State<HomeView> {
   }
 
   @override
+  void dispose() {
+    _sheetExtent.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.of(context).size.height;
+
     return Scaffold(
       backgroundColor: Colors.white,
-      body: Stack(
-        children: [
-          const ViperMapWidget(),
-          // Barra de Status Online/Offline
-          Positioned(
-            bottom: 32,
-            left: 24,
-            right: 24,
-            child: AnimatedBuilder(
-              animation: _homeController,
-              builder: (context, child) {
-                final isOnline = _homeController.isOnline;
-                return ElevatedButton(
-                  onPressed: () => _homeController.toggleOnlineStatus(context),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: isOnline ? Colors.redAccent : const Color(0xFF0055FF),
-                    padding: const EdgeInsets.symmetric(vertical: 20),
-                    elevation: 8,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
+      extendBody: true,
+      body: NotificationListener<DraggableScrollableNotification>(
+        onNotification: (notification) {
+          _sheetExtent.value = notification.extent;
+          return true;
+        },
+        child: Stack(
+          children: [
+            const ViperMapWidget(),
+            
+            // Botão "Fantasma" que sobe e evapora
+            ValueListenableBuilder<double>(
+              valueListenable: _sheetExtent,
+              builder: (context, extent, child) {
+                // Cálculo da Opacidade: (0.5 - extent) / (0.5 - 0.1)
+                final opacity = ((_fadeLimit - extent) / (_fadeLimit - _minExtent)).clamp(0.0, 1.0);
+                
+                // Cálculo da Posição: (altura da folha) + respiro + margem para barra edge-to-edge
+                final bottomPadding = MediaQuery.of(context).viewPadding.bottom;
+                final bottomPosition = (extent * screenHeight) + 16 + (extent == _minExtent ? bottomPadding : 0);
+
+                return Positioned(
+                  bottom: bottomPosition,
+                  left: 24,
+                  right: 24,
+                  child: IgnorePointer(
+                    ignoring: opacity == 0,
+                    child: Opacity(
+                      opacity: opacity,
+                      child: AnimatedBuilder(
+                        animation: _homeController,
+                        builder: (context, child) {
+                          final isOnline = _homeController.isOnline;
+                          return ElevatedButton(
+                            onPressed: () => _homeController.toggleOnlineStatus(context),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: isOnline ? Colors.redAccent : const Color(0xFF0055FF),
+                              side: const BorderSide(color: Colors.black, width: 2.5),
+                              padding: const EdgeInsets.symmetric(vertical: 20),
+                              elevation: 8,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(30),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(isOnline ? Icons.power_settings_new : Icons.play_arrow, color: Colors.white),
+                                const SizedBox(width: 12),
+                                Text(
+                                  isOnline ? 'FICAR OFFLINE' : 'FICAR ONLINE',
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 1.2,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
                     ),
                   ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                );
+              },
+            ),
+
+            // DraggableScrollableSheet (A barra que sobe)
+            DraggableScrollableSheet(
+              initialChildSize: _minExtent,
+              minChildSize: _minExtent,
+              maxChildSize: 0.9,
+              builder: (context, scrollController) {
+                return Container(
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black12,
+                        blurRadius: 10,
+                        spreadRadius: 2,
+                      )
+                    ],
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                  ),
+                  child: ListView(
+                    controller: scrollController,
+                    padding: const EdgeInsets.all(16),
                     children: [
-                      Icon(isOnline ? Icons.power_settings_new : Icons.play_arrow, color: Colors.white),
-                      const SizedBox(width: 12),
-                      Text(
-                        isOnline ? 'FICAR OFFLINE' : 'FICAR ONLINE',
-                        style: const TextStyle(
-                          fontSize: 18,
+                      Center(
+                        child: Container(
+                          width: 40,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: Colors.grey[300],
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      const Text(
+                        'Aguardando Pedidos...',
+                        style: TextStyle(
+                          fontSize: 20,
                           fontWeight: FontWeight.bold,
-                          letterSpacing: 1.2,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Fique online para ver as corridas disponíveis na sua região.',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.grey[600],
                         ),
                       ),
                     ],
@@ -65,8 +159,8 @@ class _HomeViewState extends State<HomeView> {
                 );
               },
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

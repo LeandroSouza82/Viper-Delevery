@@ -14,6 +14,12 @@ class MainActivity: FlutterActivity() {
         // 1. Desativa o modo edge-to-edge que a Xiaomi força (Android 14 fix)
         WindowCompat.setDecorFitsSystemWindows(window, true)
         
+        // Brute Force para permitir desenho abaixo das barras em Xiaomi/Android 14
+        window.setFlags(
+            WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+            WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
+        )
+        
         // 2. Garante que as barras desenhem o fundo de forma imperativa
         window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
         
