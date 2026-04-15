@@ -23,7 +23,16 @@ class ViperPricingService {
     final int countSuccess = processedOrders.where((o) => o.status == ViperOrderStatus.completed).length;
     final int countFailed = processedOrders.where((o) => o.status == ViperOrderStatus.returned).length;
 
-    final double baseValue = offer.valorTotal;
+    // NOVO CÁLCULO: Franquia de KM (ViperMath v2)
+    const double taxaBase = 6.50; // Mínimo garantido
+    const double kmFranquia = 6.0;
+    
+    final double totalKm = offer.distanciaTotal;
+    final double kmExcedente = totalKm > kmFranquia ? totalKm - kmFranquia : 0.0;
+    final double valorPorKm = offer.isSuper ? 0.95 : 1.32;
+
+    final double baseValue = taxaBase + (kmExcedente * valorPorKm);
+    
     final double successBonus = countSuccess * bonusPerSuccess;
     final double attemptFee = countFailed * feePerFailure;
     final double totalValue = baseValue + successBonus + attemptFee;

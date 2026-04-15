@@ -172,18 +172,22 @@ class ViperBottomSheetPanelState extends State<ViperBottomSheetPanel> {
                                 ],
                               ),
                               
-                              const SizedBox(height: 12),
-                              
                               // CONTEÚDO DINÂMICO (Substituindo TabBarView por ShrinkWrap)
-                              Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 16),
-                                child: tabController.index == 0
-                                    ? _buildActiveRouteTab(activeOrders)
-                                    : ReturnsTabView(
-                                        failedOrders: failedOrders,
-                                        isDark: widget.isDark,
-                                        onReturnToBase: (order) => _updateOrderStatus(order, ViperOrderStatus.returned),
-                                      ),
+                              Container(
+                                width: double.infinity,
+                                decoration: BoxDecoration(
+                                  color: widget.isDark ? const Color(0xFF1E1E1E) : Colors.grey[200],
+                                ),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+                                  child: tabController.index == 0
+                                      ? _buildActiveRouteTab(activeOrders)
+                                      : ReturnsTabView(
+                                          failedOrders: failedOrders,
+                                          isDark: widget.isDark,
+                                          onReturnToBase: (order) => _updateOrderStatus(order, ViperOrderStatus.returned),
+                                        ),
+                                ),
                               ),
                               
                               SizedBox(height: widget.bottomSafePadding + 40),
