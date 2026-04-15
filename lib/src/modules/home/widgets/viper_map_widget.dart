@@ -1,9 +1,12 @@
-import 'dart:ui' as ui;
+import 'dart:async';
 import 'dart:typed_data';
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:geolocator/geolocator.dart' as geo;
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
+import 'package:viper_delivery/src/modules/home/controllers/map_controller.dart';
 import 'package:viper_delivery/src/modules/home/controllers/settings_controller.dart';
 
 class ViperMapWidget extends StatefulWidget {
@@ -16,6 +19,14 @@ class ViperMapWidget extends StatefulWidget {
 class ViperMapWidgetState extends State<ViperMapWidget> {
   MapboxMap? mapboxMap;
   bool _hasAnimatedToUser = false;
+
+  /// Quando `true`, a câmera acompanha o GPS; pan/zoom manual define `false`.
+  bool isFollowingUser = true;
+
+  StreamSubscription<geo.Position>? _positionSub;
+  bool _cameraMoveFromApp = false;
+  bool _easeInFlight = false;
+  DateTime? _lastAutoEaseAt;
 
   // Token Público carregado do .env para segurança
   final String _accessToken = dotenv.env['MAPBOX_PUBLIC_TOKEN'] ?? '';
@@ -34,6 +45,8 @@ class ViperMapWidgetState extends State<ViperMapWidget> {
 
   @override
   void dispose() {
+    _positionSub?.cancel();
+    _positionSub = null;
     _settings.removeListener(_onSettingsChanged);
     super.dispose();
   }
@@ -99,24 +112,92 @@ class ViperMapWidgetState extends State<ViperMapWidget> {
 
     // 3. Animação de Boas-Vindas (apenas na primeira vez)
     if (!_hasAnimatedToUser) {
-      _hasAnimatedToUser = true;
       try {
         await Future.delayed(const Duration(milliseconds: 500));
         final geo.Position position = await geo.Geolocator.getCurrentPosition();
         if (mounted) {
+          _cameraMoveFromApp = true;
           await controller.flyTo(
             CameraOptions(
               center: Point(coordinates: Position(position.longitude, position.latitude)),
-              zoom: 15.0,
+              zoom: MapFollowConfig.zoomMin,
               bearing: 0,
               pitch: 0,
             ),
             MapAnimationOptions(duration: 2500),
           );
+          _cameraMoveFromApp = false;
         }
       } catch (e) {
         debugPrint("Erro na animação inicial: $e");
+        _cameraMoveFromApp = false;
+      } finally {
+        _hasAnimatedToUser = true;
       }
+    }
+
+    _bindUserInterruptsFollow(controller);
+    _ensurePositionStream(controller);
+  }
+
+  void _bindUserInterruptsFollow(MapboxMap controller) {
+    void onUserMovedMap() {
+      if (_cameraMoveFromApp) return;
+      if (!isFollowingUser) return;
+      if (mounted) {
+        setState(() => isFollowingUser = false);
+      } else {
+        isFollowingUser = false;
+      }
+    }
+
+    controller.setOnMapMoveListener((_) => onUserMovedMap());
+    controller.setOnMapZoomListener((_) => onUserMovedMap());
+  }
+
+  void _ensurePositionStream(MapboxMap controller) {
+    if (_positionSub != null) return;
+
+    _positionSub = geo.Geolocator.getPositionStream(
+      locationSettings: MapFollowConfig.locationSettings,
+    ).listen(
+      (geo.Position position) {
+        if (!mounted || mapboxMap == null) return;
+        unawaited(_onLocationUpdate(mapboxMap!, position));
+      },
+      onError: (Object e) => debugPrint('Stream de localização: $e'),
+    );
+  }
+
+  Future<void> _onLocationUpdate(
+    MapboxMap controller,
+    geo.Position position,
+  ) async {
+    if (!isFollowingUser || !mounted) return;
+
+    final now = DateTime.now();
+    if (_lastAutoEaseAt != null &&
+        now.difference(_lastAutoEaseAt!) <
+            MapFollowConfig.minIntervalBetweenAutoEase) {
+      return;
+    }
+    if (_easeInFlight) return;
+
+    _easeInFlight = true;
+    _lastAutoEaseAt = now;
+    _cameraMoveFromApp = true;
+    try {
+      await MapFollowConfig.easeCameraToPosition(
+        controller,
+        position: position,
+        durationMs: MapFollowConfig.easeDurationMs,
+        rotateWithHeading: true,
+      );
+    } catch (e) {
+      debugPrint('Erro ao seguir posição: $e');
+    } finally {
+      _cameraMoveFromApp = false;
+      _easeInFlight = false;
     }
   }
 
@@ -166,21 +247,30 @@ class ViperMapWidgetState extends State<ViperMapWidget> {
 
   /// Centraliza o mapa na localização atual do usuário
   Future<void> recenter() async {
+    if (mounted) {
+      setState(() => isFollowingUser = true);
+    } else {
+      isFollowingUser = true;
+    }
+
+    final controller = mapboxMap;
+    if (controller == null) return;
+
     try {
       final geo.Position position = await geo.Geolocator.getCurrentPosition();
-      if (mounted && mapboxMap != null) {
-        await mapboxMap!.flyTo(
-          CameraOptions(
-            center: Point(coordinates: Position(position.longitude, position.latitude)),
-            zoom: 16.5,
-            bearing: 0,
-            pitch: 0,
-          ),
-          MapAnimationOptions(duration: 1500),
-        );
-      }
+      if (!mounted) return;
+
+      _cameraMoveFromApp = true;
+      await MapFollowConfig.easeCameraToPosition(
+        controller,
+        position: position,
+        durationMs: MapFollowConfig.easeDurationMs,
+        rotateWithHeading: true,
+      );
     } catch (e) {
       debugPrint("Erro ao recentralizar mapa: $e");
+    } finally {
+      _cameraMoveFromApp = false;
     }
   }
 }

@@ -7,8 +7,9 @@ import 'package:viper_delivery/src/modules/home/widgets/home_menu_icon.dart';
 import 'package:viper_delivery/src/modules/home/widgets/recenter_map_button.dart';
 import 'package:viper_delivery/src/modules/home/widgets/sos_emergency_button.dart';
 import 'package:viper_delivery/src/modules/home/widgets/viper_menu_central.dart';
+import 'package:viper_delivery/src/modules/home/services/viper_mock_service.dart';
+import 'package:viper_delivery/src/modules/home/widgets/viper_bottom_sheet_panel.dart';
 import 'package:viper_delivery/src/modules/home/widgets/viper_map_widget.dart';
-import 'package:viper_delivery/src/modules/home/views/settings_view.dart';
 
 class HomeView extends StatefulWidget {
   const HomeView({super.key});
@@ -21,9 +22,13 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
   final SettingsController _settingsController = SettingsController();
   final HomeController _homeController = HomeController();
   final GlobalKey<ViperMapWidgetState> _mapWidgetKey = GlobalKey<ViperMapWidgetState>();
-  final ValueNotifier<double> _sheetExtent = ValueNotifier<double>(0.16);
+  final GlobalKey<ViperBottomSheetPanelState> _ridePanelKey =
+      GlobalKey<ViperBottomSheetPanelState>();
+  final ValueNotifier<double> _sheetExtent = ValueNotifier<double>(0.1);
+  final ValueNotifier<List<ViperOrder>> _rideOrders = ValueNotifier<List<ViperOrder>>([]);
+  final ValueNotifier<int> _rideWave = ValueNotifier<int>(0);
 
-  static const double _minExtent = 0.16;
+  static const double _minExtent = 0.1;
   static const double _fadeLimit = 0.5;
 
   @override
@@ -41,7 +46,19 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _sheetExtent.dispose();
+    _rideOrders.dispose();
+    _rideWave.dispose();
     super.dispose();
+  }
+
+  void _onSimulateRide() {
+    HapticFeedback.heavyImpact();
+    _rideOrders.value = ViperMockService.generateRandomRide();
+    _rideWave.value++;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _ridePanelKey.currentState?.expandToHalf();
+    });
   }
 
   @override
@@ -88,95 +105,13 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
               // 1. Mapa como fundo total
               Positioned.fill(child: ViperMapWidget(key: _mapWidgetKey)),
               
-              // 2. DraggableScrollableSheet (Agora fica 'Atrás' do botão na hierarquia)
-              DraggableScrollableSheet(
-                initialChildSize: _minExtent,
-                minChildSize: _minExtent,
-                maxChildSize: 0.9,
-                builder: (context, scrollController) {
-                  return Container(
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black12,
-                          blurRadius: 10,
-                          spreadRadius: 2,
-                        )
-                      ],
-                      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-                    ),
-                    child: ListView(
-                      controller: scrollController,
-                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                      children: [
-                        Center(
-                          child: Container(
-                            width: 40,
-                            height: 4,
-                            decoration: BoxDecoration(
-                              color: Colors.grey[300],
-                              borderRadius: BorderRadius.circular(2),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        // Novo Cabeçalho com Ícones de Controle
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.settings, color: Colors.blueGrey),
-                              onPressed: () => Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (context) => SettingsView(settingsController: _settingsController)),
-                              ),
-                            ),
-                            AnimatedBuilder(
-                              animation: _homeController,
-                              builder: (context, child) {
-                                final isOnline = _homeController.isOnline;
-                                return Text(
-                                  isOnline ? 'Aguardando Pedidos...' : 'Você está Offline',
-                                  style: const TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.black87,
-                                  ),
-                                );
-                              },
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.tune, color: Colors.blueGrey),
-                              onPressed: () {
-                                // Ação de Filtros/Ajustes
-                              },
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        AnimatedBuilder(
-                          animation: _homeController,
-                          builder: (context, child) {
-                            final isOnline = _homeController.isOnline;
-                            return Text(
-                              isOnline 
-                                ? 'Fique atento! Novas corridas aparecerão aqui.'
-                                : 'Fique online para ver as corridas disponíveis na sua região.',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.grey[600],
-                              ),
-                            );
-                          },
-                        ),
-                        // Garantia de que o conteúdo não seja cortado pela moldura preta
-                        SizedBox(height: safeBottomHeight + 20),
-                      ],
-                    ),
-                  );
-                },
+              // 2. Super Rota (painel deslizante sobre o mapa)
+              ViperBottomSheetPanel(
+                key: _ridePanelKey,
+                isDark: isDark,
+                bottomSafePadding: safeBottomHeight,
+                orders: _rideOrders,
+                rideWave: _rideWave,
               ),
 
               // 3. Botão "Fantasma" (Sempre no topo para nunca ser escondido)
@@ -246,12 +181,34 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                 ),
               ),
 
-              // 4.1 ÍCONE DE MENU (Casinha)
+              // 4.1 ÍCONE DE MENU (Casinha) + simulação de corrida
               Positioned(
                 top: topPadding + 15,
                 left: 15,
-                child: HomeMenuIcon(
-                  settingsController: _settingsController,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    HomeMenuIcon(
+                      settingsController: _settingsController,
+                    ),
+                    const SizedBox(height: 10),
+                    FloatingActionButton.small(
+                      heroTag: 'viper_simulate_ride',
+                      tooltip: 'Simular corrida (mock)',
+                      onPressed: _onSimulateRide,
+                      backgroundColor:
+                          isDark ? const Color(0xFF2A2A2A) : Colors.white,
+                      foregroundColor: const Color(0xFF0055FF),
+                      elevation: isDark ? 4 : 2,
+                      shape: CircleBorder(
+                        side: BorderSide(
+                          color: isDark ? Colors.white24 : Colors.black26,
+                          width: 1,
+                        ),
+                      ),
+                      child: const Icon(Icons.radar_rounded),
+                    ),
+                  ],
                 ),
               ),
 

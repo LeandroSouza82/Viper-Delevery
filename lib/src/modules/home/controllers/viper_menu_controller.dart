@@ -1,13 +1,14 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ViperMenuController extends ChangeNotifier {
   final SupabaseClient _supabase = Supabase.instance.client;
-  
+
   bool isLoading = false;
   Map<String, dynamic>? driverProfile;
   List<double> weeklyEarnings = List.filled(7, 0.0);
-  
+
   // Novas métricas de performance
   double dailyEarnings = 0.0;
   int dailyDeliveries = 0;
@@ -19,23 +20,38 @@ class ViperMenuController extends ChangeNotifier {
   Future<void> fetchAllData() async {
     _setLoading(true);
     errorMessage = null;
-    
+
     try {
       final user = _supabase.auth.currentUser;
-      if (user == null) throw Exception('Sessão expirada. Faça login novamente.');
+      if (user == null) {
+        throw Exception('Sessão expirada. Faça login novamente.');
+      }
 
-      // 1. Fetch Profile and Vehicle data (Joined)
+      // 1. Perfil + veículos: uma ida ao banco; .single() => Map (vehicles = List).
       final profileResponse = await _supabase
           .from('profiles')
           .select('*, vehicles(*)')
           .eq('id', user.id)
           .single();
-      
-      driverProfile = profileResponse;
+
+      final userData = Map<String, dynamic>.from(profileResponse);
+      // ignore: avoid_print — log solicitado para depuração de avatar_url
+      print('VIPER_URL_CHECK: ${userData['avatar_url']}');
+
+      // Mesma String que o CachedNetworkImage usa (trim), para o cache bater certo.
+      final avatarRaw = userData['avatar_url'] as String?;
+      final avatarUrlNormalized = (avatarRaw != null && avatarRaw.trim().isNotEmpty)
+          ? avatarRaw.trim()
+          : null;
+      if (avatarUrlNormalized != null) {
+        await CachedNetworkImage.evictFromCache(avatarUrlNormalized);
+      }
+
+      driverProfile = userData;
 
       // 2. Fetch Weekly/Daily/Monthly Performance
       await _fetchPerformanceData(user.id);
-      
+
       notifyListeners();
     } catch (e) {
       errorMessage = 'Erro ao carregar dados: ${e.toString()}';
@@ -50,7 +66,7 @@ class ViperMenuController extends ChangeNotifier {
       final now = DateTime.now();
       final sevenDaysAgo = now.subtract(const Duration(days: 7));
       final startOfMonth = DateTime(now.year, now.month, 1);
-      
+
       final response = await _supabase
           .from('trips')
           .select('amount, completed_at')
@@ -59,7 +75,7 @@ class ViperMenuController extends ChangeNotifier {
           .order('completed_at');
 
       final List<dynamic> data = response as List<dynamic>;
-      
+
       // Reset metrics
       weeklyEarnings = List.filled(7, 0.0);
       dailyEarnings = 0.0;
@@ -76,19 +92,23 @@ class ViperMenuController extends ChangeNotifier {
         monthlyDeliveries++;
 
         // Faturamento Diário (Hoje)
-        if (date.day == now.day && date.month == now.month && date.year == now.year) {
+        if (date.day == now.day &&
+            date.month == now.month &&
+            date.year == now.year) {
           dailyEarnings += amount;
           dailyDeliveries++;
         }
 
         // Gráfico Semanal (7 dias)
         if (date.isAfter(sevenDaysAgo)) {
-          final dayIndex = date.weekday % 7; 
+          final dayIndex = date.weekday % 7;
           weeklyEarnings[dayIndex] += amount;
         }
       }
     } catch (e) {
-      debugPrint('Performance Query Error: $e. Usando mocks para visualização.');
+      debugPrint(
+        'Performance Query Error: $e. Usando mocks para visualização.',
+      );
       // Mocks amigáveis se a tabela não existir ou estiver vazia
       dailyEarnings = 145.50;
       dailyDeliveries = 6;
