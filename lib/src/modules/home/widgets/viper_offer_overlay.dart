@@ -20,7 +20,6 @@ class ViperOfferOverlay extends StatelessWidget {
   Widget build(BuildContext context) {
     final bgColor = isDark ? const Color(0xFF1E1E1E) : Colors.white;
     final textColor = isDark ? Colors.white : Colors.black;
-    final subTextColor = isDark ? Colors.white70 : Colors.black54;
 
     // Identidade visual baseada no tipo de pedido (ou Super Rota)
     final mainType = offer.orders.isNotEmpty ? offer.orders.first.tipo : ViperOrderType.entrega;

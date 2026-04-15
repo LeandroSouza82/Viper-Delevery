@@ -1,4 +1,5 @@
 import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter/material.dart';
 
 class ExternalNavigationService {
   /// Abre a rota no Waze ou Google Maps (Fallback)
@@ -21,7 +22,7 @@ class ExternalNavigationService {
       }
     } catch (e) {
       // Erro silencioso ou log
-      print('Erro ao abrir navegação: $e');
+      debugPrint('Erro ao abrir navegação: $e');
     }
   }
 }

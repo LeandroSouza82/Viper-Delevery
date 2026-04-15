@@ -111,14 +111,24 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                   Positioned.fill(child: ViperMapWidget(key: _mapWidgetKey)),
                   
                   // 2. Painel Inferior (ViperBottomSheetPanel)
-                  ViperBottomSheetPanel(
-                    key: _ridePanelKey,
-                    isDark: isDark,
-                    bottomSafePadding: safeBottomHeight,
-                    orders: _rideOrders,
+                  ValueListenableBuilder<ViperOffer?>(
+                    valueListenable: _activeOffer,
+                    builder: (context, currentOffer, child) {
+                      return ViperBottomSheetPanel(
+                        key: _ridePanelKey,
+                        isDark: isDark,
+                        bottomSafePadding: safeBottomHeight,
+                        orders: _rideOrders,
+                        offer: currentOffer,
+                        onFinalize: () {
+                          _activeOffer.value = null;
+                        },
+                        isClt: _homeController.isClt,
+                      );
+                    },
                   ),
 
-                  // 3. Botão Online/Offline (Fantasma)
+                  // 3. Botão Online/Offline / Retorno à Base
                   ValueListenableBuilder<double>(
                     valueListenable: _sheetExtent,
                     builder: (context, extent, child) {
@@ -133,14 +143,33 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                           ignoring: opacity == 0,
                           child: Opacity(
                             opacity: opacity,
-                            child: AnimatedBuilder(
-                              animation: _homeController,
+                            child: ListenableBuilder(
+                              listenable: Listenable.merge([_homeController, _rideOrders]),
                               builder: (context, child) {
                                 final isOnline = _homeController.isOnline;
+                                final orders = _rideOrders.value;
+                                final hasActive = orders.any((o) => o.status == ViperOrderStatus.pending);
+                                final hasFailed = orders.any((o) => o.status == ViperOrderStatus.failed);
+                                
+                                // Lógica de Botão de Retorno
+                                final isReturning = !hasActive && hasFailed && orders.isNotEmpty;
+
                                 return ElevatedButton(
-                                  onPressed: () => _homeController.toggleOnlineStatus(context),
+                                  onPressed: () {
+                                    if (isReturning) {
+                                      // Focar no ponto de coleta original
+                                      _mapWidgetKey.currentState?.recenter(); 
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(content: Text('Retornando à base para devoluções...')),
+                                      );
+                                    } else {
+                                      _homeController.toggleOnlineStatus(context);
+                                    }
+                                  },
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: isOnline ? Colors.redAccent : const Color(0xFF0055FF),
+                                    backgroundColor: isReturning 
+                                        ? Colors.orangeAccent 
+                                        : (isOnline ? Colors.redAccent : const Color(0xFF0055FF)),
                                     side: const BorderSide(color: Colors.black, width: 2.5),
                                     padding: const EdgeInsets.symmetric(vertical: 20),
                                     elevation: 8,
@@ -151,10 +180,17 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                                   child: Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
-                                      Icon(isOnline ? Icons.power_settings_new : Icons.play_arrow, color: Colors.white),
+                                      Icon(
+                                        isReturning 
+                                            ? Icons.keyboard_return 
+                                            : (isOnline ? Icons.power_settings_new : Icons.play_arrow), 
+                                        color: Colors.white
+                                      ),
                                       const SizedBox(width: 12),
                                       Text(
-                                        isOnline ? 'FICAR OFFLINE' : 'FICAR ONLINE',
+                                        isReturning 
+                                            ? 'RETORNAR À BASE' 
+                                            : (isOnline ? 'FICAR OFFLINE' : 'FICAR ONLINE'),
                                         style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 1.2),
                                       ),
                                     ],

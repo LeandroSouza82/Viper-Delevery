@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 enum ViperOrderType { coleta, entrega, outros }
 
+enum ViperOrderStatus { pending, completed, failed, returned }
+
 extension ViperOrderTypeExtension on ViperOrderType {
   Color get color {
     switch (this) {
@@ -37,6 +39,8 @@ class ViperOrder {
   final double valor;
   final double lat;
   final double lng;
+  final ViperOrderStatus status;
+  final String? motivoFalha;
 
   ViperOrder({
     required this.id,
@@ -49,7 +53,29 @@ class ViperOrder {
     required this.valor,
     required this.lat,
     required this.lng,
+    this.status = ViperOrderStatus.pending,
+    this.motivoFalha,
   });
+
+  ViperOrder copyWith({
+    ViperOrderStatus? status,
+    String? motivoFalha,
+  }) {
+    return ViperOrder(
+      id: id,
+      cliente: cliente,
+      enderecoColeta: enderecoColeta,
+      bairroColeta: bairroColeta,
+      enderecoEntrega: enderecoEntrega,
+      bairroEntrega: bairroEntrega,
+      tipo: tipo,
+      valor: valor,
+      lat: lat,
+      lng: lng,
+      status: status ?? this.status,
+      motivoFalha: motivoFalha ?? this.motivoFalha,
+    );
+  }
 }
 
 class ViperOffer {
@@ -80,4 +106,22 @@ class ViperOffer {
   });
 
   int get qtdPedidos => orders.length;
+}
+
+class ViperExecutionSummary {
+  final double baseValue;
+  final double successBonus;
+  final double attemptFee;
+  final double totalValue;
+  final int countSuccess;
+  final int countFailed;
+
+  ViperExecutionSummary({
+    required this.baseValue,
+    required this.successBonus,
+    required this.attemptFee,
+    required this.totalValue,
+    required this.countSuccess,
+    required this.countFailed,
+  });
 }

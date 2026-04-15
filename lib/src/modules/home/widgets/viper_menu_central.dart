@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:viper_delivery/src/modules/home/controllers/settings_controller.dart';
 import 'package:viper_delivery/src/modules/home/controllers/viper_menu_controller.dart';
 import 'package:viper_delivery/src/modules/home/widgets/weekly_performance_chart.dart';
-import 'package:viper_delivery/src/modules/home/views/settings_view.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ViperMenuCentral extends StatefulWidget {
@@ -98,7 +97,6 @@ class _ViperMenuCentralState extends State<ViperMenuCentral> {
   Widget _buildHeader(bool isDark, Color textColor) {
     final photoUrl = _menuController.driverProfile?['foto_url'] as String?;
     final firstName = _menuController.driverProfile?['first_name'] ?? 'Motorista';
-    final lastName = _menuController.driverProfile?['last_name'] ?? 'Viper';
     final city = _menuController.driverProfile?['city'] ?? 'Base Não Informada';
     final state = _menuController.driverProfile?['state'] ?? '';
 
