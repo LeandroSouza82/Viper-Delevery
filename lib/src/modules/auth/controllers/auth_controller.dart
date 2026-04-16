@@ -49,6 +49,7 @@ class AuthController extends ChangeNotifier {
     required String cnhNumber,
     required String cnhCategory,
     required String pixKey,
+    String? avatarUrl,
   }) async {
     _setLoading(true);
     try {
@@ -66,6 +67,7 @@ class AuthController extends ChangeNotifier {
           'cnh_number': cnhNumber,
           'cnh_category': cnhCategory,
           'pix_key': pixKey,
+          'avatar_url': avatarUrl,
         },
         emailRedirectTo: 'viperdelivery://login-callback',
       );

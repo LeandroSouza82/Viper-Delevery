@@ -3,14 +3,15 @@ import 'package:flutter/material.dart';
 import 'package:viper_delivery/src/core/services/foreground_service_manager.dart';
 import 'package:viper_delivery/src/core/utils/permission_helper.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:viper_delivery/src/models/driver_model.dart';
 
 enum PillDisplayMode { earnings, mission, rating }
 
 class HomeController extends ChangeNotifier {
   bool isOnline = false;
-  Map<String, dynamic>? driverProfile;
+  DriverModel? driverProfile;
   
-  bool get isClt => driverProfile?['is_clt'] ?? false;
+  bool get isClt => driverProfile?.isClt ?? false;
   
   // Gestão do Comprimido (Pill)
   PillDisplayMode displayMode = PillDisplayMode.earnings;
@@ -86,7 +87,7 @@ class HomeController extends ChangeNotifier {
             .select('*')
             .eq('id', user.id)
             .single();
-        driverProfile = response;
+        driverProfile = DriverModel.fromMap(response);
         notifyListeners();
       }
     } catch (e) {

@@ -1,7 +1,10 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
 import 'package:validatorless/validatorless.dart';
+import 'package:viper_delivery/src/modules/onboarding/services/upload_service.dart';
 import 'package:viper_delivery/src/modules/auth/controllers/auth_controller.dart';
 
 class RegisterView extends StatefulWidget {
@@ -14,6 +17,10 @@ class RegisterView extends StatefulWidget {
 class _RegisterViewState extends State<RegisterView> {
   final _formKey = GlobalKey<FormState>();
   final _authController = AuthController();
+  final _uploadService = UploadService();
+
+  File? _selfieFile;
+  bool _isUploading = false;
 
   final _firstNameController = TextEditingController();
   final _lastNameController = TextEditingController();
@@ -58,13 +65,46 @@ class _RegisterViewState extends State<RegisterView> {
 
   bool get _isPasswordStrong => _hasMinLength && _hasNumber && _hasUppercase && _hasSpecialChar;
 
+  Future<void> _pickSelfie() async {
+    final picker = ImagePicker();
+    try {
+      final pickedFile = await picker.pickImage(
+        source: ImageSource.camera,
+        preferredCameraDevice: CameraDevice.front,
+        imageQuality: 70,
+      );
+
+      if (pickedFile != null) {
+        setState(() {
+          _selfieFile = File(pickedFile.path);
+        });
+      }
+    } catch (e) {
+      _showCustomSnackBar('Erro ao acessar a câmera: $e', isError: true);
+    }
+  }
+
   void _register() async {
     if (_formKey.currentState?.validate() ?? false) {
+      if (_selfieFile == null) {
+        _showCustomSnackBar('Por favor, tire uma selfie para o seu perfil.', isError: true);
+        return;
+      }
       if (!_isPasswordStrong) {
         _showCustomSnackBar('A senha não atende todos os requisitos de segurança.', isError: true);
         return;
       }
+      
+      setState(() => _isUploading = true);
+
       try {
+        // 1. Upload Selfie first using email as identifier for now
+        final avatarUrl = await _uploadService.uploadSelfie(
+          identifier: _emailController.text,
+          file: _selfieFile!,
+        );
+
+        // 2. Perform SignUp with avatarUrl in metadata
         await _authController.signUp(
           firstName: _firstNameController.text,
           lastName: _lastNameController.text,
@@ -78,7 +118,9 @@ class _RegisterViewState extends State<RegisterView> {
           cnhNumber: _cnhNumberController.text,
           cnhCategory: _selectedCnhCategory,
           pixKey: _pixKeyController.text,
+          avatarUrl: avatarUrl,
         );
+
         if (mounted) {
           _showCustomSnackBar(
             'Cadastro realizado! Verifique seu e-mail e clique no link para ativar sua conta.',
@@ -89,10 +131,12 @@ class _RegisterViewState extends State<RegisterView> {
       } catch (e) {
         if (mounted) {
           _showCustomSnackBar(
-            _authController.errorMessage ?? 'Erro ao registrar.',
+            _authController.errorMessage ?? 'Ocorreu um erro no cadastro. Tente novamente.',
             isError: true,
           );
         }
+      } finally {
+        if (mounted) setState(() => _isUploading = false);
       }
     }
   }
@@ -160,6 +204,52 @@ class _RegisterViewState extends State<RegisterView> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                Center(
+                  child: Stack(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.blue.shade700, width: 2),
+                        ),
+                        child: CircleAvatar(
+                          radius: 60,
+                          backgroundColor: Colors.grey.shade100,
+                          backgroundImage: _selfieFile != null ? FileImage(_selfieFile!) : null,
+                          child: _selfieFile == null
+                              ? Icon(Icons.person, size: 60, color: Colors.blue.shade100)
+                              : null,
+                        ),
+                      ),
+                      Positioned(
+                        bottom: 4,
+                        right: 4,
+                        child: InkWell(
+                          onTap: _pickSelfie,
+                          child: CircleAvatar(
+                            radius: 20,
+                            backgroundColor: Colors.blue.shade700,
+                            child: const Icon(Icons.camera_alt, color: Colors.white, size: 20),
+                          ),
+                        ),
+                      ),
+                      if (_isUploading)
+                        Positioned.fill(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.3),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Center(
+                              child: CircularProgressIndicator(color: Colors.white),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 32),
                 const Text(
                   'Dados Pessoais',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
@@ -368,9 +458,10 @@ class _RegisterViewState extends State<RegisterView> {
                 AnimatedBuilder(
                   animation: _authController,
                   builder: (context, child) {
+                    final isLoading = _authController.isLoading || _isUploading;
                     return ElevatedButton(
-                      onPressed: _authController.isLoading ? null : _register,
-                      child: _authController.isLoading
+                      onPressed: isLoading ? null : _register,
+                      child: isLoading
                           ? const CircularProgressIndicator(color: Colors.white)
                           : const Text('Cadastrar', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                     );

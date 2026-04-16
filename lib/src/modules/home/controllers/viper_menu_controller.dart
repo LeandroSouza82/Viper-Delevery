@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:viper_delivery/src/models/driver_model.dart';
 
 class ViperMenuController extends ChangeNotifier {
   final SupabaseClient _supabase = Supabase.instance.client;
   
   bool isLoading = false;
-  Map<String, dynamic>? driverProfile;
+  DriverModel? driverProfile;
   List<double> weeklyEarnings = List.filled(7, 0.0);
   String? errorMessage;
 
   Future<void> fetchAllData() async {
+    print('--------------------------------------------------');
+    print('[!!! VIPER !!!] MenuController: Iniciando fetchAllData...');
     _setLoading(true);
     errorMessage = null;
     
@@ -21,10 +24,21 @@ class ViperMenuController extends ChangeNotifier {
       final profileResponse = await _supabase
           .from('profiles')
           .select('*, vehicles(*)')
-          .eq('id', user.id)
+           .eq('id', user.id)
           .single();
       
-      driverProfile = profileResponse;
+      driverProfile = DriverModel.fromMap(profileResponse);
+      
+      // FALLBACK SÊNIOR: Se não estiver no banco, tenta pegar nos metadados do Auth
+      if (driverProfile?.avatarUrl == null || driverProfile!.avatarUrl!.isEmpty) {
+        final metadataPhoto = user.userMetadata?['avatar_url'];
+        if (metadataPhoto != null) {
+          print('[!!! VIPER !!!] Foto não encontrada no banco. Usando fallback de metadados: $metadataPhoto');
+          driverProfile = driverProfile?.copyWith(avatarUrl: metadataPhoto);
+        }
+      }
+
+      print('[!!! VIPER !!!] Perfil carregado -> Nome: ${driverProfile?.firstName}, Avatar: ${driverProfile?.avatarUrl}');
 
       // 2. Fetch Weekly Earnings (Last 7 days)
       await _fetchWeeklyPerformance(user.id);
@@ -32,7 +46,7 @@ class ViperMenuController extends ChangeNotifier {
       notifyListeners();
     } catch (e) {
       errorMessage = 'Erro ao carregar dados: ${e.toString()}';
-      debugPrint('ViperMenuController Error: $e');
+      print('[!!! VIPER !!!] ERROR no MenuController: $e');
     } finally {
       _setLoading(false);
     }

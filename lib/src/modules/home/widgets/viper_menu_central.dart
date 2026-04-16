@@ -36,6 +36,9 @@ class _ViperMenuCentralState extends State<ViperMenuCentral> {
         final bgColor = isDark ? const Color(0xFF121212) : Colors.white;
         final textColor = isDark ? Colors.white : Colors.black87;
         final dividerColor = isDark ? Colors.white12 : Colors.black12;
+        
+        // LOG DE RECONSTRUÇÃO AGRESSIVO
+        print('[!!! VIPER !!!] UI: Reconstruindo Drawer. Loading: ${_menuController.isLoading}, Driver: ${_menuController.driverProfile?.firstName}');
 
         return Drawer(
           backgroundColor: bgColor,
@@ -95,10 +98,12 @@ class _ViperMenuCentralState extends State<ViperMenuCentral> {
   }
 
   Widget _buildHeader(bool isDark, Color textColor) {
-    final photoUrl = _menuController.driverProfile?['foto_url'] as String?;
-    final firstName = _menuController.driverProfile?['first_name'] ?? 'Motorista';
-    final city = _menuController.driverProfile?['city'] ?? 'Base Não Informada';
-    final state = _menuController.driverProfile?['state'] ?? '';
+    final firstName = _menuController.driverProfile?.firstName ?? 'Motorista';
+    final city = _menuController.driverProfile?.city ?? 'Base Não Informada';
+    final state = _menuController.driverProfile?.state ?? '';
+    final avatarUrl = _menuController.driverProfile?.avatarUrl;
+
+    print('[!!! VIPER !!!] UI: Renderizando Header -> Nome: $firstName, Foto: $avatarUrl');
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 32, 24, 0),
@@ -113,18 +118,21 @@ class _ViperMenuCentralState extends State<ViperMenuCentral> {
             child: CircleAvatar(
               radius: 35,
               backgroundColor: isDark ? Colors.grey[800] : Colors.grey[200],
-              child: photoUrl != null 
-                  ? ClipOval(
-                      child: CachedNetworkImage(
-                        imageUrl: photoUrl,
-                        placeholder: (context, url) => const CircularProgressIndicator(strokeWidth: 2),
-                        errorWidget: (context, url, error) => Icon(Icons.person, color: textColor, size: 35),
+              child: ClipOval(
+                child: avatarUrl != null && avatarUrl.isNotEmpty
+                    ? CachedNetworkImage(
+                        imageUrl: avatarUrl,
                         fit: BoxFit.cover,
                         width: 70,
                         height: 70,
-                      ),
-                    )
-                  : Icon(Icons.person, color: textColor, size: 35),
+                        placeholder: (context, url) => const CircularProgressIndicator(strokeWidth: 2),
+                        errorWidget: (context, url, error) {
+                          print('[!!! VIPER !!!] ERROR: Falha no CachedNetworkImage: $error');
+                          return const Icon(Icons.error_outline, color: Colors.redAccent, size: 30);
+                        },
+                      )
+                    : Icon(Icons.person, color: textColor.withValues(alpha: 0.5), size: 35),
+              ),
             ),
           ),
           const SizedBox(width: 20),
@@ -339,14 +347,14 @@ class _ViperMenuCentralState extends State<ViperMenuCentral> {
   }
 
   Widget _buildProfileCard(bool isDark, Color textColor) {
-    // FIX DE TIPAGEM: Supabase retorna veículos como uma lista
-    final vehicles = _menuController.driverProfile?['vehicles'] as List?;
+    // FIX DE TIPAGEM: Usando propriedades do DriverModel
+    final vehicles = _menuController.driverProfile?.vehicles;
     final vehicle = (vehicles != null && vehicles.isNotEmpty) ? vehicles.first : null;
     
     final plate = vehicle?['plate'] ?? '-- -- --';
     final model = vehicle?['model'] ?? 'Veículo não cadastrado';
-    final cnh = _menuController.driverProfile?['cnh_number'] ?? '**********';
-    final cat = _menuController.driverProfile?['cnh_category'] ?? 'A/B';
+    final cnh = _menuController.driverProfile?.cnhNumber ?? '**********';
+    final cat = _menuController.driverProfile?.cnhCategory ?? 'A/B';
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -375,19 +383,23 @@ class _ViperMenuCentralState extends State<ViperMenuCentral> {
       children: [
         Icon(icon, color: highlight ? const Color(0xFF00FF88) : textColor.withValues(alpha: 0.5), size: 22),
         const SizedBox(width: 16),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(label, style: TextStyle(color: textColor.withValues(alpha: 0.4), fontSize: 9, fontWeight: FontWeight.bold)),
-            Text(
-              value, 
-              style: TextStyle(
-                color: highlight ? const Color(0xFF00FF88) : textColor, 
-                fontSize: 15, 
-                fontWeight: highlight ? FontWeight.w900 : FontWeight.bold
-              )
-            ),
-          ],
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label, style: TextStyle(color: textColor.withValues(alpha: 0.4), fontSize: 9, fontWeight: FontWeight.bold)),
+              Text(
+                value, 
+                style: TextStyle(
+                  color: highlight ? const Color(0xFF00FF88) : textColor, 
+                  fontSize: 15, 
+                  fontWeight: highlight ? FontWeight.w900 : FontWeight.bold
+                ),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+              ),
+            ],
+          ),
         ),
       ],
     );

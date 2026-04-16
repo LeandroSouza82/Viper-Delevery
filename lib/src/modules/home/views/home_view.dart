@@ -24,6 +24,7 @@ class HomeView extends StatefulWidget {
 class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
   final SettingsController _settingsController = SettingsController();
   final HomeController _homeController = HomeController();
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final GlobalKey<ViperMapWidgetState> _mapWidgetKey = GlobalKey<ViperMapWidgetState>();
   final GlobalKey<ViperBottomSheetPanelState> _ridePanelKey = GlobalKey<ViperBottomSheetPanelState>();
   
@@ -76,6 +77,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
     }
   }
 
+
   @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
@@ -96,7 +98,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
             systemNavigationBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
           ),
           child: Scaffold(
-            key: GlobalKey<ScaffoldState>(),
+            key: _scaffoldKey,
             backgroundColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,
             extendBody: true,
             drawer: ViperMenuCentral(settingsController: _settingsController),

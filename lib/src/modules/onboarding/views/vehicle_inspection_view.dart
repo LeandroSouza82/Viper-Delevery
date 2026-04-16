@@ -50,6 +50,7 @@ class _VehicleInspectionViewState extends State<VehicleInspectionView> {
               leading: const Icon(Icons.camera_alt),
               title: const Text('Tirar Foto'),
               onTap: () async {
+                final navigator = Navigator.of(context);
                 final file = await _picker.pickImage(
                   source: ImageSource.camera,
                   imageQuality: 70,
@@ -57,13 +58,14 @@ class _VehicleInspectionViewState extends State<VehicleInspectionView> {
                   maxHeight: 1280,
                 );
                 if (!mounted) return;
-                Navigator.pop(context, file);
+                navigator.pop(file);
               },
             ),
             ListTile(
               leading: const Icon(Icons.photo_library),
               title: const Text('Escolher da Galeria'),
               onTap: () async {
+                final navigator = Navigator.of(context);
                 final file = await _picker.pickImage(
                   source: ImageSource.gallery,
                   imageQuality: 70,
@@ -71,7 +73,7 @@ class _VehicleInspectionViewState extends State<VehicleInspectionView> {
                   maxHeight: 1280,
                 );
                 if (!mounted) return;
-                Navigator.pop(context, file);
+                navigator.pop(file);
               },
             ),
           ],

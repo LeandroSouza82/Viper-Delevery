@@ -40,8 +40,8 @@ class _SettingsViewState extends State<SettingsView> {
         final bgColor = isDark ? const Color(0xFF121212) : Colors.white;
         final textColor = isDark ? Colors.white : Colors.black;
         final borderColor = isDark ? Colors.white12 : Colors.black;
-        final first_name = (_menuController.driverProfile?['first_name'] as String?) ?? 'Motorista';
-        final firstName = first_name.split(' ').first;
+        final fullName = _menuController.driverProfile?.firstName ?? 'Motorista';
+        final firstName = fullName.split(' ').first;
 
         return Scaffold(
           backgroundColor: bgColor,
