@@ -2,7 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:viper_delivery/src/modules/home/controllers/settings_controller.dart';
 import 'package:viper_delivery/src/modules/home/controllers/viper_menu_controller.dart';
-import 'package:viper_delivery/src/modules/home/widgets/weekly_performance_chart.dart';
+import 'package:fl_chart/fl_chart.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ViperMenuCentral extends StatefulWidget {
@@ -19,6 +19,7 @@ class ViperMenuCentral extends StatefulWidget {
 
 class _ViperMenuCentralState extends State<ViperMenuCentral> {
   final _menuController = ViperMenuController();
+  String _selectedPeriod = 'SEMANA';
 
   @override
   void initState() {
@@ -72,13 +73,12 @@ class _ViperMenuCentralState extends State<ViperMenuCentral> {
                               _buildMissionStatic(isDark, textColor),
 
                               const SizedBox(height: 32),
-                              // Base: O gráfico semanal
-                              _buildSectionTitle('PERFORMANCE SEMANAL', textColor, isDark),
+                              // Base: O gráfico interativo
+                              _buildSectionTitle('PERFORMANCE', textColor, isDark),
                               const SizedBox(height: 16),
-                              WeeklyPerformanceChart(
-                                earnings: _menuController.weeklyEarnings,
-                                isDark: isDark,
-                              ),
+                              _buildPeriodSelector(isDark, textColor),
+                              const SizedBox(height: 16),
+                              _buildInteractiveChart(isDark, textColor),
                             ],
                           ),
                         ),
@@ -176,6 +176,165 @@ class _ViperMenuCentralState extends State<ViperMenuCentral> {
         fontWeight: FontWeight.bold,
         letterSpacing: 1.5,
       ),
+    );
+  }
+
+  Widget _buildPeriodSelector(bool isDark, Color textColor) {
+    final periods = ['DIA', 'SEMANA', 'MÊS'];
+    return Row(
+      children: periods.map((period) {
+        final isSelected = _selectedPeriod == period;
+        return Padding(
+          padding: const EdgeInsets.only(right: 8),
+          child: InkWell(
+            onTap: () => setState(() => _selectedPeriod = period),
+            borderRadius: BorderRadius.circular(12),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: isSelected 
+                    ? (isDark ? const Color(0xFF00FF88) : Colors.black) 
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: isSelected 
+                      ? (isDark ? const Color(0xFF00FF88) : Colors.black) 
+                      : (isDark ? Colors.white12 : Colors.black12),
+                ),
+              ),
+              child: Text(
+                period,
+                style: TextStyle(
+                  color: isSelected 
+                      ? (isDark ? Colors.black : Colors.white) 
+                      : textColor.withValues(alpha: 0.5),
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.1,
+                ),
+              ),
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildInteractiveChart(bool isDark, Color textColor) {
+    return Container(
+      height: 200,
+      padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
+      decoration: BoxDecoration(
+        color: isDark ? Colors.white.withValues(alpha: 0.03) : Colors.black.withValues(alpha: 0.03),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: isDark ? Colors.white12 : Colors.black, 
+          width: isDark ? 1.0 : 2.0,
+        ),
+      ),
+      child: BarChart(
+        BarChartData(
+          alignment: BarChartAlignment.spaceAround,
+          maxY: _getMaxY(),
+          barTouchData: BarTouchData(
+            touchTooltipData: BarTouchTooltipData(
+              getTooltipColor: (group) => isDark ? const Color(0xFF1A1A1A) : Colors.white,
+              tooltipBorder: BorderSide(color: isDark ? Colors.white12 : Colors.black12),
+              getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                return BarTooltipItem(
+                  'R\$ ${rod.toY.toStringAsFixed(2).replaceAll('.', ',')}',
+                  TextStyle(
+                    color: isDark ? const Color(0xFF00FF88) : Colors.black,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                );
+              },
+            ),
+          ),
+          titlesData: FlTitlesData(
+            show: true,
+            bottomTitles: AxisTitles(
+              sideTitles: SideTitles(
+                showTitles: true,
+                getTitlesWidget: (value, meta) => _getBottomTitles(value, meta, isDark),
+                reservedSize: 30,
+              ),
+            ),
+            leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          ),
+          gridData: const FlGridData(show: false),
+          borderData: FlBorderData(show: false),
+          barGroups: _generateGroups(isDark),
+        ),
+      ),
+    );
+  }
+
+  double _getMaxY() {
+    switch (_selectedPeriod) {
+      case 'DIA': return 150;
+      case 'SEMANA': return 300;
+      case 'MÊS': return 2000;
+      default: return 100;
+    }
+  }
+
+  List<BarChartGroupData> _generateGroups(bool isDark) {
+    final Map<String, List<double>> data = {
+      'DIA': [45.0, 78.0, 120.0, 56.0],
+      'SEMANA': [120.0, 80.0, 150.0, 200.0, 180.0, 250.0, 100.0],
+      'MÊS': [1200.0, 1500.0, 1100.0, 1800.0],
+    };
+
+    final currentData = data[_selectedPeriod] ?? [];
+
+    return List.generate(currentData.length, (index) {
+      return BarChartGroupData(
+        x: index,
+        barRods: [
+          BarChartRodData(
+            toY: currentData[index],
+            color: isDark ? const Color(0xFF00FF88) : Colors.black,
+            width: _selectedPeriod == 'SEMANA' ? 12 : 20,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
+            backDrawRodData: BackgroundBarChartRodData(
+              show: true,
+              toY: _getMaxY(),
+              color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05),
+            ),
+          ),
+        ],
+      );
+    });
+  }
+
+  Widget _getBottomTitles(double value, TitleMeta meta, bool isDark) {
+    final style = TextStyle(
+      color: isDark ? Colors.white.withValues(alpha: 0.3) : Colors.black.withValues(alpha: 0.3),
+      fontWeight: FontWeight.bold,
+      fontSize: 10,
+    );
+    String text = '';
+    
+    if (_selectedPeriod == 'DIA') {
+      final labels = ['08h', '12h', '16h', '20h'];
+      if (value.toInt() < labels.length) text = labels[value.toInt()];
+    } else if (_selectedPeriod == 'SEMANA') {
+      final labels = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
+      if (value.toInt() < labels.length) text = labels[value.toInt()];
+    } else if (_selectedPeriod == 'MÊS') {
+      final labels = ['S1', 'S2', 'S3', 'S4'];
+      if (value.toInt() < labels.length) text = labels[value.toInt()];
+    }
+
+    return SideTitleWidget(
+      meta: meta,
+      space: 8,
+      child: Text(text, style: style),
     );
   }
 
