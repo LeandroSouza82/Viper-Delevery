@@ -84,7 +84,7 @@ class _SplashViewState extends State<SplashView> with SingleTickerProviderStateM
               Text(
                 'Entregas rápidas e seguras',
                 style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.7),
+                  color: Colors.white.withOpacity(0.7),
                   fontSize: 14,
                   letterSpacing: 1,
                 ),

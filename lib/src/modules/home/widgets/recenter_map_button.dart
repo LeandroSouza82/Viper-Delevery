@@ -20,7 +20,7 @@ class RecenterMapButton extends StatelessWidget {
         
         // Cores baseadas no padrão modular da Casinha/Comprimido
         final bgColor = isDark 
-            ? Colors.black.withValues(alpha: 0.7) 
+            ? Colors.black.withOpacity(0.7) 
             : Colors.white;
         final iconColor = isDark ? Colors.white : Colors.black;
         final borderColor = isDark ? Colors.white24 : Colors.black;
@@ -36,7 +36,7 @@ class RecenterMapButton extends StatelessWidget {
               border: Border.all(color: borderColor, width: 1),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.2),
+                  color: Colors.black.withOpacity(0.2),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
                 ),

@@ -86,6 +86,33 @@ class ViperMenuController extends ChangeNotifier {
     }
   }
 
+  Future<void> updatePixKey(String newKey) async {
+    _setLoading(true);
+    try {
+      final user = _supabase.auth.currentUser;
+      if (user == null) throw Exception('Sessão expirada.');
+
+      await _supabase
+          .from('profiles')
+          .update({'pix_key': newKey})
+          .eq('id', user.id);
+
+      // Atualiza o modelo local para refletir na UI instantaneamente
+      if (driverProfile != null) {
+        driverProfile = driverProfile!.copyWith(pixKey: newKey);
+      }
+      
+      print('[!!! VIPER !!!] Pix Key atualizada com sucesso: $newKey');
+      notifyListeners();
+    } catch (e) {
+      errorMessage = 'Erro ao atualizar Pix: $e';
+      print('[!!! VIPER !!!] ERROR ao atualizar Pix: $e');
+      rethrow;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
   void _setLoading(bool value) {
     isLoading = value;
     notifyListeners();

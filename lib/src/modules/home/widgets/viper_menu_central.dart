@@ -4,13 +4,16 @@ import 'package:viper_delivery/src/modules/home/controllers/settings_controller.
 import 'package:viper_delivery/src/modules/home/controllers/viper_menu_controller.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:viper_delivery/src/modules/profile/widgets/finance_card.dart';
 
 class ViperMenuCentral extends StatefulWidget {
   final SettingsController settingsController;
+  final ViperMenuController menuController;
 
   const ViperMenuCentral({
     super.key,
     required this.settingsController,
+    required this.menuController,
   });
 
   @override
@@ -18,19 +21,17 @@ class ViperMenuCentral extends StatefulWidget {
 }
 
 class _ViperMenuCentralState extends State<ViperMenuCentral> {
-  final _menuController = ViperMenuController();
   String _selectedPeriod = 'SEMANA';
 
   @override
   void initState() {
     super.initState();
-    _menuController.fetchAllData();
   }
 
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: Listenable.merge([_menuController, widget.settingsController]),
+      listenable: Listenable.merge([widget.menuController, widget.settingsController]),
       builder: (context, child) {
         final isDark = widget.settingsController.isDarkTheme;
         final bgColor = isDark ? const Color(0xFF121212) : Colors.white;
@@ -38,7 +39,7 @@ class _ViperMenuCentralState extends State<ViperMenuCentral> {
         final dividerColor = isDark ? Colors.white12 : Colors.black12;
         
         // LOG DE RECONSTRUÇÃO AGRESSIVO
-        print('[!!! VIPER !!!] UI: Reconstruindo Drawer. Loading: ${_menuController.isLoading}, Driver: ${_menuController.driverProfile?.firstName}');
+        print('[!!! VIPER !!!] UI: Reconstruindo Drawer. Loading: ${widget.menuController.isLoading}, Driver: ${widget.menuController.driverProfile?.firstName}');
 
         return Drawer(
           backgroundColor: bgColor,
@@ -46,7 +47,7 @@ class _ViperMenuCentralState extends State<ViperMenuCentral> {
           shape: const RoundedRectangleBorder(
             borderRadius: BorderRadius.horizontal(right: Radius.circular(0)),
           ),
-          child: _menuController.isLoading 
+          child: widget.menuController.isLoading 
               ? const Center(child: CircularProgressIndicator(color: Color(0xFF00FF88)))
               : SafeArea(
                   child: Column(
@@ -98,10 +99,10 @@ class _ViperMenuCentralState extends State<ViperMenuCentral> {
   }
 
   Widget _buildHeader(bool isDark, Color textColor) {
-    final firstName = _menuController.driverProfile?.firstName ?? 'Motorista';
-    final city = _menuController.driverProfile?.city ?? 'Base Não Informada';
-    final state = _menuController.driverProfile?.state ?? '';
-    final avatarUrl = _menuController.driverProfile?.avatarUrl;
+    final firstName = widget.menuController.driverProfile?.firstName ?? 'Motorista';
+    final city = widget.menuController.driverProfile?.city ?? 'Base Não Informada';
+    final state = widget.menuController.driverProfile?.state ?? '';
+    final avatarUrl = widget.menuController.driverProfile?.avatarUrl;
 
     print('[!!! VIPER !!!] UI: Renderizando Header -> Nome: $firstName, Foto: $avatarUrl');
 
@@ -131,7 +132,7 @@ class _ViperMenuCentralState extends State<ViperMenuCentral> {
                           return const Icon(Icons.error_outline, color: Colors.redAccent, size: 30);
                         },
                       )
-                    : Icon(Icons.person, color: textColor.withValues(alpha: 0.5), size: 35),
+                    : Icon(Icons.person, color: textColor.withOpacity(0.5), size: 35),
               ),
             ),
           ),
@@ -159,7 +160,7 @@ class _ViperMenuCentralState extends State<ViperMenuCentral> {
                       child: Text(
                         '$city - $state',
                         style: TextStyle(
-                          color: textColor.withValues(alpha: 0.5),
+                          color: textColor.withOpacity(0.5),
                           fontSize: 12,
                         ),
                         overflow: TextOverflow.ellipsis,
@@ -179,7 +180,7 @@ class _ViperMenuCentralState extends State<ViperMenuCentral> {
     return Text(
       title,
       style: TextStyle(
-        color: textColor.withValues(alpha: 0.4),
+        color: textColor.withOpacity(0.4),
         fontSize: 11,
         fontWeight: FontWeight.bold,
         letterSpacing: 1.5,
@@ -216,7 +217,7 @@ class _ViperMenuCentralState extends State<ViperMenuCentral> {
                 style: TextStyle(
                   color: isSelected 
                       ? (isDark ? Colors.black : Colors.white) 
-                      : textColor.withValues(alpha: 0.5),
+                      : textColor.withOpacity(0.5),
                   fontSize: 10,
                   fontWeight: FontWeight.bold,
                   letterSpacing: 1.1,
@@ -234,7 +235,7 @@ class _ViperMenuCentralState extends State<ViperMenuCentral> {
       height: 200,
       padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
       decoration: BoxDecoration(
-        color: isDark ? Colors.white.withValues(alpha: 0.03) : Colors.black.withValues(alpha: 0.03),
+        color: isDark ? Colors.white.withOpacity(0.03) : Colors.black.withOpacity(0.03),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: isDark ? Colors.white12 : Colors.black, 
@@ -312,7 +313,7 @@ class _ViperMenuCentralState extends State<ViperMenuCentral> {
             backDrawRodData: BackgroundBarChartRodData(
               show: true,
               toY: _getMaxY(),
-              color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05),
+              color: isDark ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.05),
             ),
           ),
         ],
@@ -322,7 +323,7 @@ class _ViperMenuCentralState extends State<ViperMenuCentral> {
 
   Widget _getBottomTitles(double value, TitleMeta meta, bool isDark) {
     final style = TextStyle(
-      color: isDark ? Colors.white.withValues(alpha: 0.3) : Colors.black.withValues(alpha: 0.3),
+      color: isDark ? Colors.white.withOpacity(0.3) : Colors.black.withOpacity(0.3),
       fontWeight: FontWeight.bold,
       fontSize: 10,
     );
@@ -348,18 +349,18 @@ class _ViperMenuCentralState extends State<ViperMenuCentral> {
 
   Widget _buildProfileCard(bool isDark, Color textColor) {
     // FIX DE TIPAGEM: Usando propriedades do DriverModel
-    final vehicles = _menuController.driverProfile?.vehicles;
+    final vehicles = widget.menuController.driverProfile?.vehicles;
     final vehicle = (vehicles != null && vehicles.isNotEmpty) ? vehicles.first : null;
     
     final plate = vehicle?['plate'] ?? '-- -- --';
     final model = vehicle?['model'] ?? 'Veículo não cadastrado';
-    final cnh = _menuController.driverProfile?.cnhNumber ?? '**********';
-    final cat = _menuController.driverProfile?.cnhCategory ?? 'A/B';
+    final cnh = widget.menuController.driverProfile?.cnhNumber ?? '**********';
+    final cat = widget.menuController.driverProfile?.cnhCategory ?? 'N/A';
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isDark ? Colors.white.withValues(alpha: 0.03) : Colors.black.withValues(alpha: 0.03),
+        color: isDark ? Colors.white.withOpacity(0.03) : Colors.black.withOpacity(0.03),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: isDark ? Colors.white12 : Colors.black, 
@@ -370,7 +371,7 @@ class _ViperMenuCentralState extends State<ViperMenuCentral> {
         children: [
           _buildInfoItem(Icons.credit_card_outlined, 'CNH (CATEGORIA $cat)', cnh, textColor, isDark),
           const SizedBox(height: 16),
-          Divider(color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.1)),
+          Divider(color: isDark ? Colors.white.withOpacity(0.1) : Colors.black.withOpacity(0.1)),
           const SizedBox(height: 16),
           _buildInfoItem(Icons.local_shipping_outlined, 'VEÍCULO ($model)', plate, textColor, isDark, highlight: true),
         ],
@@ -381,13 +382,13 @@ class _ViperMenuCentralState extends State<ViperMenuCentral> {
   Widget _buildInfoItem(IconData icon, String label, String value, Color textColor, bool isDark, {bool highlight = false}) {
     return Row(
       children: [
-        Icon(icon, color: highlight ? const Color(0xFF00FF88) : textColor.withValues(alpha: 0.5), size: 22),
+        Icon(icon, color: highlight ? const Color(0xFF00FF88) : textColor.withOpacity(0.5), size: 22),
         const SizedBox(width: 16),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(label, style: TextStyle(color: textColor.withValues(alpha: 0.4), fontSize: 9, fontWeight: FontWeight.bold)),
+              Text(label, style: TextStyle(color: textColor.withOpacity(0.4), fontSize: 9, fontWeight: FontWeight.bold)),
               Text(
                 value, 
                 style: TextStyle(
@@ -409,7 +410,7 @@ class _ViperMenuCentralState extends State<ViperMenuCentral> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF0055FF).withValues(alpha: 0.1),
+        color: const Color(0xFF0055FF).withOpacity(0.1),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: isDark ? Colors.white12 : Colors.black, 
@@ -422,14 +423,14 @@ class _ViperMenuCentralState extends State<ViperMenuCentral> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('PROGRESSO', style: TextStyle(color: textColor.withValues(alpha: 0.6), fontSize: 10, fontWeight: FontWeight.bold)),
+              Text('PROGRESSO', style: TextStyle(color: textColor.withOpacity(0.6), fontSize: 10, fontWeight: FontWeight.bold)),
               const Text('2/5', style: TextStyle(color: Color(0xFF0055FF), fontSize: 14, fontWeight: FontWeight.w900)),
             ],
           ),
           const SizedBox(height: 12),
           LinearProgressIndicator(
             value: 0.4,
-            backgroundColor: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.05),
+            backgroundColor: (isDark ? Colors.white : Colors.black).withOpacity(0.05),
             color: const Color(0xFF0055FF),
             minHeight: 10,
             borderRadius: BorderRadius.circular(5),
@@ -437,7 +438,7 @@ class _ViperMenuCentralState extends State<ViperMenuCentral> {
           const SizedBox(height: 8),
           Text(
             'Faltam 3 entregas para o bônus de R\$ 50,00',
-            style: TextStyle(color: textColor.withValues(alpha: 0.5), fontSize: 11),
+            style: TextStyle(color: textColor.withOpacity(0.5), fontSize: 11),
           ),
         ],
       ),

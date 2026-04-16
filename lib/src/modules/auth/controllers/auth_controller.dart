@@ -53,22 +53,25 @@ class AuthController extends ChangeNotifier {
   }) async {
     _setLoading(true);
     try {
+      final userMetadata = {
+        'first_name': firstName,
+        'last_name': lastName,
+        'cpf': cpf,
+        'phone': phone,
+        'city': city,
+        'neighborhood': neighborhood,
+        'state': state,
+        'cnh_number': cnhNumber,
+        'cnh_category': cnhCategory,
+        'pix_key': pixKey,
+        'avatar_url': avatarUrl,
+      };
+      debugPrint('🐍 VIPER DEBUG: Enviando Metadata -> $userMetadata');
+
       await _supabase.auth.signUp(
         email: email,
         password: password,
-        data: {
-          'first_name': firstName,
-          'last_name': lastName,
-          'cpf': cpf,
-          'phone': phone,
-          'city': city,
-          'neighborhood': neighborhood,
-          'state': state,
-          'cnh_number': cnhNumber,
-          'cnh_category': cnhCategory,
-          'pix_key': pixKey,
-          'avatar_url': avatarUrl,
-        },
+        data: userMetadata,
         emailRedirectTo: 'viperdelivery://login-callback',
       );
     } on AuthException catch (e) {

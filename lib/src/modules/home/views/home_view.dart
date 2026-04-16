@@ -12,6 +12,7 @@ import 'package:viper_delivery/src/modules/home/views/settings_view.dart';
 import 'package:viper_delivery/src/modules/home/models/viper_order.dart';
 import 'package:viper_delivery/src/modules/home/services/viper_mock_service.dart';
 import 'package:viper_delivery/src/modules/home/widgets/viper_offer_overlay.dart';
+import 'package:viper_delivery/src/modules/home/controllers/viper_menu_controller.dart';
 import 'package:viper_delivery/src/modules/home/widgets/viper_bottom_sheet_panel.dart';
 
 class HomeView extends StatefulWidget {
@@ -24,6 +25,7 @@ class HomeView extends StatefulWidget {
 class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
   final SettingsController _settingsController = SettingsController();
   final HomeController _homeController = HomeController();
+  final ViperMenuController _menuController = ViperMenuController();
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final GlobalKey<ViperMapWidgetState> _mapWidgetKey = GlobalKey<ViperMapWidgetState>();
   final GlobalKey<ViperBottomSheetPanelState> _ridePanelKey = GlobalKey<ViperBottomSheetPanelState>();
@@ -42,6 +44,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _settingsController.init();
       _homeController.initializeResilience(context);
+      _menuController.fetchAllData();
     });
   }
 
@@ -101,7 +104,10 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
             key: _scaffoldKey,
             backgroundColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,
             extendBody: true,
-            drawer: ViperMenuCentral(settingsController: _settingsController),
+            drawer: ViperMenuCentral(
+              settingsController: _settingsController,
+              menuController: _menuController,
+            ),
             body: NotificationListener<DraggableScrollableNotification>(
               onNotification: (notification) {
                 _sheetExtent.value = notification.extent;
@@ -122,6 +128,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                         bottomSafePadding: safeBottomHeight,
                         orders: _rideOrders,
                         offer: currentOffer,
+                        menuController: _menuController,
                         onFinalize: () {
                           _activeOffer.value = null;
                         },

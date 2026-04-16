@@ -41,10 +41,10 @@ class SOSEmergencyButton extends StatelessWidget {
         
         // Cores baseadas no padrão modular da Viper
         final bgColor = isDark 
-            ? Colors.black.withValues(alpha: 0.7) 
+            ? Colors.black.withOpacity(0.7) 
             : Colors.white;
         const iconColor = Colors.red; // Vermelho Vivo para Alerta
-        final borderColor = isDark ? Colors.red.withValues(alpha: 0.3) : Colors.black;
+        final borderColor = isDark ? Colors.red.withOpacity(0.3) : Colors.black;
 
         return GestureDetector(
           onLongPress: _launchSOS,
@@ -57,7 +57,7 @@ class SOSEmergencyButton extends StatelessWidget {
               border: Border.all(color: borderColor, width: 1.5),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.red.withValues(alpha: 0.2),
+                  color: Colors.red.withOpacity(0.2),
                   blurRadius: 12,
                   spreadRadius: 2,
                   offset: const Offset(0, 4),

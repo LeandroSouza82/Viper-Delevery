@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:viper_delivery/src/modules/home/models/viper_order.dart';
+import 'package:viper_delivery/src/modules/home/controllers/viper_menu_controller.dart';
+import 'package:viper_delivery/src/modules/ride/widgets/payment_selector.dart';
 
 class ViperReceiptBottomSheet extends StatelessWidget {
   final ViperExecutionSummary summary;
   final bool isDark;
   final bool isClt;
+  final ViperMenuController menuController;
   final VoidCallback onFinish;
 
   const ViperReceiptBottomSheet({
@@ -12,6 +15,7 @@ class ViperReceiptBottomSheet extends StatelessWidget {
     required this.summary,
     required this.isDark,
     required this.isClt,
+    required this.menuController,
     required this.onFinish,
   });
 
@@ -59,8 +63,11 @@ class ViperReceiptBottomSheet extends StatelessWidget {
           
           if (isClt)
             _buildCltSummary(textColor, isDark)
-          else
+          else ...[
             _buildFinancialSummary(textColor, accentColor, isDark),
+            const SizedBox(height: 24),
+            PaymentSelector(menuController: menuController),
+          ],
 
           const SizedBox(height: 32),
           SizedBox(

@@ -3,6 +3,7 @@ import 'package:viper_delivery/src/modules/home/models/viper_order.dart';
 import 'package:viper_delivery/src/modules/home/widgets/viper_order_card.dart';
 import 'package:viper_delivery/src/modules/returns/widgets/returns_tab_view.dart';
 import 'package:viper_delivery/src/modules/home/services/pricing_service.dart';
+import 'package:viper_delivery/src/modules/home/controllers/viper_menu_controller.dart';
 import 'package:viper_delivery/src/modules/home/widgets/viper_receipt_bottom_sheet.dart';
 
 class ViperBottomSheetPanel extends StatefulWidget {
@@ -13,6 +14,7 @@ class ViperBottomSheetPanel extends StatefulWidget {
     required this.orders,
     required this.offer,
     required this.onFinalize,
+    required this.menuController,
     this.isClt = false,
   });
 
@@ -21,6 +23,7 @@ class ViperBottomSheetPanel extends StatefulWidget {
   final ValueNotifier<List<ViperOrder>> orders;
   final ViperOffer? offer;
   final VoidCallback onFinalize;
+  final ViperMenuController menuController;
   final bool isClt;
 
   @override
@@ -96,6 +99,7 @@ class ViperBottomSheetPanelState extends State<ViperBottomSheetPanel> {
           summary: summary,
           isDark: widget.isDark,
           isClt: widget.isClt,
+          menuController: widget.menuController,
           onFinish: () {
             Navigator.pop(context);
             // RESET TOTAL DO ESTADO
