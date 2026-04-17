@@ -53,8 +53,8 @@ class ViperMockService {
   ];
 
   /// Gera uma oferta baseada no GPS real e motor de precificação variável (Surge Pricing)
-  static ViperOffer generateOffer({double? userLat, double? userLng}) {
-    final isSuper = _random.nextBool();
+  static ViperOffer generateOffer({double? userLat, double? userLng, bool? forceSuper}) {
+    final isSuper = forceSuper ?? _random.nextBool();
     final qtdPedidos = isSuper ? _random.nextInt(3) + 3 : 1; 
     final mainType = ViperOrderType.values[_random.nextInt(ViperOrderType.values.length)];
     final client = _clients[_random.nextInt(_clients.length)];

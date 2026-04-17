@@ -88,10 +88,20 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
 
   void _onRadarPressed() {
     HapticFeedback.selectionClick();
-    // Simula a chegada de uma nova oferta com base no GPS REAL capturado
+    // Simula a chegada de uma nova oferta aleatória
     _activeOffer.value = ViperMockService.generateOffer(
       userLat: _menuController.userLatitude,
       userLng: _menuController.userLongitude,
+    );
+  }
+
+  void _onTestSimulation() {
+    HapticFeedback.heavyImpact();
+    // Força uma SUPER ROTA (Palhoça -> Floripa) para validação do Viper Math v5
+    _activeOffer.value = ViperMockService.generateOffer(
+      userLat: _menuController.userLatitude,
+      userLng: _menuController.userLongitude,
+      forceSuper: true,
     );
   }
 
@@ -236,6 +246,19 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                     top: topPadding + 15,
                     left: 15,
                     child: HomeMenuIcon(settingsController: _settingsController),
+                  ),
+
+                  // 4.5 Gatilho de Testes (Simulação de Super Rota)
+                  Positioned(
+                    top: topPadding + 75,
+                    left: 15,
+                    child: _buildFloatingButton(
+                      icon: Icons.auto_awesome_motion_rounded,
+                      onPressed: _onTestSimulation,
+                      isDark: _settingsController.isDarkTheme,
+                      heroTag: 'test_simulation_btn',
+                      color: Colors.purpleAccent,
+                    ),
                   ),
 
                   // 5. Botão Recentalizar
