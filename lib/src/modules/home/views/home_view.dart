@@ -14,6 +14,7 @@ import 'package:viper_delivery/src/modules/home/services/viper_mock_service.dart
 import 'package:viper_delivery/src/modules/home/widgets/viper_offer_overlay.dart';
 import 'package:viper_delivery/src/modules/home/controllers/viper_menu_controller.dart';
 import 'package:viper_delivery/src/modules/home/widgets/viper_bottom_sheet_panel.dart';
+import 'package:viper_delivery/src/modules/home/services/dispatch_service.dart';
 
 class HomeView extends StatefulWidget {
   const HomeView({super.key});
@@ -29,6 +30,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final GlobalKey<ViperMapWidgetState> _mapWidgetKey = GlobalKey<ViperMapWidgetState>();
   final GlobalKey<ViperBottomSheetPanelState> _ridePanelKey = GlobalKey<ViperBottomSheetPanelState>();
+  final DispatchService _dispatchService = DispatchService();
   
   final ValueNotifier<double> _sheetExtent = ValueNotifier<double>(0.16);
   final ValueNotifier<List<ViperOrder>> _rideOrders = ValueNotifier<List<ViperOrder>>([]);
@@ -54,13 +56,22 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
     _sheetExtent.dispose();
     _rideOrders.dispose();
     _activeOffer.dispose();
+    _dispatchService.dispose();
     super.dispose();
+  }
+
+  // Lógica de Dispatch simplificada para rodar apenas em background (logs)
+  void _startBackgroundDispatch() {
+    _dispatchService.startSearch(initialValue: 15.0);
   }
 
   void _onRadarPressed() {
     HapticFeedback.selectionClick();
-    // Simula a chegada de uma nova oferta
-    _activeOffer.value = ViperMockService.generateOffer();
+    // Simula a chegada de uma nova oferta com base no GPS REAL capturado
+    _activeOffer.value = ViperMockService.generateOffer(
+      userLat: _menuController.userLatitude,
+      userLng: _menuController.userLongitude,
+    );
   }
 
   void _onAcceptOffer(ViperOffer offer) {
@@ -316,12 +327,13 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
     required VoidCallback onPressed,
     required bool isDark,
     required String heroTag,
+    Color? color,
   }) {
     return FloatingActionButton.small(
       heroTag: heroTag,
       onPressed: onPressed,
       backgroundColor: isDark ? const Color(0xFF2A2A2A) : Colors.white,
-      foregroundColor: const Color(0xFF0055FF),
+      foregroundColor: color ?? const Color(0xFF0055FF),
       elevation: 4,
       shape: CircleBorder(
         side: BorderSide(color: isDark ? Colors.white24 : Colors.black12, width: 1),

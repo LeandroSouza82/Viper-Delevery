@@ -55,6 +55,9 @@
 				<string>viperdelivery</string>
 			</array>
 		</dict>
-	</array>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>O Viper precisa da sua localização para rastrear as entregas e otimizar suas rotas em tempo real.</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>O Viper precisa da sua localização, mesmo em segundo plano, para garantir que as entregas sejam monitoradas corretamente.</string>
 </dict>
 </plist>

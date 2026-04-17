@@ -94,6 +94,8 @@ class ViperBottomSheetPanelState extends State<ViperBottomSheetPanel> {
       showModalBottomSheet(
         context: context,
         isScrollControlled: true,
+        isDismissible: false,
+        enableDrag: false,
         backgroundColor: Colors.transparent,
         builder: (context) => ViperReceiptBottomSheet(
           summary: summary,

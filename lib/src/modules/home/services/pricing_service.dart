@@ -44,6 +44,7 @@ class ViperPricingService {
       totalValue: totalValue,
       countSuccess: countSuccess,
       countFailed: countFailed,
+      paymentStatus: offer.paymentStatus,
     );
   }
 }

@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 enum ViperOrderType { coleta, entrega, outros }
 
 enum ViperOrderStatus { pending, completed, failed, returned }
+enum ViperPaymentStatus { paid_online, pending }
+enum ViperContractType { clt, freelancer }
+enum ViperRouteType { simple, super_rota }
 
 extension ViperOrderTypeExtension on ViperOrderType {
   Color get color {
@@ -90,6 +93,12 @@ class ViperOffer {
   final String dropoffNeighborhood;
   final String dropoffStreet;
   final double distanciaDeslocamento;
+  final ViperPaymentStatus paymentStatus;
+  final ViperContractType contractType;
+  final ViperRouteType routeType;
+  final double valorKmIda;
+  final double valorKmRota;
+  final double priorityBoost;
 
   ViperOffer({
     required this.id,
@@ -103,6 +112,12 @@ class ViperOffer {
     required this.dropoffNeighborhood,
     required this.dropoffStreet,
     required this.distanciaDeslocamento,
+    this.paymentStatus = ViperPaymentStatus.paid_online,
+    this.contractType = ViperContractType.freelancer,
+    this.routeType = ViperRouteType.simple,
+    this.valorKmIda = 0,
+    this.valorKmRota = 0,
+    this.priorityBoost = 0,
   });
 
   int get qtdPedidos => orders.length;
@@ -115,6 +130,8 @@ class ViperExecutionSummary {
   final double totalValue;
   final int countSuccess;
   final int countFailed;
+  final ViperPaymentStatus paymentStatus;
+  final ViperContractType contractType;
 
   ViperExecutionSummary({
     required this.baseValue,
@@ -123,5 +140,7 @@ class ViperExecutionSummary {
     required this.totalValue,
     required this.countSuccess,
     required this.countFailed,
+    this.paymentStatus = ViperPaymentStatus.paid_online,
+    this.contractType = ViperContractType.freelancer,
   });
 }

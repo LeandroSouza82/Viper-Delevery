@@ -1,14 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:viper_delivery/src/modules/home/models/viper_order.dart';
 import 'package:viper_delivery/src/models/driver_model.dart';
+import 'package:viper_delivery/src/modules/onboarding/services/upload_service.dart';
+import 'dart:io';
+import 'package:viper_delivery/src/core/services/location_service.dart';
 
 class ViperMenuController extends ChangeNotifier {
   final SupabaseClient _supabase = Supabase.instance.client;
+  final UploadService _uploadService = UploadService();
   
   bool isLoading = false;
   DriverModel? driverProfile;
   List<double> weeklyEarnings = List.filled(7, 0.0);
   String? errorMessage;
+
+  // Estado Global da Localização Real
+  double? userLatitude;
+  double? userLongitude;
 
   Future<void> fetchAllData() async {
     print('--------------------------------------------------');
@@ -42,6 +51,17 @@ class ViperMenuController extends ChangeNotifier {
 
       // 2. Fetch Weekly Earnings (Last 7 days)
       await _fetchWeeklyPerformance(user.id);
+
+      // 3. Captura de Localização REAL (Bússola)
+      print('[!!! VIPER !!!] Solicitando GPS Real...');
+      final position = await LocationService.getCurrentLocation();
+      if (position != null) {
+        userLatitude = position.latitude;
+        userLongitude = position.longitude;
+        print('[!!! VIPER !!!] GPS REAL CAPTURADO: $userLatitude, $userLongitude');
+      } else {
+        print('[!!! VIPER !!!] GPS não disponível. Usando modo offline/mock.');
+      }
       
       notifyListeners();
     } catch (e) {
@@ -116,5 +136,48 @@ class ViperMenuController extends ChangeNotifier {
   void _setLoading(bool value) {
     isLoading = value;
     notifyListeners();
+  }
+
+  Future<void> finalizeRide({
+    required ViperExecutionSummary summary,
+    String? receiverName,
+    String? receiverCpf,
+    File? proofPhoto,
+  }) async {
+    // Simulação de delay para feedback visual solicitado
+    await Future.delayed(const Duration(milliseconds: 1500));
+    
+    try {
+      final user = _supabase.auth.currentUser;
+      if (user == null) throw Exception('Sessão expirada.');
+
+      String? photoUrl;
+      if (proofPhoto != null) {
+        photoUrl = await _uploadService.uploadFile(
+          bucket: 'driver_documents', // Usando bucket existente para simplificação
+          userId: user.id,
+          docType: 'delivery_proof_${DateTime.now().millisecondsSinceEpoch}',
+          file: proofPhoto,
+        );
+      }
+
+      // Persistência no Supabase: Registrando o histórico da execução com Proof of Delivery
+      await _supabase.from('ride_history').insert({
+        'driver_id': user.id,
+        'amount': summary.totalValue,
+        'count_success': summary.countSuccess,
+        'count_failed': summary.countFailed,
+        'payment_status': summary.paymentStatus.name,
+        'receiver_name': receiverName,
+        'receiver_cpf': receiverCpf,
+        'proof_photo_url': photoUrl,
+        'completed_at': DateTime.now().toIso8601String(),
+      });
+      
+      print('[!!! VIPER !!!] Checkout BLINDADO finalizado e persistido no Supabase.');
+    } catch (e) {
+      print('[!!! VIPER !!!] Erro no Checkout: $e');
+      rethrow;
+    }
   }
 }
