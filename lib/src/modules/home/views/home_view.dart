@@ -172,15 +172,16 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                     ),
                   ),
 
-                  // 3. Botão Acionar Rota (Online/Offline) - Reposicionado para ficar acima da Dragon Ball (em descaso)
+                  // 3. Botão Acionar Rota (Online/Offline) - Ride-on-Sheet
                   ValueListenableBuilder<double>(
                     valueListenable: _sheetExtent,
                     builder: (context, extent, child) {
-                      // O botão fica fixo perto da base, e a Dragon Ball o cobre ao subir
-                      final opacity = ((_fadeLimit - extent) / (_fadeLimit - _minExtent)).clamp(0.0, 1.0);
+                      // O botão "pousa" sobre a Dragon Ball e sobe junto com ela
+                      // Efeito de sumir: 1.0 (fechada) -> 0.0 (extent > 0.4)
+                      final opacity = ((0.4 - extent) / (0.4 - _minExtent)).clamp(0.0, 1.0);
                       
                       return Positioned(
-                        bottom: (screenHeight * _minExtent) + 15, // Pousa 15px acima da Dragon Ball fechada
+                        bottom: (screenHeight * extent) + 15, 
                         left: 24,
                         right: 24,
                         child: IgnorePointer(
