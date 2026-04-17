@@ -1,10 +1,18 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:viper_delivery/src/modules/home/controllers/settings_controller.dart';
 import 'package:viper_delivery/src/modules/home/controllers/viper_menu_controller.dart';
-import 'package:fl_chart/fl_chart.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:viper_delivery/src/modules/profile/widgets/finance_card.dart';
+import 'package:viper_delivery/src/shared/widgets/pix_qr_dialog.dart';
+import 'package:viper_delivery/src/modules/profile/views/atividades_view.dart';
+import 'package:viper_delivery/src/modules/home/views/settings_view.dart';
+import 'package:viper_delivery/src/modules/profile/views/profile_view.dart';
+import 'package:viper_delivery/src/modules/profile/views/wallet_view.dart';
+import 'package:viper_delivery/src/modules/profile/views/history_view.dart';
+import 'package:viper_delivery/src/modules/profile/views/acceptance_rate_view.dart';
+import 'package:viper_delivery/src/modules/profile/views/help_view.dart';
+import 'package:viper_delivery/src/modules/home/controllers/settings_controller.dart';
 
 class ViperMenuCentral extends StatefulWidget {
   final SettingsController settingsController;
@@ -21,7 +29,6 @@ class ViperMenuCentral extends StatefulWidget {
 }
 
 class _ViperMenuCentralState extends State<ViperMenuCentral> {
-  String _selectedPeriod = 'SEMANA';
 
   @override
   void initState() {
@@ -77,12 +84,59 @@ class _ViperMenuCentralState extends State<ViperMenuCentral> {
                               _buildMissionStatic(isDark, textColor),
 
                               const SizedBox(height: 32),
-                              // Base: O gráfico interativo
-                              _buildSectionTitle('PERFORMANCE', textColor, isDark),
+                              _buildSectionTitle('COCKPIT E PERFORMANCE', textColor, isDark),
                               const SizedBox(height: 16),
-                              _buildPeriodSelector(isDark, textColor),
+                              // Destaque: Atividades
+                              _buildMenuButton(
+                                icon: Icons.insights_rounded,
+                                label: 'Minhas Atividades',
+                                subLabel: 'Ganhos e histórico de desempenho',
+                                isDark: isDark,
+                                textColor: textColor,
+                                onPressed: () {
+                                  if (!Get.isRegistered<SettingsController>()) {
+                                    Get.put(widget.settingsController);
+                                  }
+                                  Get.to(() => const AtividadesView());
+                                },
+                              ),
+                              
+                              const SizedBox(height: 24),
+                              _buildSectionTitle('SISTEMA E CONTA', textColor, isDark),
                               const SizedBox(height: 16),
-                              _buildInteractiveChart(isDark, textColor),
+                              
+                              // Outros itens restaurados
+                              ListTile(
+                                leading: Icon(Icons.person_outline_rounded, color: textColor.withOpacity(0.6)),
+                                title: const Text('Meu Perfil', style: TextStyle(fontWeight: FontWeight.bold)),
+                                textColor: textColor,
+                                onTap: () => Get.to(() => const ProfileView()),
+                              ),
+                              const SizedBox(height: 4),
+                              ListTile(
+                                leading: Icon(Icons.account_balance_wallet_outlined, color: textColor.withOpacity(0.6)),
+                                title: const Text('Minha Carteira', style: TextStyle(fontWeight: FontWeight.bold)),
+                                textColor: textColor,
+                                onTap: () => Get.to(() => const WalletView()),
+                              ),
+                              const SizedBox(height: 12),
+                              _buildSimpleMenuItem(
+                                icon: Icons.settings_outlined,
+                                label: 'Configurações',
+                                textColor: textColor,
+                                isDark: isDark,
+                                onPressed: () => Get.to(() => SettingsView(
+                                  settingsController: widget.settingsController,
+                                )),
+                              ),
+                              const SizedBox(height: 12),
+                              _buildSimpleMenuItem(
+                                icon: Icons.help_outline_rounded,
+                                label: 'Ajuda e Suporte',
+                                textColor: textColor,
+                                isDark: isDark,
+                                onPressed: () => Get.to(() => const HelpView()),
+                              ),
                             ],
                           ),
                         ),
@@ -188,162 +242,64 @@ class _ViperMenuCentralState extends State<ViperMenuCentral> {
     );
   }
 
-  Widget _buildPeriodSelector(bool isDark, Color textColor) {
-    final periods = ['DIA', 'SEMANA', 'MÊS'];
-    return Row(
-      children: periods.map((period) {
-        final isSelected = _selectedPeriod == period;
-        return Padding(
-          padding: const EdgeInsets.only(right: 8),
-          child: InkWell(
-            onTap: () => setState(() => _selectedPeriod = period),
-            borderRadius: BorderRadius.circular(12),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+  Widget _buildMenuButton({
+    required IconData icon,
+    required String label,
+    required String subLabel,
+    required bool isDark,
+    required Color textColor,
+    required VoidCallback onPressed,
+  }) {
+    return InkWell(
+      onTap: onPressed,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: isDark ? Colors.white.withOpacity(0.03) : Colors.black.withOpacity(0.03),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isDark ? Colors.white12 : Colors.black, 
+            width: isDark ? 1.0 : 2.0,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: isSelected 
-                    ? (isDark ? const Color(0xFF00FF88) : Colors.black) 
-                    : Colors.transparent,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: isSelected 
-                      ? (isDark ? const Color(0xFF00FF88) : Colors.black) 
-                      : (isDark ? Colors.white12 : Colors.black12),
-                ),
+                color: const Color(0xFF00FF88).withOpacity(0.1),
+                shape: BoxShape.circle,
               ),
-              child: Text(
-                period,
-                style: TextStyle(
-                  color: isSelected 
-                      ? (isDark ? Colors.black : Colors.white) 
-                      : textColor.withOpacity(0.5),
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 1.1,
-                ),
-              ),
+              child: const Icon(Icons.insights_rounded, color: Color(0xFF00FF88), size: 18),
             ),
-          ),
-        );
-      }).toList(),
-    );
-  }
-
-  Widget _buildInteractiveChart(bool isDark, Color textColor) {
-    return Container(
-      height: 200,
-      padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
-      decoration: BoxDecoration(
-        color: isDark ? Colors.white.withOpacity(0.03) : Colors.black.withOpacity(0.03),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: isDark ? Colors.white12 : Colors.black, 
-          width: isDark ? 1.0 : 2.0,
-        ),
-      ),
-      child: BarChart(
-        BarChartData(
-          alignment: BarChartAlignment.spaceAround,
-          maxY: _getMaxY(),
-          barTouchData: BarTouchData(
-            touchTooltipData: BarTouchTooltipData(
-              getTooltipColor: (group) => isDark ? const Color(0xFF1A1A1A) : Colors.white,
-              tooltipBorder: BorderSide(color: isDark ? Colors.white12 : Colors.black12),
-              getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                return BarTooltipItem(
-                  'R\$ ${rod.toY.toStringAsFixed(2).replaceAll('.', ',')}',
-                  TextStyle(
-                    color: isDark ? const Color(0xFF00FF88) : Colors.black,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: TextStyle(
+                      color: textColor,
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                );
-              },
-            ),
-          ),
-          titlesData: FlTitlesData(
-            show: true,
-            bottomTitles: AxisTitles(
-              sideTitles: SideTitles(
-                showTitles: true,
-                getTitlesWidget: (value, meta) => _getBottomTitles(value, meta, isDark),
-                reservedSize: 30,
+                  Text(
+                    subLabel,
+                    style: TextStyle(
+                      color: textColor.withOpacity(0.4),
+                      fontSize: 10,
+                    ),
+                  ),
+                ],
               ),
             ),
-            leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          ),
-          gridData: const FlGridData(show: false),
-          borderData: FlBorderData(show: false),
-          barGroups: _generateGroups(isDark),
+            Icon(Icons.arrow_forward_ios_rounded, color: textColor.withOpacity(0.2), size: 14),
+          ],
         ),
       ),
-    );
-  }
-
-  double _getMaxY() {
-    switch (_selectedPeriod) {
-      case 'DIA': return 150;
-      case 'SEMANA': return 300;
-      case 'MÊS': return 2000;
-      default: return 100;
-    }
-  }
-
-  List<BarChartGroupData> _generateGroups(bool isDark) {
-    final Map<String, List<double>> data = {
-      'DIA': [45.0, 78.0, 120.0, 56.0],
-      'SEMANA': [120.0, 80.0, 150.0, 200.0, 180.0, 250.0, 100.0],
-      'MÊS': [1200.0, 1500.0, 1100.0, 1800.0],
-    };
-
-    final currentData = data[_selectedPeriod] ?? [];
-
-    return List.generate(currentData.length, (index) {
-      return BarChartGroupData(
-        x: index,
-        barRods: [
-          BarChartRodData(
-            toY: currentData[index],
-            color: isDark ? const Color(0xFF00FF88) : Colors.black,
-            width: _selectedPeriod == 'SEMANA' ? 12 : 20,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
-            backDrawRodData: BackgroundBarChartRodData(
-              show: true,
-              toY: _getMaxY(),
-              color: isDark ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.05),
-            ),
-          ),
-        ],
-      );
-    });
-  }
-
-  Widget _getBottomTitles(double value, TitleMeta meta, bool isDark) {
-    final style = TextStyle(
-      color: isDark ? Colors.white.withOpacity(0.3) : Colors.black.withOpacity(0.3),
-      fontWeight: FontWeight.bold,
-      fontSize: 10,
-    );
-    String text = '';
-    
-    if (_selectedPeriod == 'DIA') {
-      final labels = ['08h', '12h', '16h', '20h'];
-      if (value.toInt() < labels.length) text = labels[value.toInt()];
-    } else if (_selectedPeriod == 'SEMANA') {
-      final labels = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
-      if (value.toInt() < labels.length) text = labels[value.toInt()];
-    } else if (_selectedPeriod == 'MÊS') {
-      final labels = ['S1', 'S2', 'S3', 'S4'];
-      if (value.toInt() < labels.length) text = labels[value.toInt()];
-    }
-
-    return SideTitleWidget(
-      meta: meta,
-      space: 8,
-      child: Text(text, style: style),
     );
   }
 
@@ -463,6 +419,41 @@ class _ViperMenuCentralState extends State<ViperMenuCentral> {
             ),
           ),
         ],
+      ),
+    );
+  }
+  Widget _buildSimpleMenuItem({
+    required IconData icon,
+    required String label,
+    required Color textColor,
+    required bool isDark,
+    required VoidCallback onPressed,
+  }) {
+    return InkWell(
+      onTap: onPressed,
+      borderRadius: BorderRadius.circular(15),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: isDark ? Colors.white.withOpacity(0.02) : Colors.black.withOpacity(0.02),
+          borderRadius: BorderRadius.circular(15),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: textColor.withOpacity(0.6), size: 20),
+            const SizedBox(width: 16),
+            Text(
+              label,
+              style: TextStyle(
+                color: textColor,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const Spacer(),
+            Icon(Icons.chevron_right_rounded, color: textColor.withOpacity(0.2), size: 18),
+          ],
+        ),
       ),
     );
   }

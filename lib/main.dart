@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -70,7 +71,7 @@ class ViperDeliveryApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return Directionality(
       textDirection: TextDirection.ltr,
-      child: MaterialApp(
+      child: GetMaterialApp(
         navigatorKey: navigatorKey,
         title: 'Viper Delivery',
         theme: ThemeData(
