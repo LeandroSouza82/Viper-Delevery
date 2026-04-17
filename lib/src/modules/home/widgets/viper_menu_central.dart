@@ -87,7 +87,10 @@ class _ViperMenuCentralState extends State<ViperMenuCentral> {
                                 subLabel: 'Ganhos e histórico detalhado',
                                 isDark: isDark,
                                 textColor: textColor,
-                                onPressed: () => Get.to(() => const AtividadesView()),
+                                onPressed: () {
+                                  if (!Get.isRegistered<SettingsController>()) { Get.put(SettingsController()); }
+                                  Get.to(() => const AtividadesView());
+                                },
                               ),
                               const SizedBox(height: 12),
                               _buildSimpleMenuItem(
@@ -103,7 +106,10 @@ class _ViperMenuCentralState extends State<ViperMenuCentral> {
                                 label: 'Minha Carteira',
                                 textColor: textColor,
                                 isDark: isDark,
-                                onPressed: () => Get.to(() => const WalletView()),
+                                onPressed: () {
+                                  if (!Get.isRegistered<SettingsController>()) { Get.put(SettingsController()); }
+                                  Get.to(() => const WalletView());
+                                },
                               ),
                               const SizedBox(height: 12),
                               _buildSimpleMenuItem(
@@ -121,7 +127,10 @@ class _ViperMenuCentralState extends State<ViperMenuCentral> {
                                 label: 'Ajuda e Suporte',
                                 textColor: textColor,
                                 isDark: isDark,
-                                onPressed: () => Get.to(() => const HelpView()),
+                                onPressed: () {
+                                  if (!Get.isRegistered<SettingsController>()) { Get.put(SettingsController()); }
+                                  Get.to(() => const HelpView());
+                                },
                               ),
                             ],
                           ),
