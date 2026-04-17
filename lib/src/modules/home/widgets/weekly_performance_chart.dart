@@ -92,7 +92,7 @@ class WeeklyPerformanceChart extends StatelessWidget {
             backDrawRodData: BackgroundBarChartRodData(
               show: true,
               toY: _getMaxY() * 0.8,
-              color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05),
+              color: isDark ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.05),
             ),
           ),
         ],

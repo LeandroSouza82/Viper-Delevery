@@ -17,6 +17,7 @@ import 'package:viper_delivery/src/modules/home/widgets/viper_offer_overlay.dart
 import 'package:viper_delivery/src/modules/home/controllers/viper_menu_controller.dart';
 import 'package:viper_delivery/src/modules/home/widgets/viper_bottom_sheet_panel.dart';
 import 'package:viper_delivery/src/modules/home/services/dispatch_service.dart';
+import 'package:viper_delivery/src/modules/profile/controllers/performance_controller.dart';
 
 class HomeView extends StatefulWidget {
   const HomeView({super.key});
@@ -29,6 +30,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
   final SettingsController _settingsController = SettingsController();
   final HomeController _homeController = HomeController();
   final ViperMenuController _menuController = Get.put(ViperMenuController());
+  final PerformanceController _performanceController = Get.put(PerformanceController());
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final GlobalKey<ViperMapWidgetState> _mapWidgetKey = GlobalKey<ViperMapWidgetState>();
   final GlobalKey<ViperBottomSheetPanelState> _ridePanelKey = GlobalKey<ViperBottomSheetPanelState>();
@@ -54,6 +56,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
       _settingsController.init();
       _homeController.initializeResilience(context);
       _menuController.fetchAllData();
+      _performanceController.onInit(); // Garante o fetch inicial
     });
   }
 

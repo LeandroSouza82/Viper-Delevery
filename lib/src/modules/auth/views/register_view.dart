@@ -77,7 +77,7 @@ class _RegisterViewState extends State<RegisterView> {
 
       if (pickedFile != null) {
         setState(() {
-          _selfieFile = File(pickedFile.path);
+          _photo = File(pickedFile.path); // Corrigido de _selfieFile para _photo conforme o resto do arquivo
         });
       }
     } catch (e) {
@@ -95,8 +95,6 @@ class _RegisterViewState extends State<RegisterView> {
     if (_formKey.currentState?.validate() ?? false) {
       if (_photo == null) {
         _showCustomSnackBar('A foto de perfil é obrigatória!', isError: true);
-        return;
-      }
         return;
       }
       if (!_isPasswordStrong) {
@@ -528,7 +526,7 @@ class _RegisterViewState extends State<RegisterView> {
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<String>(
-                  initialValue: _selectedCnhCategory,
+                  value: _selectedCnhCategory,
                   decoration: const InputDecoration(
                     labelText: 'Categoria da CNH',
                     border: OutlineInputBorder(),
@@ -659,7 +657,7 @@ class _RegisterViewState extends State<RegisterView> {
           ),
         ),
       ),
-      ),
-    );
-  }
+    ),
+  );
+ }
 }

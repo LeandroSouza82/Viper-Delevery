@@ -155,10 +155,6 @@ class AuthController extends ChangeNotifier {
       );
       
       return response.user?.id;
-        emailRedirectTo: 'viperdelivery://login-callback',
-      );
-      
-      return response.user?.id;
     } on AuthException catch (e) {
       if (e.message.toLowerCase().contains('already registered') || e.message.toLowerCase().contains('already exists')) {
         errorMessage = 'Este e-mail já está sendo utilizado por outro motorista.';

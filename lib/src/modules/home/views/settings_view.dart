@@ -569,7 +569,7 @@ class _SettingsViewState extends State<SettingsView> {
             color: (isDark ? Colors.white : Colors.black).withOpacity(0.05),
             borderRadius: BorderRadius.circular(12),
           ),
-          child: Icon(icon, color: textColor.withValues(alpha: 0.7), size: 20),
+          child: Icon(icon, color: textColor.withOpacity(0.7), size: 20),
         ),
         const SizedBox(width: 16),
         Expanded(
@@ -630,7 +630,7 @@ class _SettingsViewState extends State<SettingsView> {
               color: (isDark ? Colors.white : Colors.black).withOpacity(0.05),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(icon, color: textColor.withValues(alpha: 0.7), size: 20),
+            child: Icon(icon, color: textColor.withOpacity(0.7), size: 20),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -666,7 +666,7 @@ class _SettingsViewState extends State<SettingsView> {
               color: (isDark ? Colors.white : Colors.black).withOpacity(0.05),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(icon, color: textColor.withValues(alpha: 0.7), size: 20),
+            child: Icon(icon, color: textColor.withOpacity(0.7), size: 20),
           ),
           const SizedBox(width: 16),
           Expanded(

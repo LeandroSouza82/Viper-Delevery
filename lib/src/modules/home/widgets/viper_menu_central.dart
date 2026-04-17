@@ -404,7 +404,7 @@ class _ViperMenuCentralState extends State<ViperMenuCentral> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text('GANHOS DA SEMANA', style: TextStyle(color: textColor.withOpacity(0.4), fontSize: 10, fontWeight: FontWeight.bold)),
-                Text('R$ ${totalWeekly.toStringAsFixed(2)}', style: TextStyle(color: textColor, fontSize: 15, fontWeight: FontWeight.w900)),
+                Text('R\$ ${totalWeekly.toStringAsFixed(2)}', style: TextStyle(color: textColor, fontSize: 15, fontWeight: FontWeight.w900)),
               ],
             ),
             const SizedBox(height: 16),
@@ -423,7 +423,7 @@ class _ViperMenuCentralState extends State<ViperMenuCentral> {
         children: [
           Text('GANHOS DE HOJE', style: TextStyle(color: textColor.withOpacity(0.4), fontSize: 10, fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
-          Text('R$ ${widget.menuController.dailyEarnings.toStringAsFixed(2)}', style: TextStyle(color: textColor, fontSize: 28, fontWeight: FontWeight.w900)),
+          Text('R\$ ${widget.menuController.dailyEarnings.toStringAsFixed(2)}', style: TextStyle(color: textColor, fontSize: 28, fontWeight: FontWeight.w900)),
           const SizedBox(height: 16),
           _buildMiniStat('Entregas', '${widget.menuController.dailyDeliveries}', isDark, textColor),
         ],
@@ -438,13 +438,13 @@ class _ViperMenuCentralState extends State<ViperMenuCentral> {
         children: [
           Text('TOTAL DO MÊS', style: TextStyle(color: textColor.withOpacity(0.4), fontSize: 10, fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
-          Text('R$ ${widget.menuController.monthlyEarnings.toStringAsFixed(2)}', style: TextStyle(color: isDark ? const Color(0xFF00FF88) : Colors.blue, fontSize: 26, fontWeight: FontWeight.w900)),
+          Text('R\$ ${widget.menuController.monthlyEarnings.toStringAsFixed(2)}', style: TextStyle(color: isDark ? const Color(0xFF00FF88) : Colors.blue, fontSize: 26, fontWeight: FontWeight.w900)),
           const SizedBox(height: 20),
           Row(
             children: [
               Expanded(child: _buildMiniStat('Pedidos', '${widget.menuController.monthlyDeliveries}', isDark, textColor)),
               const SizedBox(width: 8),
-              Expanded(child: _buildMiniStat('Média', 'R$ ${(widget.menuController.monthlyDeliveries > 0 ? widget.menuController.monthlyEarnings / widget.menuController.monthlyDeliveries : 0).toStringAsFixed(2)}', isDark, textColor)),
+              Expanded(child: _buildMiniStat('Média', 'R\$ ${(widget.menuController.monthlyDeliveries > 0 ? (widget.menuController.monthlyEarnings / widget.menuController.monthlyDeliveries) : 0).toStringAsFixed(2)}', isDark, textColor)),
             ],
           ),
         ],
@@ -478,7 +478,7 @@ class _ViperMenuCentralState extends State<ViperMenuCentral> {
             borderRadius: BorderRadius.circular(4),
           ),
           const SizedBox(height: 8),
-          Text('Meta: 5 entregas para bônus de R$ 50,00', style: TextStyle(color: textColor.withOpacity(0.5), fontSize: 11)),
+          Text('Meta: 5 entregas para bônus de R\$ 50,00', style: TextStyle(color: textColor.withOpacity(0.5), fontSize: 11)),
         ],
       ),
     );
