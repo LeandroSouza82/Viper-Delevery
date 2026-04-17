@@ -128,7 +128,7 @@ class ViperMapWidgetState extends State<ViperMapWidget> {
 
     // 1. Sombra suave para profundidade
     final shadowPaint = Paint()
-      ..color = Colors.black.withValues(alpha: 0.3)
+      ..color = Colors.black.withOpacity(0.3)
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10);
     canvas.drawCircle(const Offset(size / 2, size / 2 + 4), size / 2 - 15, shadowPaint);
 

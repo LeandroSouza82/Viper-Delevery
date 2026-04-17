@@ -2,11 +2,16 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:viper_delivery/src/core/services/foreground_service_manager.dart';
 import 'package:viper_delivery/src/core/utils/permission_helper.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:viper_delivery/src/models/driver_model.dart';
 
 enum PillDisplayMode { earnings, mission, rating }
 
 class HomeController extends ChangeNotifier {
   bool isOnline = false;
+  DriverModel? driverProfile;
+  
+  bool get isClt => driverProfile?.isClt ?? false;
   
   // Gestão do Comprimido (Pill)
   PillDisplayMode displayMode = PillDisplayMode.earnings;
@@ -72,5 +77,21 @@ class HomeController extends ChangeNotifier {
   Future<void> initializeResilience(BuildContext context) async {
     // Apenas verifica permissões iniciais sem iniciar o serviço automaticamente
     await PermissionHelper.requestResilientPermissions(context);
+    
+    // Buscar perfil do motorista para flags como isClt
+    try {
+      final user = Supabase.instance.client.auth.currentUser;
+      if (user != null) {
+        final response = await Supabase.instance.client
+            .from('profiles')
+            .select('*')
+            .eq('id', user.id)
+            .single();
+        driverProfile = DriverModel.fromMap(response);
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('Error fetching profile in HomeController: $e');
+    }
   }
 }

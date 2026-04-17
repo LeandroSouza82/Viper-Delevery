@@ -1,11 +1,20 @@
-import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:viper_delivery/src/modules/home/models/viper_order.dart';
+import 'package:viper_delivery/src/models/driver_model.dart';
+import 'package:viper_delivery/src/modules/onboarding/services/upload_service.dart';
+import 'dart:io';
+import 'package:viper_delivery/src/core/services/location_service.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:flutter/foundation.dart'; // For debugPrint
+import 'package:viper_delivery/src/modules/home/services/viper_mock_service.dart';
 
-class ViperMenuController extends ChangeNotifier {
+class ViperMenuController extends GetxController {
   final SupabaseClient _supabase = Supabase.instance.client;
+  final UploadService _uploadService = UploadService();
   
   bool isLoading = false;
-  Map<String, dynamic>? driverProfile;
+  DriverModel? driverProfile;
   List<double> weeklyEarnings = List.filled(7, 0.0);
   
   // Novas métricas de performance
@@ -16,7 +25,61 @@ class ViperMenuController extends ChangeNotifier {
 
   String? errorMessage;
 
+  // Estado Global da Localização Real
+  double? userLatitude;
+  double? userLongitude;
+
+  // Oferta Ativa (Global/Reativa)
+  var activeOffer = Rx<ViperOffer?>(null);
+
+  // Controle de Ciclo de Testes
+  int _testOfferIndex = 0;
+
+  void triggerNextTestOffer() {
+    // 1. Limpeza breve para resetar animações e timers na UI
+    activeOffer.value = null;
+
+    final lat = userLatitude;
+    final lng = userLongitude;
+
+    // 2. Ciclo de scenarios
+    switch (_testOfferIndex) {
+      case 0:
+        // Super Rota (Viper Math v5)
+        activeOffer.value = ViperMockService.generateOffer(userLat: lat, userLng: lng, forceSuper: true);
+        break;
+      case 1:
+        // Rota de Entrega
+        activeOffer.value = ViperMockService.getMockEntrega(lat: lat, lng: lng);
+        break;
+      case 2:
+        // Rota de Coleta
+        activeOffer.value = ViperMockService.getMockColeta(lat: lat, lng: lng);
+        break;
+      case 3:
+        // Outros Serviços
+        activeOffer.value = ViperMockService.getMockOutros(lat: lat, lng: lng);
+        break;
+    }
+
+    // 3. Incremento e reset do ciclo
+    _testOfferIndex = (_testOfferIndex + 1) % 4;
+    
+    print('[!!! VIPER !!!] Teste Ciclo #${_testOfferIndex} disparado.');
+    update();
+  }
+
+  void clearActiveOffer() {
+    activeOffer.value = null;
+    update();
+  }
+
+  // Controle de Visibilidade do Botão do Pânico (SOS) - GetX RX
+  var showPanicButton = true.obs;
+
   Future<void> fetchAllData() async {
+    print('--------------------------------------------------');
+    print('[!!! VIPER !!!] MenuController: Iniciando fetchAllData...');
     _setLoading(true);
     errorMessage = null;
     
@@ -28,18 +91,42 @@ class ViperMenuController extends ChangeNotifier {
       final profileResponse = await _supabase
           .from('profiles')
           .select('*, vehicles(*)')
-          .eq('id', user.id)
+           .eq('id', user.id)
           .single();
       
-      driverProfile = profileResponse;
+      driverProfile = DriverModel.fromMap(profileResponse);
+      
+      // FALLBACK SÊNIOR: Se não estiver no banco, tenta pegar nos metadados do Auth
+      if (driverProfile?.avatarUrl == null || driverProfile!.avatarUrl!.isEmpty) {
+        final metadataPhoto = user.userMetadata?['avatar_url'];
+        if (metadataPhoto != null) {
+          print('[!!! VIPER !!!] Foto não encontrada no banco. Usando fallback de metadados: $metadataPhoto');
+          driverProfile = driverProfile?.copyWith(avatarUrl: metadataPhoto);
+        }
+      }
+
+      print('[!!! VIPER !!!] Perfil carregado -> Nome: ${driverProfile?.firstName}, Avatar: ${driverProfile?.avatarUrl}');
 
       // 2. Fetch Weekly/Daily/Monthly Performance
       await _fetchPerformanceData(user.id);
+
+      // 3. Captura de Localização REAL
+      final position = await LocationService.getCurrentLocation();
+      if (position != null) {
+        userLatitude = position.latitude;
+        userLongitude = position.longitude;
+      }
+
+      // 4. Verificação de Sobreposição (Somente Android)
+      if (Platform.isAndroid) {
+        final status = await Permission.systemAlertWindow.status;
+        print('[!!! VIPER !!!] Status Sobreposição: $status');
+      }
       
-      notifyListeners();
+      update();
     } catch (e) {
       errorMessage = 'Erro ao carregar dados: ${e.toString()}';
-      debugPrint('ViperMenuController Error: $e');
+      print('[!!! VIPER !!!] ERROR no MenuController: $e');
     } finally {
       _setLoading(false);
     }
@@ -98,8 +185,78 @@ class ViperMenuController extends ChangeNotifier {
     }
   }
 
+  Future<void> updatePixKey(String newKey) async {
+    _setLoading(true);
+    try {
+      final user = _supabase.auth.currentUser;
+      if (user == null) throw Exception('Sessão expirada.');
+
+      await _supabase
+          .from('profiles')
+          .update({'pix_key': newKey})
+          .eq('id', user.id);
+
+      // Atualiza o modelo local para refletir na UI instantaneamente
+      if (driverProfile != null) {
+        driverProfile = driverProfile!.copyWith(pixKey: newKey);
+      }
+      
+      print('[!!! VIPER !!!] Pix Key atualizada com sucesso: $newKey');
+      update();
+    } catch (e) {
+      errorMessage = 'Erro ao atualizar Pix: $e';
+      print('[!!! VIPER !!!] ERROR ao atualizar Pix: $e');
+      rethrow;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
   void _setLoading(bool value) {
     isLoading = value;
-    notifyListeners();
+    update();
+  }
+
+  Future<void> finalizeRide({
+    required ViperExecutionSummary summary,
+    String? receiverName,
+    String? receiverCpf,
+    File? proofPhoto,
+  }) async {
+    // Simulação de delay para feedback visual solicitado
+    await Future.delayed(const Duration(milliseconds: 1500));
+    
+    try {
+      final user = _supabase.auth.currentUser;
+      if (user == null) throw Exception('Sessão expirada.');
+
+      String? photoUrl;
+      if (proofPhoto != null) {
+        photoUrl = await _uploadService.uploadFile(
+          bucket: 'driver_documents', // Usando bucket existente para simplificação
+          userId: user.id,
+          docType: 'delivery_proof_${DateTime.now().millisecondsSinceEpoch}',
+          file: proofPhoto,
+        );
+      }
+
+      // Persistência no Supabase: Registrando o histórico da execução com Proof of Delivery
+      await _supabase.from('ride_history').insert({
+        'driver_id': user.id,
+        'amount': summary.totalValue,
+        'count_success': summary.countSuccess,
+        'count_failed': summary.countFailed,
+        'payment_status': summary.paymentStatus.name,
+        'receiver_name': receiverName,
+        'receiver_cpf': receiverCpf,
+        'proof_photo_url': photoUrl,
+        'completed_at': DateTime.now().toIso8601String(),
+      });
+      
+      print('[!!! VIPER !!!] Checkout BLINDADO finalizado e persistido no Supabase.');
+    } catch (e) {
+      print('[!!! VIPER !!!] Erro no Checkout: $e');
+      rethrow;
+    }
   }
 }

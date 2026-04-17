@@ -117,6 +117,7 @@ class AuthController extends ChangeNotifier {
     required String cnhNumber,
     required String cnhCategory,
     required String pixKey,
+    String? avatarUrl,
   }) async {
     _setLoading(true);
     try {
@@ -131,22 +132,29 @@ class AuthController extends ChangeNotifier {
       final tCnhNumber = cnhNumber.trim();
       final tPixKey = pixKey.trim();
 
+      final userMetadata = {
+        'first_name': tFirstName,
+        'last_name': tLastName,
+        'cpf': cpf,
+        'phone': phone,
+        'city': tCity,
+        'neighborhood': tNeighborhood,
+        'state': tState,
+        'address': tAddress,
+        'cnh_number': tCnhNumber,
+        'cnh_category': cnhCategory,
+        'pix_key': tPixKey,
+        'avatar_url': avatarUrl,
+      };
+
       final AuthResponse response = await _supabase.auth.signUp(
         email: tEmail,
         password: password,
-        data: {
-          'first_name': tFirstName,
-          'last_name': tLastName,
-          'cpf': cpf,
-          'phone': phone,
-          'city': tCity,
-          'neighborhood': tNeighborhood,
-          'state': tState,
-          'address': tAddress,
-          'cnh_number': tCnhNumber,
-          'cnh_category': cnhCategory,
-          'pix_key': tPixKey,
-        },
+        data: userMetadata,
+        emailRedirectTo: 'viperdelivery://login-callback',
+      );
+      
+      return response.user?.id;
         emailRedirectTo: 'viperdelivery://login-callback',
       );
       

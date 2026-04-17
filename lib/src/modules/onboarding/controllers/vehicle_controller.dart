@@ -97,12 +97,15 @@ class VehicleController extends ChangeNotifier {
         throw Exception('Todos os documentos e fotos da vistoria são obrigatórios.');
       }
 
+      // 🐍 VIPER: Docs -> Criminal: $criminalRecordUrl, Endereço: $addressProofUrl
+      debugPrint('🐍 VIPER: Docs -> Criminal: $criminalRecordUrl, Endereço: $addressProofUrl');
+
       // 1. Update Profile with Personal Documents
       await _supabase.from('profiles').update({
         'cnh_front_url': cnhFrontUrl,
         'criminal_record_url': criminalRecordUrl,
         'address_proof_url': addressProofUrl,
-        'status': 'pending_approval' // Update status here or later
+        'status': 'pending_approval'
       }).eq('id', user.id);
 
       // 2. Insert into Vehicles Table

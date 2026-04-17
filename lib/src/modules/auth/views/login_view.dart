@@ -67,7 +67,7 @@ class _LoginViewState extends State<LoginView> {
                 _authController.errorMessage ?? 'Erro ao fazer login',
                 style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
               ),
-              backgroundColor: Colors.redAccent.withValues(alpha: 0.9),
+              backgroundColor: Colors.redAccent.withOpacity(0.9),
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               margin: const EdgeInsets.all(16),
@@ -107,23 +107,25 @@ class _LoginViewState extends State<LoginView> {
           ElevatedButton(
             onPressed: () async {
               final email = emailResetController.text.trim();
-              if (email.isNotEmpty) {
-                try {
-                  await _authController.resetPassword(email);
-                  if (mounted) {
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('E-mail de recuperação enviado com sucesso!')),
-                    );
-                  }
-                } catch (e) {
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Erro: ${_authController.errorMessage}')),
-                    );
+                if (email.isNotEmpty) {
+                  final messenger = ScaffoldMessenger.of(context);
+                  final navigator = Navigator.of(context);
+                  try {
+                    await _authController.resetPassword(email);
+                    if (mounted) {
+                      navigator.pop();
+                      messenger.showSnackBar(
+                        const SnackBar(content: Text('E-mail de recuperação enviado com sucesso!')),
+                      );
+                    }
+                  } catch (e) {
+                    if (mounted) {
+                      messenger.showSnackBar(
+                        SnackBar(content: Text('Erro: ${_authController.errorMessage}')),
+                      );
+                    }
                   }
                 }
-              }
             },
             child: const Text('Enviar'),
           ),

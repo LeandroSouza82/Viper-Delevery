@@ -23,6 +23,23 @@ class UploadService {
     return _supabase.storage.from(bucket).getPublicUrl(storagePath);
   }
 
+  Future<String> uploadSelfie({
+    required String identifier,
+    required File file,
+  }) async {
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final ext = file.path.split('.').last;
+    final storagePath = '$identifier/selfie_$timestamp.$ext';
+
+    await _supabase.storage.from('driver_documents').upload(
+      storagePath,
+      file,
+      fileOptions: const FileOptions(upsert: true),
+    );
+
+    return _supabase.storage.from('driver_documents').getPublicUrl(storagePath);
+  }
+
   Future<String> uploadVehiclePhoto({
     required String userId,
     required String angle,
