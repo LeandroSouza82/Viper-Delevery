@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:viper_delivery/src/modules/home/controllers/settings_controller.dart';
 import 'package:viper_delivery/src/modules/home/controllers/viper_menu_controller.dart';
 import 'package:viper_delivery/src/modules/profile/widgets/edit_pix_modal.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class SettingsView extends StatefulWidget {
   final SettingsController settingsController;
@@ -267,7 +268,25 @@ class _SettingsViewState extends State<SettingsView> {
                 Center(
                   child: TextButton.icon(
                     onPressed: () {
-                      // TODO: Implementar Logout
+                      Get.defaultDialog(
+                        title: 'Sair do Viper?',
+                        titleStyle: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                        middleText: 'Tem certeza que deseja desconectar sua conta?',
+                        middleTextStyle: TextStyle(color: Colors.white.withOpacity(0.7)),
+                        backgroundColor: const Color(0xFF1E1E1E),
+                        radius: 16,
+                        textCancel: 'Cancelar',
+                        cancelTextColor: Colors.white,
+                        textConfirm: 'Sim, Sair',
+                        confirmTextColor: Colors.white,
+                        buttonColor: Colors.redAccent,
+                        onCancel: () {},
+                        onConfirm: () {
+                          Supabase.instance.client.auth.signOut();
+                          Get.back(); // Fecha o dialog
+                          Get.back(); // Fecha a tela de configurações para voltar ao lobby de login
+                        },
+                      );
                     },
                     icon: const Icon(Icons.logout, color: Colors.redAccent),
                     label: const Text('ENCERRAR SESSÃO', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),

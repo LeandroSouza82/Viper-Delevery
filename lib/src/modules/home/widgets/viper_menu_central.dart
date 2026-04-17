@@ -408,7 +408,26 @@ class _ViperMenuCentralState extends State<ViperMenuCentral> {
         mainAxisSize: MainAxisSize.min,
         children: [
           OutlinedButton.icon(
-            onPressed: () => Supabase.instance.client.auth.signOut(),
+            onPressed: () {
+              Get.defaultDialog(
+                title: 'Sair do Viper?',
+                titleStyle: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                middleText: 'Tem certeza que deseja desconectar sua conta?',
+                middleTextStyle: TextStyle(color: Colors.white.withOpacity(0.7)),
+                backgroundColor: const Color(0xFF1E1E1E),
+                radius: 16,
+                textCancel: 'Cancelar',
+                cancelTextColor: Colors.white,
+                textConfirm: 'Sim, Sair',
+                confirmTextColor: Colors.white,
+                buttonColor: Colors.redAccent,
+                onCancel: () {},
+                onConfirm: () {
+                  Supabase.instance.client.auth.signOut();
+                  Get.back(); // Fecha o dialog antes
+                },
+              );
+            },
             icon: const Icon(Icons.logout, size: 20),
             label: const Text('SAIR DO APP'),
             style: OutlinedButton.styleFrom(
