@@ -213,26 +213,67 @@ class ViperOfferOverlay extends StatelessWidget {
                       const SizedBox(width: 12),
                       // ACEITAR
                       Expanded(
-                        child: ElevatedButton(
-                          onPressed: () {
-                            HapticFeedback.vibrate();
-                            onAccept();
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF00C853),
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 18),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            elevation: 4,
+                        child: Container(
+                          height: 60,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFF00C853).withOpacity(0.3),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
                           ),
-                          child: const Text(
-                            'ACEITAR',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: 1.5,
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(20),
+                            child: Material(
+                              color: const Color(0xFF00C853).withOpacity(0.15), // Base light green
+                              child: InkWell(
+                                onTap: () {
+                                  HapticFeedback.vibrate();
+                                  onAccept();
+                                },
+                                child: Stack(
+                                  children: [
+                                    // Camada de Progresso (Vibrante)
+                                    TweenAnimationBuilder<double>(
+                                      tween: Tween<double>(begin: 1.0, end: 0.0),
+                                      duration: const Duration(seconds: 12),
+                                      builder: (context, value, child) {
+                                        return FractionallySizedBox(
+                                          widthFactor: value,
+                                          alignment: Alignment.centerLeft,
+                                          child: Container(
+                                            decoration: const BoxDecoration(
+                                              color: Color(0xFF00C853),
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                    // Texto por cima de tudo
+                                    const Center(
+                                      child: Text(
+                                        'ACEITAR',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.w900,
+                                          letterSpacing: 1.5,
+                                          shadows: [
+                                            Shadow(
+                                              color: Colors.black26,
+                                              offset: Offset(0, 1),
+                                              blurRadius: 2,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             ),
                           ),
                         ),
