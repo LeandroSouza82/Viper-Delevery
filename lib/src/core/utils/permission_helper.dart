@@ -87,6 +87,21 @@ class PermissionHelper {
       await Permission.ignoreBatteryOptimizations.request();
     }
 
+    // 5. Sobreposição de Sistema (Overlay)
+    var overlayStatus = await Permission.systemAlertWindow.status;
+    if (!context.mounted) return false;
+
+    if (!overlayStatus.isGranted) {
+      await showExplanationDialog(
+        context,
+        title: 'Sobreposição de Tela',
+        message: 'Para receber ofertas enquanto usa o Waze ou Google Maps, ative a sobreposição para o Viper Delivery na próxima tela.',
+      );
+      if (!context.mounted) return false;
+
+      await Permission.systemAlertWindow.request();
+    }
+
     return true;
   }
 }

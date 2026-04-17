@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'dart:async';
 import 'package:viper_delivery/src/modules/home/controllers/home_controller.dart';
 import 'package:viper_delivery/src/modules/home/controllers/settings_controller.dart';
 import 'package:viper_delivery/src/modules/home/widgets/stats_pill_widget.dart';
@@ -35,6 +36,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
   final ValueNotifier<double> _sheetExtent = ValueNotifier<double>(0.16);
   final ValueNotifier<List<ViperOrder>> _rideOrders = ValueNotifier<List<ViperOrder>>([]);
   final ValueNotifier<ViperOffer?> _activeOffer = ValueNotifier<ViperOffer?>(null);
+  Timer? _offerTimer;
 
   static const double _minExtent = 0.16;
   static const double _fadeLimit = 0.5;
@@ -43,6 +45,10 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    
+    // Escuta mudanças na oferta para disparar o timer de 12s
+    _activeOffer.addListener(_onOfferChanged);
+    
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _settingsController.init();
       _homeController.initializeResilience(context);
@@ -53,11 +59,26 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _activeOffer.removeListener(_onOfferChanged);
+    _offerTimer?.cancel();
     _sheetExtent.dispose();
     _rideOrders.dispose();
     _activeOffer.dispose();
     _dispatchService.dispose();
     super.dispose();
+  }
+
+  void _onOfferChanged() {
+    _offerTimer?.cancel();
+    if (_activeOffer.value != null) {
+      // Regra dos 12 segundos: se o motorista não agir, a oferta some
+      _offerTimer = Timer(const Duration(seconds: 12), () {
+        if (mounted) {
+          print('[!!! VIPER !!!] Oferta expirada por tempo limite (12s).');
+          _activeOffer.value = null;
+        }
+      });
+    }
   }
 
   // Lógica de Dispatch simplificada para rodar apenas em background (logs)
@@ -90,7 +111,6 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
       _settingsController.reevaluateAutoTheme();
     }
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -126,37 +146,31 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
               },
               child: Stack(
                 children: [
-                  // 1. Mapa
+                  // 1. Mapa (Fundo)
                   Positioned.fill(child: ViperMapWidget(key: _mapWidgetKey)),
                   
-                  // 2. Painel Inferior (ViperBottomSheetPanel)
-                  ValueListenableBuilder<ViperOffer?>(
-                    valueListenable: _activeOffer,
-                    builder: (context, currentOffer, child) {
-                      return ViperBottomSheetPanel(
-                        key: _ridePanelKey,
-                        isDark: isDark,
-                        bottomSafePadding: safeBottomHeight,
-                        orders: _rideOrders,
-                        offer: currentOffer,
-                        menuController: _menuController,
-                        onFinalize: () {
-                          _activeOffer.value = null;
-                        },
-                        isClt: _homeController.isClt,
-                      );
-                    },
+                  // 2. HUD - Cápsula de Status (Topo)
+                  Positioned(
+                    top: topPadding + 15,
+                    left: 0,
+                    right: 0,
+                    child: Center(
+                      child: StatsPillWidget(
+                        homeController: _homeController,
+                        settingsController: _settingsController,
+                      ),
+                    ),
                   ),
 
-                  // 3. Botão Online/Offline / Retorno à Base
+                  // 3. Botão Acionar Rota (Online/Offline) - Reposicionado para ficar acima da Dragon Ball (em descaso)
                   ValueListenableBuilder<double>(
                     valueListenable: _sheetExtent,
                     builder: (context, extent, child) {
+                      // O botão fica fixo perto da base, e a Dragon Ball o cobre ao subir
                       final opacity = ((_fadeLimit - extent) / (_fadeLimit - _minExtent)).clamp(0.0, 1.0);
-                      final bottomPosition = (extent * screenHeight) + 25;
-
+                      
                       return Positioned(
-                        bottom: bottomPosition,
+                        bottom: (screenHeight * _minExtent) + 15, // Pousa 15px acima da Dragon Ball fechada
                         left: 24,
                         right: 24,
                         child: IgnorePointer(
@@ -170,14 +184,11 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                                 final orders = _rideOrders.value;
                                 final hasActive = orders.any((o) => o.status == ViperOrderStatus.pending);
                                 final hasFailed = orders.any((o) => o.status == ViperOrderStatus.failed);
-                                
-                                // Lógica de Botão de Retorno
                                 final isReturning = !hasActive && hasFailed && orders.isNotEmpty;
 
                                 return ElevatedButton(
                                   onPressed: () {
                                     if (isReturning) {
-                                      // Focar no ponto de coleta original
                                       _mapWidgetKey.currentState?.recenter(); 
                                       ScaffoldMessenger.of(context).showSnackBar(
                                         const SnackBar(content: Text('Retornando à base para devoluções...')),
@@ -201,16 +212,12 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
                                       Icon(
-                                        isReturning 
-                                            ? Icons.keyboard_return 
-                                            : (isOnline ? Icons.power_settings_new : Icons.play_arrow), 
+                                        isReturning ? Icons.keyboard_return : (isOnline ? Icons.power_settings_new : Icons.play_arrow), 
                                         color: Colors.white
                                       ),
                                       const SizedBox(width: 12),
                                       Text(
-                                        isReturning 
-                                            ? 'RETORNAR À BASE' 
-                                            : (isOnline ? 'FICAR OFFLINE' : 'FICAR ONLINE'),
+                                        isReturning ? 'RETORNAR À BASE' : (isOnline ? 'FICAR OFFLINE' : 'FICAR ONLINE'),
                                         style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 1.2),
                                       ),
                                     ],
@@ -224,76 +231,14 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                     },
                   ),
 
-                  // 4. Overlay de Oferta
-                  ValueListenableBuilder<ViperOffer?>(
-                    valueListenable: _activeOffer,
-                    builder: (context, offer, child) {
-                      if (offer == null) return const SizedBox.shrink();
-                      return Container(
-                        color: Colors.black54,
-                        child: ViperOfferOverlay(
-                          offer: offer,
-                          isDark: isDark,
-                          onAccept: () => _onAcceptOffer(offer),
-                          onDecline: () => _activeOffer.value = null,
-                        ),
-                      );
-                    },
-                  ),
-
-                  // 5. HUD - Cápsula de Status
-                  Positioned(
-                    top: topPadding + 15,
-                    left: 0,
-                    right: 0,
-                    child: Center(
-                      child: StatsPillWidget(
-                        homeController: _homeController,
-                        settingsController: _settingsController,
-                      ),
-                    ),
-                  ),
-
-                  // 6. Coluna de Botões Flutuantes (Radar, Menu, Ajustes)
+                  // 4. Menu Lateral (Gatilho da Gaveta)
                   Positioned(
                     top: topPadding + 15,
                     left: 15,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        HomeMenuIcon(settingsController: _settingsController),
-                        const SizedBox(height: 12),
-                        // RADAR (Simulador de Ofertas)
-                        _buildFloatingButton(
-                          icon: Icons.radar_rounded,
-                          onPressed: _onRadarPressed,
-                          isDark: isDark,
-                          heroTag: 'radar_btn',
-                        ),
-                        const SizedBox(height: 12),
-                        // AJUSTES
-                        _buildFloatingButton(
-                          icon: Icons.tune_rounded,
-                          onPressed: () {},
-                          isDark: isDark,
-                          heroTag: 'tune_btn',
-                        ),
-                        const SizedBox(height: 12),
-                        // CONFIGURAÇÕES
-                        _buildFloatingButton(
-                          icon: Icons.settings_rounded,
-                          onPressed: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (context) => SettingsView(settingsController: _settingsController)),
-                          ),
-                          isDark: isDark,
-                          heroTag: 'settings_btn',
-                        ),
-                      ],
-                    ),
+                    child: HomeMenuIcon(settingsController: _settingsController),
                   ),
 
-                  // 7. Botão Recentalizar
+                  // 5. Botão Recentalizar
                   Positioned(
                     top: topPadding + 15,
                     right: 15,
@@ -303,11 +248,51 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                     ),
                   ),
 
-                  // 8. Botão SOS
+                  // 6. Botão SOS
                   Positioned(
                     top: topPadding + 75,
                     right: 15,
                     child: SOSEmergencyButton(settingsController: _settingsController),
+                  ),
+
+                  // 7. Painel Inferior (Dragon Ball / ViperBottomSheetPanel)
+                  // Movido para cá para que ele cubra os elementos acima quando expandido
+                  ValueListenableBuilder<ViperOffer?>(
+                    valueListenable: _activeOffer,
+                    builder: (context, currentOffer, child) {
+                      return ViperBottomSheetPanel(
+                        key: _ridePanelKey,
+                        isDark: isDark,
+                        bottomSafePadding: safeBottomHeight,
+                        orders: _rideOrders,
+                        offer: currentOffer,
+                        menuController: _menuController,
+                        settingsController: _settingsController,
+                        onFinalize: () {
+                          _activeOffer.value = null;
+                        },
+                        isClt: _homeController.isClt,
+                      );
+                    },
+                  ),
+
+                  // 8. O REI DA TELA: Overlay de Oferta
+                  ValueListenableBuilder<ViperOffer?>(
+                    valueListenable: _activeOffer,
+                    builder: (context, offer, child) {
+                      if (offer == null) return const SizedBox.shrink();
+                      return Container(
+                        width: double.infinity,
+                        height: double.infinity,
+                        color: Colors.black.withOpacity(0.6),
+                        child: ViperOfferOverlay(
+                          offer: offer,
+                          isDark: isDark,
+                          onAccept: () => _onAcceptOffer(offer),
+                          onDecline: () => _activeOffer.value = null,
+                        ),
+                      );
+                    },
                   ),
 
                   // Molduras de Sistema

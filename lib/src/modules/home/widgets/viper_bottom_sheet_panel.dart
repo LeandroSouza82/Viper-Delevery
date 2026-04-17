@@ -5,6 +5,8 @@ import 'package:viper_delivery/src/modules/returns/widgets/returns_tab_view.dart
 import 'package:viper_delivery/src/modules/home/services/pricing_service.dart';
 import 'package:viper_delivery/src/modules/home/controllers/viper_menu_controller.dart';
 import 'package:viper_delivery/src/modules/home/widgets/viper_receipt_bottom_sheet.dart';
+import 'package:viper_delivery/src/modules/home/controllers/settings_controller.dart';
+import 'package:viper_delivery/src/modules/home/views/settings_view.dart';
 
 class ViperBottomSheetPanel extends StatefulWidget {
   const ViperBottomSheetPanel({
@@ -15,6 +17,7 @@ class ViperBottomSheetPanel extends StatefulWidget {
     required this.offer,
     required this.onFinalize,
     required this.menuController,
+    required this.settingsController,
     this.isClt = false,
   });
 
@@ -24,6 +27,7 @@ class ViperBottomSheetPanel extends StatefulWidget {
   final ViperOffer? offer;
   final VoidCallback onFinalize;
   final ViperMenuController menuController;
+  final SettingsController settingsController;
   final bool isClt;
 
   @override
@@ -163,20 +167,13 @@ class ViperBottomSheetPanelState extends State<ViperBottomSheetPanel> {
                               // ÁREA DRAGGABLE 1: Handle
                               _buildHandle(handleColor),
                               
-                              // ÁREA DRAGGABLE 2: Cabeçalho
-                              _buildHeader(activeOrders.length),
+                              // HEADER PRINCIPAL (GEAR | VIPER | AJUSTES)
+                              _buildDragonBallHeader(context),
                               
-                              // ÁREA DRAGGABLE 3: Abas
-                              TabBar(
-                                indicatorColor: const Color(0xFF0055FF),
-                                labelColor: widget.isDark ? Colors.white : Colors.black,
-                                unselectedLabelColor: Colors.grey,
-                                indicatorWeight: 3,
-                                tabs: [
-                                  Tab(text: 'Rota (${activeOrders.length})'),
-                                  Tab(text: 'Falhas (${failedOrders.length})'),
-                                ],
-                              ),
+                              // SELETOR DE ABAS (ROTA | FALHA)
+                              _buildTabSelector(tabController, activeOrders.length, failedOrders.length),
+                              
+                              const SizedBox(height: 8),
                               
                               // CONTEÚDO DINÂMICO (Substituindo TabBarView por ShrinkWrap)
                               Container(
@@ -299,22 +296,85 @@ class ViperBottomSheetPanelState extends State<ViperBottomSheetPanel> {
     );
   }
 
-  Widget _buildHeader(int count) {
+  Widget _buildDragonBallHeader(BuildContext context) {
+    final textColor = widget.isDark ? Colors.white : Colors.black;
+
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          const Icon(Icons.delivery_dining, color: Color(0xFF0055FF)),
-          const SizedBox(width: 12),
+          // Lado Esquerdo: Engrenagem
+          _buildHeaderButton(
+            icon: Icons.settings_rounded,
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => SettingsView(settingsController: widget.settingsController)),
+            ),
+          ),
+          
+          // Centro: Logo/Texto Viper
           Text(
-            count > 1 ? 'Super Rota Ativa' : 'Próxima Parada',
+            'VIPER',
             style: TextStyle(
-              fontSize: 20,
+              fontSize: 22,
               fontWeight: FontWeight.w900,
-              color: widget.isDark ? Colors.white : Colors.black,
+              letterSpacing: 4,
+              color: textColor,
+            ),
+          ),
+          
+          // Lado Direito: Ajustes (Sliders)
+          _buildHeaderButton(
+            icon: Icons.tune_rounded,
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => SettingsView(settingsController: widget.settingsController)),
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildHeaderButton({required IconData icon, required VoidCallback onPressed}) {
+    return IconButton(
+      icon: Icon(icon, color: widget.isDark ? Colors.white70 : Colors.black87),
+      onPressed: onPressed,
+      visualDensity: VisualDensity.compact,
+    );
+  }
+
+  Widget _buildTabSelector(TabController controller, int rotaCount, int falhaCount) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      child: Container(
+        height: 45,
+        decoration: BoxDecoration(
+          color: widget.isDark ? Colors.white12 : Colors.black.withOpacity(0.05),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: TabBar(
+          controller: controller,
+          indicator: BoxDecoration(
+            borderRadius: BorderRadius.circular(10),
+            color: const Color(0xFF0055FF),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF0055FF).withOpacity(0.3),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          labelColor: Colors.white,
+          unselectedLabelColor: widget.isDark ? Colors.white38 : Colors.black38,
+          labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+          tabs: [
+            Tab(text: 'ROTA ($rotaCount)'),
+            Tab(text: 'FALHA ($falhaCount)'),
+          ],
+        ),
       ),
     );
   }

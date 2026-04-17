@@ -5,6 +5,8 @@ import 'package:viper_delivery/src/models/driver_model.dart';
 import 'package:viper_delivery/src/modules/onboarding/services/upload_service.dart';
 import 'dart:io';
 import 'package:viper_delivery/src/core/services/location_service.dart';
+import 'package:viper_delivery/src/core/utils/permission_helper.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class ViperMenuController extends ChangeNotifier {
   final SupabaseClient _supabase = Supabase.instance.client;
@@ -52,15 +54,17 @@ class ViperMenuController extends ChangeNotifier {
       // 2. Fetch Weekly Earnings (Last 7 days)
       await _fetchWeeklyPerformance(user.id);
 
-      // 3. Captura de Localização REAL (Bússola)
-      print('[!!! VIPER !!!] Solicitando GPS Real...');
+      // 3. Captura de Localização REAL
       final position = await LocationService.getCurrentLocation();
       if (position != null) {
         userLatitude = position.latitude;
         userLongitude = position.longitude;
-        print('[!!! VIPER !!!] GPS REAL CAPTURADO: $userLatitude, $userLongitude');
-      } else {
-        print('[!!! VIPER !!!] GPS não disponível. Usando modo offline/mock.');
+      }
+
+      // 4. Verificação de Sobreposição (Somente Android)
+      if (Platform.isAndroid) {
+        final status = await Permission.systemAlertWindow.status;
+        print('[!!! VIPER !!!] Status Sobreposição: $status');
       }
       
       notifyListeners();
