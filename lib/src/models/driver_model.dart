@@ -1,3 +1,5 @@
+import 'package:viper_delivery/src/models/vehicle_model.dart';
+
 class DriverModel {
   final String id;
   final String firstName;
@@ -13,7 +15,7 @@ class DriverModel {
   final String? pixKey;
   final String? avatarUrl;
   final bool? isClt;
-  final List<dynamic>? vehicles;
+  final List<VehicleModel>? vehicles;
 
   DriverModel({
     required this.id,
@@ -48,7 +50,7 @@ class DriverModel {
     String? pixKey,
     String? avatarUrl,
     bool? isClt,
-    List<dynamic>? vehicles,
+    List<VehicleModel>? vehicles,
   }) {
     return DriverModel(
       id: id ?? this.id,
@@ -85,7 +87,9 @@ class DriverModel {
       pixKey: map['pix_key'],
       avatarUrl: map['avatar_url'], // Mapeamento crítico: chave exata do banco
       isClt: map['is_clt'],
-      vehicles: map['vehicles'],
+      vehicles: (map['vehicles'] as List<dynamic>?)
+          ?.map((v) => VehicleModel.fromMap(v as Map<String, dynamic>))
+          .toList(),
     );
   }
 }
