@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:flutter/services.dart';
 import 'dart:async';
 import 'package:viper_delivery/src/modules/home/controllers/home_controller.dart';
@@ -27,7 +28,7 @@ class HomeView extends StatefulWidget {
 class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
   final SettingsController _settingsController = SettingsController();
   final HomeController _homeController = HomeController();
-  final ViperMenuController _menuController = ViperMenuController();
+  final ViperMenuController _menuController = Get.put(ViperMenuController());
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final GlobalKey<ViperMapWidgetState> _mapWidgetKey = GlobalKey<ViperMapWidgetState>();
   final GlobalKey<ViperBottomSheetPanelState> _ridePanelKey = GlobalKey<ViperBottomSheetPanelState>();
@@ -273,11 +274,13 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                   ),
 
                   // 6. Botão SOS
-                  Positioned(
-                    top: topPadding + 75,
-                    right: 15,
-                    child: SOSEmergencyButton(settingsController: _settingsController),
-                  ),
+                  Obx(() => _menuController.showPanicButton.value
+                    ? Positioned(
+                        top: topPadding + 75,
+                        right: 15,
+                        child: SOSEmergencyButton(settingsController: _settingsController),
+                      )
+                    : const SizedBox.shrink()),
 
                   // 7. Painel Inferior (Dragon Ball / ViperBottomSheetPanel)
                   // Movido para cá para que ele cubra os elementos acima quando expandido

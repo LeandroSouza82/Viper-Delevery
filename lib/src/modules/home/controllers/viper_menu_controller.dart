@@ -1,14 +1,14 @@
-import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:viper_delivery/src/modules/home/models/viper_order.dart';
 import 'package:viper_delivery/src/models/driver_model.dart';
 import 'package:viper_delivery/src/modules/onboarding/services/upload_service.dart';
 import 'dart:io';
 import 'package:viper_delivery/src/core/services/location_service.dart';
-import 'package:viper_delivery/src/core/utils/permission_helper.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:flutter/foundation.dart'; // For debugPrint
 
-class ViperMenuController extends ChangeNotifier {
+class ViperMenuController extends GetxController {
   final SupabaseClient _supabase = Supabase.instance.client;
   final UploadService _uploadService = UploadService();
   
@@ -20,6 +20,9 @@ class ViperMenuController extends ChangeNotifier {
   // Estado Global da Localização Real
   double? userLatitude;
   double? userLongitude;
+
+  // Controle de Visibilidade do Botão do Pânico (SOS) - GetX RX
+  var showPanicButton = true.obs;
 
   Future<void> fetchAllData() async {
     print('--------------------------------------------------');
@@ -67,7 +70,7 @@ class ViperMenuController extends ChangeNotifier {
         print('[!!! VIPER !!!] Status Sobreposição: $status');
       }
       
-      notifyListeners();
+      update();
     } catch (e) {
       errorMessage = 'Erro ao carregar dados: ${e.toString()}';
       print('[!!! VIPER !!!] ERROR no MenuController: $e');
@@ -127,7 +130,7 @@ class ViperMenuController extends ChangeNotifier {
       }
       
       print('[!!! VIPER !!!] Pix Key atualizada com sucesso: $newKey');
-      notifyListeners();
+      update();
     } catch (e) {
       errorMessage = 'Erro ao atualizar Pix: $e';
       print('[!!! VIPER !!!] ERROR ao atualizar Pix: $e');
@@ -139,7 +142,7 @@ class ViperMenuController extends ChangeNotifier {
 
   void _setLoading(bool value) {
     isLoading = value;
-    notifyListeners();
+    update();
   }
 
   Future<void> finalizeRide({

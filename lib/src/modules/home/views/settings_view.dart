@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:viper_delivery/src/modules/home/controllers/settings_controller.dart';
 import 'package:viper_delivery/src/modules/home/controllers/viper_menu_controller.dart';
 import 'package:viper_delivery/src/modules/profile/widgets/edit_pix_modal.dart';
@@ -16,7 +17,7 @@ class SettingsView extends StatefulWidget {
 }
 
 class _SettingsViewState extends State<SettingsView> {
-  final _menuController = ViperMenuController();
+  final _menuController = Get.find<ViperMenuController>();
   final _searchController = TextEditingController();
 
   @override
@@ -35,7 +36,7 @@ class _SettingsViewState extends State<SettingsView> {
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: Listenable.merge([widget.settingsController, _menuController]),
+      listenable: widget.settingsController,
       builder: (context, child) {
         final isDark = widget.settingsController.isDarkTheme;
         final bgColor = isDark ? const Color(0xFF121212) : Colors.white;
@@ -247,15 +248,15 @@ class _SettingsViewState extends State<SettingsView> {
                       const SizedBox(height: 16),
                       Divider(color: borderColor.withOpacity(0.1)),
                       const SizedBox(height: 16),
-                      _buildViperSwitchTile(
+                      Obx(() => _buildViperSwitchTile(
                         label: 'Botão de Pânico',
                         subtitle: 'Atalho rápido no mapa',
                         icon: Icons.warning_amber_rounded,
-                        value: widget.settingsController.isPanicButtonEnabled,
-                        onChanged: (val) => widget.settingsController.setPanicButtonEnabled(val),
+                        value: _menuController.showPanicButton.value,
+                        onChanged: (val) => _menuController.showPanicButton.value = val,
                         isDark: isDark,
                         textColor: textColor,
-                      ),
+                      )),
                     ],
                   ),
                 ),
