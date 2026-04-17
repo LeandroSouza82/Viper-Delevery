@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:viper_delivery/src/modules/home/models/viper_order.dart';
 
-class ViperOfferOverlay extends StatelessWidget {
+class ViperOfferOverlay extends StatefulWidget {
   final ViperOffer offer;
   final VoidCallback onAccept;
   final VoidCallback onDecline;
@@ -17,13 +17,46 @@ class ViperOfferOverlay extends StatelessWidget {
   });
 
   @override
+  State<ViperOfferOverlay> createState() => _ViperOfferOverlayState();
+}
+
+class _ViperOfferOverlayState extends State<ViperOfferOverlay> with SingleTickerProviderStateMixin {
+  late AnimationController _pulseController;
+  late Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulseController = AnimationController(
+      duration: const Duration(milliseconds: 450), // Ciclo suave de pulsar
+      vsync: this,
+    );
+
+    _scaleAnimation = Tween<double>(
+      begin: 1.0,
+      end: 1.05, // Aumento de 5%
+    ).animate(CurvedAnimation(
+      parent: _pulseController,
+      curve: Curves.easeInOut,
+    ));
+
+    _pulseController.repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final bgColor = isDark ? const Color(0xFF1E1E1E) : Colors.white;
-    final textColor = isDark ? Colors.white : Colors.black;
+    final bgColor = widget.isDark ? const Color(0xFF1E1E1E) : Colors.white;
+    final textColor = widget.isDark ? Colors.white : Colors.black;
 
     // Identidade visual baseada no tipo de pedido (ou Super Rota)
-    final mainType = offer.orders.isNotEmpty ? offer.orders.first.tipo : ViperOrderType.entrega;
-    final serviceColor = offer.isSuper ? Colors.tealAccent[400]! : mainType.color;
+    final mainType = widget.offer.orders.isNotEmpty ? widget.offer.orders.first.tipo : ViperOrderType.entrega;
+    final serviceColor = widget.offer.isSuper ? Colors.tealAccent[400]! : mainType.color;
 
     return TweenAnimationBuilder<double>(
       duration: const Duration(milliseconds: 600),
@@ -36,294 +69,304 @@ class ViperOfferOverlay extends StatelessWidget {
         );
       },
       child: Center(
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            Container(
-              margin: const EdgeInsets.symmetric(horizontal: 24),
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: bgColor,
-                borderRadius: BorderRadius.circular(28),
-                border: Border.all(
-                  color: offer.priorityBoost > 0 ? Colors.orangeAccent : serviceColor, 
-                  width: (offer.isSuper || offer.priorityBoost > 0) ? 3 : 2
+        child: AnimatedBuilder(
+          animation: _scaleAnimation,
+          builder: (context, child) {
+            return Transform.scale(
+              scale: _scaleAnimation.value,
+              alignment: Alignment.center,
+              child: child,
+            );
+          },
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 24),
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: bgColor,
+                  borderRadius: BorderRadius.circular(28),
+                  border: Border.all(
+                    color: widget.offer.priorityBoost > 0 ? Colors.orangeAccent : serviceColor, 
+                    width: (widget.offer.isSuper || widget.offer.priorityBoost > 0) ? 3 : 2
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: (widget.offer.priorityBoost > 0 ? Colors.orangeAccent : serviceColor).withAlpha(widget.isDark ? 80 : 40),
+                      blurRadius: 40,
+                      offset: const Offset(0, 10),
+                    ),
+                  ],
                 ),
-                boxShadow: [
-                  BoxShadow(
-                    color: (offer.priorityBoost > 0 ? Colors.orangeAccent : serviceColor).withAlpha(isDark ? 80 : 40),
-                    blurRadius: 40,
-                    offset: const Offset(0, 10),
-                  ),
-                ],
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // Título Superior (Apenas em Super Rota)
-                  if (offer.isSuper)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 4),
-                      child: Text(
-                        'SUPER ROTA',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: serviceColor,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 3,
-                        ),
-                      ),
-                    )
-                  else
-                    Center(
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: offer.priorityBoost > 0 ? Colors.orangeAccent : serviceColor,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Título Superior (Apenas em Super Rota)
+                    if (widget.offer.isSuper)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 4),
                         child: Text(
-                          offer.priorityBoost > 0 ? 'OFERTA PRIORITÁRIA' : mainType.label,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 1.2,
-                          ),
-                        ),
-                      ),
-                    ),
-                  
-                  // VALOR (Destaque Máximo)
-                  Text(
-                    'R\$ ${offer.valorTotal.toStringAsFixed(2)}',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: offer.isSuper ? 54 : 32,
-                      fontWeight: FontWeight.w900,
-                      color: textColor,
-                      letterSpacing: -1,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        'Ida: R\$ 0,85/km  |  Rota: R\$ ${offer.valorKmRota.toStringAsFixed(2)}/km',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: textColor.withOpacity(0.5),
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                      if (offer.priorityBoost > 0) ...[
-                        const SizedBox(width: 8),
-                        const Icon(Icons.bolt, color: Colors.greenAccent, size: 14),
-                        Text(
-                          '+ R\$ ${offer.priorityBoost.toStringAsFixed(2)}',
-                          style: const TextStyle(color: Colors.greenAccent, fontWeight: FontWeight.bold, fontSize: 11),
-                        ),
-                      ],
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-
-                  // Print Style Body
-                  _buildStatRow('Distância Total', '${offer.distanciaTotal.toStringAsFixed(1)} KM', isDark),
-                  _buildStatRow('Deslocamento até Coleta', '${offer.distanciaDeslocamento.toStringAsFixed(1)} KM', isDark),
-                  _buildStatRow('Valor por KM', 'R\$ ${offer.valorPorKm.toStringAsFixed(2)}', isDark),
-                  const Divider(height: 32),
-
-                  // Locations
-                  _buildLocationRow(
-                    Icons.radio_button_checked,
-                    'Origem (Coleta)',
-                    offer.pickupNeighborhood,
-                    offer.pickupStreet,
-                    serviceColor,
-                    isDark,
-                  ),
-                  const SizedBox(height: 12),
-                  _buildLocationRow(
-                    Icons.location_on,
-                    'Destino Final',
-                    offer.dropoffNeighborhood,
-                    offer.dropoffStreet,
-                    offer.isSuper ? serviceColor : Colors.green,
-                    isDark,
-                  ),
-                  const SizedBox(height: 20),
-
-                  // Summary Info
-                  if (offer.isSuper)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 20),
-                      child: Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: serviceColor.withAlpha(20),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Text(
-                          'Rota otimizada com ${offer.qtdPedidos} entregas sequenciais.',
-                          style: TextStyle(color: serviceColor, fontSize: 12, fontWeight: FontWeight.bold),
+                          'SUPER ROTA',
                           textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: serviceColor,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 3,
+                          ),
                         ),
+                      )
+                    else
+                      Center(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: widget.offer.priorityBoost > 0 ? Colors.orangeAccent : serviceColor,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            widget.offer.priorityBoost > 0 ? 'OFERTA PRIORITÁRIA' : mainType.label,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 1.2,
+                            ),
+                          ),
+                        ),
+                      ),
+                    
+                    // VALOR (Destaque Máximo)
+                    Text(
+                      'R\$ ${widget.offer.valorTotal.toStringAsFixed(2)}',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: widget.offer.isSuper ? 54 : 32,
+                        fontWeight: FontWeight.w900,
+                        color: textColor,
+                        letterSpacing: -1,
                       ),
                     ),
-
-                  // Badges
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      _buildBadge(Icons.motorcycle, 'Moto', isDark),
-                      const SizedBox(width: 8),
-                      _buildBadge(Icons.pix, 'Pix', isDark),
-                      if (offer.isSuper) ...[
-                        const SizedBox(width: 8),
-                        _buildBadge(Icons.layers, '${offer.qtdPedidos} Pedidos', isDark),
-                      ],
-                    ],
-                  ),
-                  const SizedBox(height: 28),
-
-                  // Buttons
-                  Row(
-                    children: [
-                      // RECUSAR
-                      GestureDetector(
-                        onTap: () {
-                          HapticFeedback.lightImpact();
-                          onDecline();
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: isDark ? Colors.white10 : Colors.grey[200],
-                            borderRadius: BorderRadius.circular(20),
+                    const SizedBox(height: 4),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          'Ida: R\$ 0,85/km  |  Rota: R\$ ${widget.offer.valorKmRota.toStringAsFixed(2)}/km',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: textColor.withOpacity(0.5),
+                            letterSpacing: 0.5,
                           ),
-                          child: const Icon(Icons.close, color: Colors.red, size: 28),
+                        ),
+                        if (widget.offer.priorityBoost > 0) ...[
+                          const SizedBox(width: 8),
+                          const Icon(Icons.bolt, color: Colors.greenAccent, size: 14),
+                          Text(
+                            '+ R\$ ${widget.offer.priorityBoost.toStringAsFixed(2)}',
+                            style: const TextStyle(color: Colors.greenAccent, fontWeight: FontWeight.bold, fontSize: 11),
+                          ),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+  
+                    // Print Style Body
+                    _buildStatRow('Distância Total', '${widget.offer.distanciaTotal.toStringAsFixed(1)} KM', widget.isDark),
+                    _buildStatRow('Deslocamento até Coleta', '${widget.offer.distanciaDeslocamento.toStringAsFixed(1)} KM', widget.isDark),
+                    _buildStatRow('Valor por KM', 'R\$ ${widget.offer.valorPorKm.toStringAsFixed(2)}', widget.isDark),
+                    const Divider(height: 32),
+  
+                    // Locations
+                    _buildLocationRow(
+                      Icons.radio_button_checked,
+                      'Origem (Coleta)',
+                      widget.offer.pickupNeighborhood,
+                      widget.offer.pickupStreet,
+                      serviceColor,
+                      widget.isDark,
+                    ),
+                    const SizedBox(height: 12),
+                    _buildLocationRow(
+                      Icons.location_on,
+                      'Destino Final',
+                      widget.offer.dropoffNeighborhood,
+                      widget.offer.dropoffStreet,
+                      widget.offer.isSuper ? serviceColor : Colors.green,
+                      widget.isDark,
+                    ),
+                    const SizedBox(height: 20),
+  
+                    // Summary Info
+                    if (widget.offer.isSuper)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 20),
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: serviceColor.withAlpha(20),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Text(
+                            'Rota otimizada com ${widget.offer.qtdPedidos} entregas sequenciais.',
+                            style: TextStyle(color: serviceColor, fontSize: 12, fontWeight: FontWeight.bold),
+                            textAlign: TextAlign.center,
+                          ),
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      // ACEITAR
-                      Expanded(
-                        child: Container(
-                          height: 60,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(20),
-                            boxShadow: [
-                              BoxShadow(
-                                color: const Color(0xFF00C853).withOpacity(0.3),
-                                blurRadius: 10,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
+  
+                    // Badges
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        _buildBadge(Icons.motorcycle, 'Moto', widget.isDark),
+                        const SizedBox(width: 8),
+                        _buildBadge(Icons.pix, 'Pix', widget.isDark),
+                        if (widget.offer.isSuper) ...[
+                          const SizedBox(width: 8),
+                          _buildBadge(Icons.layers, '${widget.offer.qtdPedidos} Pedidos', widget.isDark),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 28),
+  
+                    // Buttons
+                    Row(
+                      children: [
+                        // RECUSAR
+                        GestureDetector(
+                          onTap: () {
+                            HapticFeedback.lightImpact();
+                            widget.onDecline();
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: widget.isDark ? Colors.white10 : Colors.grey[200],
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: const Icon(Icons.close, color: Colors.red, size: 28),
                           ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(20),
-                            child: Material(
-                              color: const Color(0xFF00C853).withOpacity(0.15), // Base light green
-                              child: InkWell(
-                                onTap: () {
-                                  HapticFeedback.vibrate();
-                                  onAccept();
-                                },
-                                child: Stack(
-                                  children: [
-                                    // Camada de Progresso (Vibrante)
-                                    TweenAnimationBuilder<double>(
-                                      tween: Tween<double>(begin: 1.0, end: 0.0),
-                                      duration: const Duration(seconds: 12),
-                                      builder: (context, value, child) {
-                                        return FractionallySizedBox(
-                                          widthFactor: value,
-                                          alignment: Alignment.centerLeft,
-                                          child: Container(
-                                            decoration: const BoxDecoration(
-                                              color: Color(0xFF00C853),
+                        ),
+                        const SizedBox(width: 12),
+                        // ACEITAR
+                        Expanded(
+                          child: Container(
+                            height: 60,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(20),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFF00C853).withOpacity(0.3),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(20),
+                              child: Material(
+                                color: const Color(0xFF00C853).withOpacity(0.15), // Base light green
+                                child: InkWell(
+                                  onTap: () {
+                                    HapticFeedback.vibrate();
+                                    widget.onAccept();
+                                  },
+                                  child: Stack(
+                                    children: [
+                                      // Camada de Progresso (Vibrante)
+                                      TweenAnimationBuilder<double>(
+                                        tween: Tween<double>(begin: 1.0, end: 0.0),
+                                        duration: const Duration(seconds: 12),
+                                        builder: (context, value, child) {
+                                          return FractionallySizedBox(
+                                            widthFactor: value,
+                                            alignment: Alignment.centerLeft,
+                                            child: Container(
+                                              decoration: const BoxDecoration(
+                                                color: Color(0xFF00C853),
+                                              ),
                                             ),
+                                          );
+                                        },
+                                      ),
+                                      // Texto por cima de tudo
+                                      const Center(
+                                        child: Text(
+                                          'ACEITAR',
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.w900,
+                                            letterSpacing: 1.5,
+                                            shadows: [
+                                              Shadow(
+                                                color: Colors.black26,
+                                                offset: Offset(0, 1),
+                                                blurRadius: 2,
+                                              ),
+                                            ],
                                           ),
-                                        );
-                                      },
-                                    ),
-                                    // Texto por cima de tudo
-                                    const Center(
-                                      child: Text(
-                                        'ACEITAR',
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.w900,
-                                          letterSpacing: 1.5,
-                                          shadows: [
-                                            Shadow(
-                                              color: Colors.black26,
-                                              offset: Offset(0, 1),
-                                              blurRadius: 2,
-                                            ),
-                                          ],
                                         ),
                                       ),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            // Badge de Boost (URGENTE)
-            if (offer.priorityBoost > 0)
-              Positioned(
-                top: -12,
-                right: 12,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFFFF9100), Color(0xFFFF3D00)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
+                      ],
                     ),
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.red.withOpacity(0.5),
-                        blurRadius: 12,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.priority_high, color: Colors.white, size: 14),
-                      const SizedBox(width: 4),
-                      Text(
-                        'URGENTE + R\$ ${offer.priorityBoost.toStringAsFixed(2)}',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                    ],
-                  ),
+                  ],
                 ),
               ),
-          ],
+              // Badge de Boost (URGENTE)
+              if (widget.offer.priorityBoost > 0)
+                Positioned(
+                  top: -12,
+                  right: 12,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFFFF9100), Color(0xFFFF3D00)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.red.withOpacity(0.5),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.priority_high, color: Colors.white, size: 14),
+                        const SizedBox(width: 4),
+                        Text(
+                          'URGENTE + R\$ ${widget.offer.priorityBoost.toStringAsFixed(2)}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );

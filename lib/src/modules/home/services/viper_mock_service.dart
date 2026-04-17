@@ -1,13 +1,10 @@
 import 'dart:math';
 import 'package:viper_delivery/src/modules/home/models/viper_order.dart';
 import 'package:viper_delivery/src/modules/home/services/viper_routing_service.dart';
-import 'package:geolocator/geolocator.dart';
 
 class ViperMockService {
   static final Random _random = Random();
 
-  // Coordenadas simuladas para a Grande Florianópolis
-  // Coordenadas simuladas para Palhoça e região (Coerência Regional)
   // Coordenadas simuladas para a Grande Florianópolis (Corredor Logístico)
   static const Map<String, List<double>> _coords = {
     // PALHOÇA
@@ -52,40 +49,45 @@ class ViperMockService {
     'Burger King',
   ];
 
-  /// Gera uma oferta baseada no GPS real e motor de precificação variável (Surge Pricing)
-  static ViperOffer generateOffer({double? userLat, double? userLng, bool? forceSuper}) {
+  /// Geradores Determinísticos para Ciclo de Testes
+  static ViperOffer getMockEntrega({double? lat, double? lng}) {
+    return generateOffer(userLat: lat, userLng: lng, forceSuper: false, forceType: ViperOrderType.entrega);
+  }
+
+  static ViperOffer getMockColeta({double? lat, double? lng}) {
+    return generateOffer(userLat: lat, userLng: lng, forceSuper: false, forceType: ViperOrderType.coleta);
+  }
+
+  static ViperOffer getMockOutros({double? lat, double? lng}) {
+    return generateOffer(userLat: lat, userLng: lng, forceSuper: false, forceType: ViperOrderType.outros);
+  }
+
+  /// Gera uma oferta baseada no GPS real e motor de precificação v5
+  static ViperOffer generateOffer({double? userLat, double? userLng, bool? forceSuper, ViperOrderType? forceType}) {
     final isSuper = forceSuper ?? _random.nextBool();
     final qtdPedidos = isSuper ? _random.nextInt(3) + 3 : 1; 
-    final mainType = ViperOrderType.values[_random.nextInt(ViperOrderType.values.length)];
+    final mainType = forceType ?? ViperOrderType.values[_random.nextInt(ViperOrderType.values.length)];
     final client = _clients[_random.nextInt(_clients.length)];
 
-    // 1. Usar Posição Real do Motorista (Marco Zero)
-    // Se não houver coordenadas reais (permissão negada etc), usa fallback de Florianópolis
     final currentLat = userLat ?? -27.5948;
     final currentLng = userLng ?? -48.5569;
 
-    // 2. Definir Ponto de Coleta (Sempre em Palhoça para o Corredor)
     final pickupAddr = _addrPalhoca[_random.nextInt(_addrPalhoca.length)];
     final pCoords = _coords[pickupAddr]!;
     final pParts = pickupAddr.split(',');
 
-    // 3. Gerar Pedidos (Entregas Fluxo Logístico: SJ -> Floripa)
     final List<ViperOrder> rawOrders = [];
     
     if (isSuper) {
-      // Super Rota Dinâmica (5 Pontos de Corredor)
-      // Parada 1 e 2 em São José
       for (int i = 0; i < 2; i++) {
         final addr = _addrSaoJose[_random.nextInt(_addrSaoJose.length)];
         rawOrders.add(_createOrder(addr, pickupAddr, pParts, client, mainType));
       }
-      // Parada 3 e 4 em Florianópolis
       for (int i = 0; i < 2; i++) {
         final addr = _addrFloripa[_random.nextInt(_addrFloripa.length)];
         rawOrders.add(_createOrder(addr, pickupAddr, pParts, client, mainType));
       }
     } else {
-      // Rota Simples (Local ou Regional)
       final allAddresses = [..._addrPalhoca, ..._addrSaoJose, ..._addrFloripa];
       String dropoffAddr;
       do {
@@ -94,7 +96,6 @@ class ViperMockService {
       rawOrders.add(_createOrder(dropoffAddr, pickupAddr, pParts, client, mainType));
     }
 
-    // 4. Rodar Motor de Roteirização baseado na posição REAL
     final routingResult = ViperRoutingService.optimize(
       driverLat: currentLat,
       driverLng: currentLng,
@@ -103,31 +104,17 @@ class ViperMockService {
       orders: rawOrders,
     );
 
-    // 5. Algoritmo de Precificação Viper v5 (Odômetro Acumulado)
-    // O totalDistance do routingResult já contém: (Motorista -> Coleta) + (Coleta -> Entrega 1 -> Entrega 2...)
     final double distIda = routingResult.distanceDriverToPickup;
     final double distRotaAcumulada = routingResult.distancePickupToDeliveries; 
     final double distTotalOdometro = routingResult.totalDistance;
 
-    // Taxa Fixa de Ida (Deslocamento): R$ 0,85/km
     const double valorKmIda = 0.85;
-    
-    // Taxa Dinâmica de Rota (Entrega): Sorteio entre R$ 1,35 e R$ 1,60/km 
-    // Aumentamos levemente para garantir a média alvo em trajetos mais longos
     final double valorKmRota = 1.35 + (_random.nextDouble() * 0.25);
 
-    // Valor Total = Soma de todas as pernas do odômetro
     double valorFinal = (distIda * valorKmIda) + (distRotaAcumulada * valorKmRota);
-    
-    // Trava 1: Bandeirada Mínima (R$ 7,50)
-    if (valorFinal < 7.50) {
-      valorFinal = 7.50;
-    }
+    if (valorFinal < 7.50) valorFinal = 7.50;
 
-    // Trava 2: Garantia de Média VIPER (Meta: R$ 1,20 a R$ 1,40 / KM Total)
     final double mediaKmReal = valorFinal / distTotalOdometro;
-    
-    // Se a média por KM total for menor que R$ 1,20, ajustamos para o alvo comercial de R$ 1,30/km
     if (mediaKmReal < 1.20) {
       valorFinal = distTotalOdometro * 1.30;
     }
@@ -135,7 +122,6 @@ class ViperMockService {
     final valorKmMedioFinal = valorFinal / distTotalOdometro;
     final valorFracionado = valorFinal / qtdPedidos;
 
-    // 6. Atualizar os pedidos roteirizados com o valor fracionado
     final List<ViperOrder> finalOrders = routingResult.optimizedOrders.map((o) {
       return ViperOrder(
         id: o.id,

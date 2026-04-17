@@ -7,6 +7,7 @@ import 'dart:io';
 import 'package:viper_delivery/src/core/services/location_service.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter/foundation.dart'; // For debugPrint
+import 'package:viper_delivery/src/modules/home/services/viper_mock_service.dart';
 
 class ViperMenuController extends GetxController {
   final SupabaseClient _supabase = Supabase.instance.client;
@@ -20,6 +21,51 @@ class ViperMenuController extends GetxController {
   // Estado Global da Localização Real
   double? userLatitude;
   double? userLongitude;
+
+  // Oferta Ativa (Global/Reativa)
+  var activeOffer = Rx<ViperOffer?>(null);
+
+  // Controle de Ciclo de Testes
+  int _testOfferIndex = 0;
+
+  void triggerNextTestOffer() {
+    // 1. Limpeza breve para resetar animações e timers na UI
+    activeOffer.value = null;
+
+    final lat = userLatitude;
+    final lng = userLongitude;
+
+    // 2. Ciclo de scenarios
+    switch (_testOfferIndex) {
+      case 0:
+        // Super Rota (Viper Math v5)
+        activeOffer.value = ViperMockService.generateOffer(userLat: lat, userLng: lng, forceSuper: true);
+        break;
+      case 1:
+        // Rota de Entrega
+        activeOffer.value = ViperMockService.getMockEntrega(lat: lat, lng: lng);
+        break;
+      case 2:
+        // Rota de Coleta
+        activeOffer.value = ViperMockService.getMockColeta(lat: lat, lng: lng);
+        break;
+      case 3:
+        // Outros Serviços
+        activeOffer.value = ViperMockService.getMockOutros(lat: lat, lng: lng);
+        break;
+    }
+
+    // 3. Incremento e reset do ciclo
+    _testOfferIndex = (_testOfferIndex + 1) % 4;
+    
+    print('[!!! VIPER !!!] Teste Ciclo #${_testOfferIndex} disparado.');
+    update();
+  }
+
+  void clearActiveOffer() {
+    activeOffer.value = null;
+    update();
+  }
 
   // Controle de Visibilidade do Botão do Pânico (SOS) - GetX RX
   var showPanicButton = true.obs;

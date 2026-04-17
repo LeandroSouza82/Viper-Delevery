@@ -36,8 +36,8 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
   
   final ValueNotifier<double> _sheetExtent = ValueNotifier<double>(0.16);
   final ValueNotifier<List<ViperOrder>> _rideOrders = ValueNotifier<List<ViperOrder>>([]);
-  final ValueNotifier<ViperOffer?> _activeOffer = ValueNotifier<ViperOffer?>(null);
   Timer? _offerTimer;
+  StreamSubscription? _offerSubscription;
 
   static const double _minExtent = 0.16;
   static const double _fadeLimit = 0.5;
@@ -48,7 +48,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     
     // Escuta mudanças na oferta para disparar o timer de 12s
-    _activeOffer.addListener(_onOfferChanged);
+    _offerSubscription = _menuController.activeOffer.listen((_) => _onOfferChanged());
     
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _settingsController.init();
@@ -60,23 +60,22 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _activeOffer.removeListener(_onOfferChanged);
+    _offerSubscription?.cancel();
     _offerTimer?.cancel();
     _sheetExtent.dispose();
     _rideOrders.dispose();
-    _activeOffer.dispose();
     _dispatchService.dispose();
     super.dispose();
   }
 
   void _onOfferChanged() {
     _offerTimer?.cancel();
-    if (_activeOffer.value != null) {
+    if (_menuController.activeOffer.value != null) {
       // Regra dos 12 segundos: se o motorista não agir, a oferta some
       _offerTimer = Timer(const Duration(seconds: 12), () {
         if (mounted) {
           print('[!!! VIPER !!!] Oferta expirada por tempo limite (12s).');
-          _activeOffer.value = null;
+          _menuController.clearActiveOffer();
         }
       });
     }
@@ -90,7 +89,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
   void _onRadarPressed() {
     HapticFeedback.selectionClick();
     // Simula a chegada de uma nova oferta aleatória
-    _activeOffer.value = ViperMockService.generateOffer(
+    _menuController.activeOffer.value = ViperMockService.generateOffer(
       userLat: _menuController.userLatitude,
       userLng: _menuController.userLongitude,
     );
@@ -98,17 +97,13 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
 
   void _onTestSimulation() {
     HapticFeedback.heavyImpact();
-    // Força uma SUPER ROTA (Palhoça -> Floripa) para validação do Viper Math v5
-    _activeOffer.value = ViperMockService.generateOffer(
-      userLat: _menuController.userLatitude,
-      userLng: _menuController.userLongitude,
-      forceSuper: true,
-    );
+    // Agora o ciclo é controlado pelo MenuController (Super -> Entrega -> Coleta -> Serviço)
+    _menuController.triggerNextTestOffer();
   }
 
   void _onAcceptOffer(ViperOffer offer) {
     _rideOrders.value = [..._rideOrders.value, ...offer.orders];
-    _activeOffer.value = null;
+    _menuController.clearActiveOffer();
     
     // Pequeno delay para garantir que o overlay sumiu antes do painel subir
     Future.delayed(const Duration(milliseconds: 100), () {
@@ -283,44 +278,36 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                     : const SizedBox.shrink()),
 
                   // 7. Painel Inferior (Dragon Ball / ViperBottomSheetPanel)
-                  // Movido para cá para que ele cubra os elementos acima quando expandido
-                  ValueListenableBuilder<ViperOffer?>(
-                    valueListenable: _activeOffer,
-                    builder: (context, currentOffer, child) {
-                      return ViperBottomSheetPanel(
+                  Obx(() => ViperBottomSheetPanel(
                         key: _ridePanelKey,
                         isDark: isDark,
                         bottomSafePadding: safeBottomHeight,
                         orders: _rideOrders,
-                        offer: currentOffer,
+                        offer: _menuController.activeOffer.value,
                         menuController: _menuController,
                         settingsController: _settingsController,
                         onFinalize: () {
-                          _activeOffer.value = null;
+                          _menuController.clearActiveOffer();
                         },
                         isClt: _homeController.isClt,
-                      );
-                    },
-                  ),
+                      )),
 
                   // 8. O REI DA TELA: Overlay de Oferta
-                  ValueListenableBuilder<ViperOffer?>(
-                    valueListenable: _activeOffer,
-                    builder: (context, offer, child) {
-                      if (offer == null) return const SizedBox.shrink();
-                      return Container(
-                        width: double.infinity,
-                        height: double.infinity,
-                        color: Colors.black.withOpacity(0.6),
-                        child: ViperOfferOverlay(
-                          offer: offer,
-                          isDark: isDark,
-                          onAccept: () => _onAcceptOffer(offer),
-                          onDecline: () => _activeOffer.value = null,
-                        ),
-                      );
-                    },
-                  ),
+                  Obx(() {
+                    final offer = _menuController.activeOffer.value;
+                    if (offer == null) return const SizedBox.shrink();
+                    return Container(
+                      width: double.infinity,
+                      height: double.infinity,
+                      color: Colors.black.withOpacity(0.6),
+                      child: ViperOfferOverlay(
+                        offer: offer,
+                        isDark: isDark,
+                        onAccept: () => _onAcceptOffer(offer),
+                        onDecline: () => _menuController.clearActiveOffer(),
+                      ),
+                    );
+                  }),
 
                   // Molduras de Sistema
                   Positioned(top: 0, left: 0, right: 0, child: Container(height: topPadding, color: Colors.black)),
