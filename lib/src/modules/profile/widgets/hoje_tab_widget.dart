@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:viper_delivery/src/modules/profile/views/history_view.dart';
-import 'package:viper_delivery/src/modules/profile/views/wallet_view.dart';
 import 'package:viper_delivery/src/modules/profile/views/acceptance_rate_view.dart';
 import 'package:viper_delivery/src/modules/home/controllers/settings_controller.dart';
 
@@ -158,14 +157,6 @@ class HojeTabWidget extends StatelessWidget {
           isDark: isDark,
           textColor: textColor,
           onPressed: () => Get.to(() => const HistoryView()),
-        ),
-        const SizedBox(height: 12),
-        _buildActionButton(
-          icon: Icons.account_balance_wallet_rounded,
-          label: 'Minha Carteira',
-          isDark: isDark,
-          textColor: textColor,
-          onPressed: () => Get.to(() => const WalletView()),
         ),
         const SizedBox(height: 12),
         _buildActionButton(

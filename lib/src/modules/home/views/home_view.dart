@@ -136,8 +136,8 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
           value: SystemUiOverlayStyle(
             statusBarColor: Colors.transparent,
             statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
-            statusBarBrightness: isDark ? Brightness.dark : Brightness.light,
-            systemNavigationBarColor: isDark ? Colors.black : Colors.white,
+            statusBarBrightness: isDark ? Brightness.dark : Brightness.light, 
+            systemNavigationBarColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,
             systemNavigationBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
           ),
           child: Scaffold(
@@ -312,9 +312,9 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                     );
                   }),
 
-                  // Molduras de Sistema
-                  Positioned(top: 0, left: 0, right: 0, child: Container(height: topPadding, color: Colors.black)),
-                  Positioned(bottom: 0, left: 0, right: 0, child: Container(height: safeBottomHeight, color: Colors.black)),
+                  // Molduras de Sistema (Dinâmicas)
+                  Positioned(top: 0, left: 0, right: 0, child: Container(height: topPadding, color: isDark ? Colors.black : Colors.white)),
+                  Positioned(bottom: 0, left: 0, right: 0, child: Container(height: safeBottomHeight, color: isDark ? Colors.black : Colors.white)),
                 ],
               ),
             ),

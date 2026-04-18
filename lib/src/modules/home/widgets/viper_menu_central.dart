@@ -98,7 +98,10 @@ class _ViperMenuCentralState extends State<ViperMenuCentral> {
                                 label: 'Meu Perfil',
                                 textColor: textColor,
                                 isDark: isDark,
-                                onPressed: () => Get.to(() => const ProfileView()),
+                                onPressed: () {
+                                  if (!Get.isRegistered<SettingsController>()) { Get.put(SettingsController()); }
+                                  Get.to(() => const ProfileView());
+                                },
                               ),
                               const SizedBox(height: 12),
                               _buildSimpleMenuItem(
@@ -612,15 +615,21 @@ class _ViperMenuCentralState extends State<ViperMenuCentral> {
   }
 
   Widget _buildFooter(BuildContext context, bool isDark, Color textColor) {
+    final buttonBgColor = isDark ? const Color(0xFF1E1E1E) : Colors.white;
+    final iconColor = isDark ? Colors.redAccent : Colors.red;
+
     return Padding(
       padding: const EdgeInsets.all(24),
-      child: OutlinedButton.icon(
+      child: TextButton.icon(
         onPressed: () {
           Get.defaultDialog(
             title: 'Sair do Viper?',
             middleText: 'Tem certeza que deseja desconectar?',
             textConfirm: 'SIM',
             textCancel: 'NÃO',
+            titleStyle: TextStyle(color: textColor),
+            middleTextStyle: TextStyle(color: textColor.withOpacity(0.7)),
+            backgroundColor: isDark ? const Color(0xFF121212) : Colors.white,
             confirmTextColor: Colors.white,
             buttonColor: Colors.redAccent,
             onConfirm: () {
@@ -629,13 +638,15 @@ class _ViperMenuCentralState extends State<ViperMenuCentral> {
             },
           );
         },
-        icon: const Icon(Icons.logout, size: 18),
-        label: const Text('SAIR DO APP'),
-        style: OutlinedButton.styleFrom(
-          foregroundColor: Colors.redAccent,
-          side: const BorderSide(color: Colors.redAccent),
-          minimumSize: const Size(double.infinity, 45),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        icon: Icon(Icons.logout, size: 18, color: iconColor),
+        label: Text('SAIR DO APP', style: TextStyle(color: iconColor, fontWeight: FontWeight.bold)),
+        style: TextButton.styleFrom(
+          backgroundColor: buttonBgColor,
+          minimumSize: const Size(double.infinity, 48),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(color: iconColor.withOpacity(0.3)),
+          ),
         ),
       ),
     );

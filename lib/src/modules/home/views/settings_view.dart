@@ -268,15 +268,16 @@ class _SettingsViewState extends State<SettingsView> {
                 Center(
                   child: TextButton.icon(
                     onPressed: () {
+                      final dialogBgColor = isDark ? const Color(0xFF121212) : Colors.white;
                       Get.defaultDialog(
                         title: 'Sair do Viper?',
-                        titleStyle: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                        titleStyle: TextStyle(fontWeight: FontWeight.bold, color: textColor),
                         middleText: 'Tem certeza que deseja desconectar sua conta?',
-                        middleTextStyle: TextStyle(color: Colors.white.withOpacity(0.7)),
-                        backgroundColor: const Color(0xFF1E1E1E),
+                        middleTextStyle: TextStyle(color: textColor.withOpacity(0.7)),
+                        backgroundColor: dialogBgColor,
                         radius: 16,
                         textCancel: 'Cancelar',
-                        cancelTextColor: Colors.white,
+                        cancelTextColor: textColor.withOpacity(0.5),
                         textConfirm: 'Sim, Sair',
                         confirmTextColor: Colors.white,
                         buttonColor: Colors.redAccent,
@@ -288,8 +289,16 @@ class _SettingsViewState extends State<SettingsView> {
                         },
                       );
                     },
-                    icon: const Icon(Icons.logout, color: Colors.redAccent),
+                    icon: const Icon(Icons.logout, color: Colors.redAccent, size: 20),
                     label: const Text('ENCERRAR SESSÃO', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
+                    style: TextButton.styleFrom(
+                      backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.grey[100],
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        side: BorderSide(color: Colors.redAccent.withOpacity(0.2)),
+                      ),
+                    ),
                   ),
                 ),
                 
