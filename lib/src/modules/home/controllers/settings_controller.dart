@@ -5,10 +5,10 @@ import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'package:viper_delivery/src/core/services/haptic_service.dart';
 import 'package:vibration/vibration.dart';
+import 'package:viper_delivery/src/core/config/env.dart';
 
 enum NavigationApp { googleMaps, waze }
 enum ViperThemeMode { day, night, automatic }
@@ -190,7 +190,7 @@ class SettingsController extends GetxController {
     isSearching.value = true;
     _debounce = Timer(const Duration(milliseconds: 500), () async {
       try {
-        final token = dotenv.env['MAPBOX_PUBLIC_TOKEN'];
+        final token = Env.mapboxPublicToken;
         final url = 'https://api.mapbox.com/geocoding/v5/mapbox.places/$query.json?access_token=$token&autocomplete=true&language=pt&country=br&limit=5';
         final response = await http.get(Uri.parse(url));
         if (response.statusCode == 200) {

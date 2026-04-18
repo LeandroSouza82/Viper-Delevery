@@ -2,15 +2,15 @@ allprojects {
     repositories {
         google()
         mavenCentral()
-        
-        // Configurao segura do Mapbox
+
+        // Configuração segura do Mapbox
         val localProperties = java.util.Properties()
         val localPropertiesFile = rootProject.file("local.properties")
         if (localPropertiesFile.exists()) {
             localPropertiesFile.inputStream().use { localProperties.load(it) }
         }
         val mapboxToken = localProperties.getProperty("MAPBOX_DOWNLOADS_TOKEN") ?: ""
-        
+
         if (mapboxToken.isNotEmpty()) {
             maven {
                 url = uri("https://api.mapbox.com/downloads/v2/releases/maven")
@@ -33,11 +33,14 @@ val newBuildDir: Directory =
 rootProject.layout.buildDirectory.value(newBuildDir)
 
 subprojects {
+    // 1. Configuração de diretórios de build
     val newSubprojectBuildDir: Directory = newBuildDir.dir(project.name)
     project.layout.buildDirectory.value(newSubprojectBuildDir)
-}
-subprojects {
-    project.evaluationDependsOn(":app")
+
+    // 2. Dependência de avaliação (apenas no subprojeto app, não em todos)
+    if (project.name != "app") {
+        project.evaluationDependsOn(":app")
+    }
 }
 
 tasks.register<Delete>("clean") {

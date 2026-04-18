@@ -53,6 +53,9 @@ dependencies:
   qr_flutter: ^4.1.0
   get: ^4.7.3
   vibration: ^2.0.1
+  safe_device: ^1.1.1
+  flutter_windowmanager_plus: ^1.0.1
+  envied: ^0.5.4+1
 
 dev_dependencies:
   flutter_test:
@@ -64,6 +67,8 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
+  envied_generator: ^0.5.4
+  build_runner: ^2.4.11
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

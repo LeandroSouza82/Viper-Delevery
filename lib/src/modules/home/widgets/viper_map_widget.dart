@@ -1,9 +1,9 @@
 import 'dart:ui' as ui;
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:geolocator/geolocator.dart' as geo;
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
+import 'package:viper_delivery/src/core/config/env.dart';
 import 'package:viper_delivery/src/modules/home/controllers/settings_controller.dart';
 
 class ViperMapWidget extends StatefulWidget {
@@ -17,8 +17,8 @@ class ViperMapWidgetState extends State<ViperMapWidget> {
   MapboxMap? mapboxMap;
   bool _hasAnimatedToUser = false;
 
-  // Token Público carregado do .env para segurança
-  final String _accessToken = dotenv.env['MAPBOX_PUBLIC_TOKEN'] ?? '';
+  // Token Público carregado da classe Env (Envied) para segurança
+  final String _accessToken = Env.mapboxPublicToken;
   final _settings = SettingsController();
 
   @override

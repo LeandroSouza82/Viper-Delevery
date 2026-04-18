@@ -4,6 +4,7 @@ import 'package:viper_delivery/src/core/services/foreground_service_manager.dart
 import 'package:viper_delivery/src/core/utils/permission_helper.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:viper_delivery/src/models/driver_model.dart';
+import 'package:viper_delivery/src/core/services/security_service.dart';
 
 enum PillDisplayMode { earnings, mission, rating }
 
@@ -52,6 +53,10 @@ class HomeController extends ChangeNotifier {
   }
 
   Future<void> startViperService(BuildContext context) async {
+    // [VUP PROTECT] Inicia verificação de integridade antes de permitir 'Online'
+    final isSecure = await SecurityService.verifyDevice();
+    if (!isSecure) return; // Bloqueia operação se o dispositivo estiver comprometido
+
     final granted = await PermissionHelper.requestResilientPermissions(context);
     if (granted) {
       await ForegroundServiceManager.start();

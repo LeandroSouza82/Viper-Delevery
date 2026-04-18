@@ -7,6 +7,7 @@ import 'package:viper_delivery/src/modules/onboarding/controllers/vehicle_contro
 import 'package:viper_delivery/src/modules/onboarding/views/pending_approval_view.dart';
 import 'package:viper_delivery/src/modules/onboarding/views/vehicle_inspection_view.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter_windowmanager_plus/flutter_windowmanager_plus.dart';
 
 class VehicleRegistrationView extends StatefulWidget {
   const VehicleRegistrationView({super.key});
@@ -22,6 +23,37 @@ class _VehicleRegistrationViewState extends State<VehicleRegistrationView> {
   final _picker = ImagePicker();
 
   String _selectedVehicleType = 'Moto';
+
+  @override
+  void initState() {
+    super.initState();
+    _enableScreenProtection();
+  }
+
+  @override
+  void dispose() {
+    _disableScreenProtection();
+    _plateController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _enableScreenProtection() async {
+    try {
+      await FlutterWindowManagerPlus.addFlags(FlutterWindowManagerPlus.FLAG_SECURE);
+      debugPrint('🛡️ [VUP PROTECT] Proteção de tela ATIVA nos Documentos');
+    } catch (e) {
+      debugPrint('🛡️ [VUP PROTECT] Erro ao ativar proteção de tela: $e');
+    }
+  }
+
+  Future<void> _disableScreenProtection() async {
+    try {
+      await FlutterWindowManagerPlus.clearFlags(FlutterWindowManagerPlus.FLAG_SECURE);
+      debugPrint('🛡️ [VUP PROTECT] Proteção de tela DESATIVADA');
+    } catch (e) {
+      debugPrint('🛡️ [VUP PROTECT] Erro ao desativar proteção de tela: $e');
+    }
+  }
 
   Future<void> _pickAndUpload(String type) async {
     final pickedFile = await showModalBottomSheet<XFile>(

@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:viper_delivery/src/core/services/foreground_service_manager.dart';
-
+import 'package:viper_delivery/src/core/config/env.dart';
 import 'package:viper_delivery/src/modules/auth/guards/auth_guard_view.dart';
 import 'package:viper_delivery/src/modules/auth/views/reset_password_view.dart';
 import 'package:viper_delivery/src/modules/auth/views/login_view.dart';
+import 'package:viper_delivery/src/modules/home/controllers/settings_controller.dart';
 
 final navigatorKey = GlobalKey<NavigatorState>();
 
@@ -37,13 +37,14 @@ void main() async {
     systemNavigationBarIconBrightness: Brightness.light,
     systemNavigationBarDividerColor: Colors.transparent,
   ));
-
-  await dotenv.load(fileName: ".env");
   
   await Supabase.initialize(
-    url: dotenv.env['SUPABASE_URL'] ?? '',
-    anonKey: dotenv.env['SUPABASE_ANON_KEY'] ?? '',
+    url: Env.supabaseUrl,
+    anonKey: Env.supabaseKey,
   );
+
+  // Inicializa o controlador de configurações (Sindicato de Tema)
+  Get.put(SettingsController());
 
   Supabase.instance.client.auth.onAuthStateChange.listen((data) {
     if (data.event == AuthChangeEvent.signedOut) {
@@ -69,54 +70,54 @@ class ViperDeliveryApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Directionality(
-      textDirection: TextDirection.ltr,
-      child: GetMaterialApp(
+    final settingsController = Get.find<SettingsController>();
+
+    return Obx(() {
+      // MAPEAMENTO DEFINITIVO DE TEMA (Viper Unified)
+      ThemeMode flutterThemeMode;
+      switch (settingsController.themeMode.value) {
+        case ViperThemeMode.day:
+          flutterThemeMode = ThemeMode.light;
+          break;
+        case ViperThemeMode.night:
+          flutterThemeMode = ThemeMode.dark;
+          break;
+        default:
+          flutterThemeMode = ThemeMode.system;
+      }
+
+      return GetMaterialApp(
         navigatorKey: navigatorKey,
         title: 'Viper Delivery',
+        debugShowCheckedModeBanner: false,
+        themeMode: flutterThemeMode, // SINCRONIA TOTAL: Segue o SettingsController
         theme: ThemeData(
           useMaterial3: true,
+          brightness: Brightness.light,
           scaffoldBackgroundColor: Colors.white,
+          colorSchemeSeed: const Color(0xFF00FF88),
           appBarTheme: const AppBarTheme(
             backgroundColor: Color(0xFF0055FF),
             foregroundColor: Colors.white,
             elevation: 0,
-            systemOverlayStyle: SystemUiOverlayStyle(
-              statusBarColor: Colors.black,
-              statusBarIconBrightness: Brightness.light,
-              systemNavigationBarColor: Colors.black,
-              systemNavigationBarIconBrightness: Brightness.light,
-            ),
           ),
-          elevatedButtonTheme: ElevatedButtonThemeData(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF0055FF),
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 18),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-              textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-          ),
-          outlinedButtonTheme: OutlinedButtonThemeData(
-            style: OutlinedButton.styleFrom(
-              foregroundColor: const Color(0xFF0055FF),
-              padding: const EdgeInsets.symmetric(vertical: 18),
-              side: const BorderSide(color: Color(0xFF0055FF), width: 2),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-              textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
+        ),
+        darkTheme: ThemeData(
+          useMaterial3: true,
+          brightness: Brightness.dark,
+          scaffoldBackgroundColor: const Color(0xFF0A0A0A),
+          colorSchemeSeed: const Color(0xFF00FF88),
+          appBarTheme: const AppBarTheme(
+            backgroundColor: Colors.black,
+            foregroundColor: Colors.white,
+            elevation: 0,
           ),
         ),
         home: const AuthGuardView(),
         routes: {
           '/reset-password': (context) => const ResetPasswordView(),
         },
-      ),
-    );
+      );
+    });
   }
 }
-
