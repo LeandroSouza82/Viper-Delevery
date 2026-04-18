@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:viper_delivery/src/core/services/haptic_service.dart';
 import 'package:viper_delivery/src/modules/home/models/viper_order.dart';
 
 class ViperOfferOverlay extends StatefulWidget {
@@ -27,6 +27,7 @@ class _ViperOfferOverlayState extends State<ViperOfferOverlay> with SingleTicker
   @override
   void initState() {
     super.initState();
+    HapticService.vibrateViperEmergency(); // VIBRAÇÃO PERSISTENTE DE 12S NA OFERTA
     _pulseController = AnimationController(
       duration: const Duration(milliseconds: 450), // Ciclo suave de pulsar
       vsync: this,
@@ -45,6 +46,7 @@ class _ViperOfferOverlayState extends State<ViperOfferOverlay> with SingleTicker
 
   @override
   void dispose() {
+    HapticService.stopVibration();
     _pulseController.dispose();
     super.dispose();
   }
@@ -240,7 +242,7 @@ class _ViperOfferOverlayState extends State<ViperOfferOverlay> with SingleTicker
                         // RECUSAR
                         GestureDetector(
                           onTap: () {
-                            HapticFeedback.lightImpact();
+                            HapticService.stopVibration(); // PARA TUDO AO RECUSAR
                             widget.onDecline();
                           },
                           child: Container(
@@ -273,7 +275,7 @@ class _ViperOfferOverlayState extends State<ViperOfferOverlay> with SingleTicker
                                 color: const Color(0xFF00C853).withOpacity(0.15), // Base light green
                                 child: InkWell(
                                   onTap: () {
-                                    HapticFeedback.vibrate();
+                                    HapticService.stopVibration(); // PARA TUDO AO ACEITAR
                                     widget.onAccept();
                                   },
                                   child: Stack(

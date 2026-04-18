@@ -1,16 +1,20 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
+import 'package:viper_delivery/src/core/services/haptic_service.dart';
+import 'package:vibration/vibration.dart';
 
 enum NavigationApp { googleMaps, waze }
 enum ViperThemeMode { day, night, automatic }
 
-class SettingsController extends ChangeNotifier {
+class SettingsController extends GetxController {
+  // Singleton para compatibilidade legada
   static final SettingsController _instance = SettingsController._internal();
   factory SettingsController() => _instance;
   SettingsController._internal();
@@ -18,64 +22,60 @@ class SettingsController extends ChangeNotifier {
   final _supabase = Supabase.instance.client;
   Timer? _debounce;
 
-  // Existing settings (Local)
-  NavigationApp _navigationApp = NavigationApp.googleMaps;
-  ViperThemeMode _themeMode = ViperThemeMode.automatic;
-  bool _isSoundEnabled = true;
-  bool _isVibrationEnabled = true;
-  bool _isPanicButtonEnabled = false;
-  String _emergencyContact = "";
-  bool _isInit = false;
+  // Estados Reativos (GetX)
+  final navigationApp = NavigationApp.googleMaps.obs;
+  final themeMode = ViperThemeMode.automatic.obs;
+  final isSoundEnabled = true.obs;
+  final vibrationEnabled = true.obs;
+  final isPanicButtonEnabled = false.obs;
+  final emergencyContact = "".obs;
+  
+  final destFilterActive = false.obs;
+  final destFilterLocation = "".obs;
+  final destinationUses = 3.obs;
+  final lastReset = DateTime.now().obs;
+  
+  final acceptsCash = true.obs;
+  final acceptsDebit = true.obs;
+  final acceptsCredit = true.obs;
+  final acceptsPrepaid = true.obs;
 
-  // New settings (Supabase)
-  bool _destFilterActive = false;
-  String _destFilterLocation = "";
-  int _destinationUses = 3;
-  DateTime _lastReset = DateTime.now();
-  bool _acceptsCash = true;
-  bool _acceptsDebit = true;
-  bool _acceptsCredit = true;
-  bool _acceptsPrepaid = true;
+  // Getters para compatibilidade legada
+  NavigationApp get navApp => navigationApp.value;
+  ViperThemeMode get currentTheme => themeMode.value;
+  bool get isSoundEnabledVal => isSoundEnabled.value;
+  bool get isVibrationEnabled => vibrationEnabled.value;
+  bool get isPanicButtonEnabledVal => isPanicButtonEnabled.value;
+  String get currentEmergencyContact => emergencyContact.value;
+  
+  bool get destFilterActiveVal => destFilterActive.value;
+  String get destFilterLocationVal => destFilterLocation.value;
+  int get destinationUsesVal => destinationUses.value;
+  bool get acceptsCashVal => acceptsCash.value;
+  bool get acceptsDebitVal => acceptsDebit.value;
+  bool get acceptsCreditVal => acceptsCredit.value;
+  bool get acceptsPrepaidVal => acceptsPrepaid.value;
 
   // UI Support
-  List<Map<String, dynamic>> _searchResults = [];
-  bool _isSearching = false;
-
-  // Getters
-  NavigationApp get navigationApp => _navigationApp;
-  ViperThemeMode get themeMode => _themeMode;
-  bool get isSoundEnabled => _isSoundEnabled;
-  bool get isVibrationEnabled => _isVibrationEnabled;
-  bool get isPanicButtonEnabled => _isPanicButtonEnabled;
-  String get emergencyContact => _emergencyContact;
-  
-  bool get destFilterActive => _destFilterActive;
-  String get destFilterLocation => _destFilterLocation;
-  int get destinationUses => _destinationUses;
-  bool get acceptsCash => _acceptsCash;
-  bool get acceptsDebit => _acceptsDebit;
-  bool get acceptsCredit => _acceptsCredit;
-  bool get acceptsPrepaid => _acceptsPrepaid;
-  List<Map<String, dynamic>> get searchResults => _searchResults;
-  bool get isSearching => _isSearching;
+  final searchResults = <Map<String, dynamic>>[].obs;
+  final isSearching = false.obs;
+  bool _isInit = false;
 
   /// Retorna o estilo do mapa baseado na configuração atual e horário
   String get mapStyle {
-    if (_themeMode == ViperThemeMode.day) return MapboxStyles.MAPBOX_STREETS;
-    if (_themeMode == ViperThemeMode.night) return MapboxStyles.DARK;
+    if (themeMode.value == ViperThemeMode.day) return MapboxStyles.MAPBOX_STREETS;
+    if (themeMode.value == ViperThemeMode.night) return MapboxStyles.DARK;
     
-    // Lógica Automática (06:00 - 18:00)
     final hour = DateTime.now().hour;
-    if (hour >= 6 && hour < 18) {
-      return MapboxStyles.MAPBOX_STREETS;
-    } else {
-      return MapboxStyles.DARK;
-    }
+    return (hour >= 6 && hour < 18) ? MapboxStyles.MAPBOX_STREETS : MapboxStyles.DARK;
   }
 
-  /// Verifica se o tema atual (calculado) é escuro
-  bool get isDarkTheme {
-    return mapStyle == MapboxStyles.DARK;
+  bool get isDarkTheme => mapStyle == MapboxStyles.DARK;
+
+  @override
+  void onInit() {
+    super.onInit();
+    init();
   }
 
   Future<void> init() async {
@@ -83,18 +83,17 @@ class SettingsController extends ChangeNotifier {
     
     // 1. Load Local Settings (SharedPreferences)
     final prefs = await SharedPreferences.getInstance();
-    _navigationApp = NavigationApp.values[prefs.getInt('navigation_app') ?? 0];
-    _themeMode = ViperThemeMode.values[prefs.getInt('theme_mode') ?? 2];
-    _isSoundEnabled = prefs.getBool('sound_enabled') ?? true;
-    _isVibrationEnabled = prefs.getBool('vibration_enabled') ?? true;
-    _isPanicButtonEnabled = prefs.getBool('panic_enabled') ?? false;
-    _emergencyContact = prefs.getString('emergency_contact') ?? "";
+    navigationApp.value = NavigationApp.values[prefs.getInt('navigation_app') ?? 0];
+    themeMode.value = ViperThemeMode.values[prefs.getInt('theme_mode') ?? 2];
+    isSoundEnabled.value = prefs.getBool('sound_enabled') ?? true;
+    vibrationEnabled.value = prefs.getBool('vibration_enabled') ?? true;
+    isPanicButtonEnabled.value = prefs.getBool('panic_enabled') ?? false;
+    emergencyContact.value = prefs.getString('emergency_contact') ?? "";
 
     // 2. Load Driver Settings (Supabase)
     await _fetchDriverSettings();
 
     _isInit = true;
-    notifyListeners();
   }
 
   Future<void> _fetchDriverSettings() async {
@@ -109,24 +108,24 @@ class SettingsController extends ChangeNotifier {
           .maybeSingle();
 
       if (data != null) {
-        _destFilterActive = data['dest_filter_active'] ?? false;
-        _destFilterLocation = data['dest_filter_location'] ?? "";
-        _destinationUses = data['destination_uses'] ?? 3;
-        _lastReset = DateTime.parse(data['last_reset'] ?? DateTime.now().toIso8601String());
-        _acceptsCash = data['accepts_cash'] ?? true;
-        _acceptsDebit = data['accepts_debit'] ?? true;
-        _acceptsCredit = data['accepts_credit'] ?? true;
-        _acceptsPrepaid = data['accepts_prepaid'] ?? true;
+        destFilterActive.value = data['dest_filter_active'] ?? false;
+        destFilterLocation.value = data['dest_filter_location'] ?? "";
+        destinationUses.value = data['destination_uses'] ?? 3;
+        lastReset.value = DateTime.parse(data['last_reset'] ?? DateTime.now().toIso8601String());
+        acceptsCash.value = data['accepts_cash'] ?? true;
+        acceptsDebit.value = data['accepts_debit'] ?? true;
+        acceptsCredit.value = data['accepts_credit'] ?? true;
+        acceptsPrepaid.value = data['accepts_prepaid'] ?? true;
+        vibrationEnabled.value = data['vibration_enabled'] ?? true;
 
         // Reset Diário Check
         final now = DateTime.now();
-        if (_lastReset.day != now.day || _lastReset.month != now.month || _lastReset.year != now.year) {
-          _destinationUses = 3;
-          _lastReset = now;
+        if (lastReset.value.day != now.day || lastReset.value.month != now.month || lastReset.value.year != now.year) {
+          destinationUses.value = 3;
+          lastReset.value = now;
           await _syncToSupabase();
         }
       } else {
-        // Create initial settings if missing
         await _syncToSupabase();
       }
     } catch (e) {
@@ -141,44 +140,62 @@ class SettingsController extends ChangeNotifier {
 
       await _supabase.from('driver_settings').upsert({
         'id': user.id,
-        'dest_filter_active': _destFilterActive,
-        'dest_filter_location': _destFilterLocation,
-        'destination_uses': _destinationUses,
-        'last_reset': _lastReset.toIso8601String(),
-        'accepts_cash': _acceptsCash,
-        'accepts_debit': _acceptsDebit,
-        'accepts_credit': _acceptsCredit,
-        'accepts_prepaid': _acceptsPrepaid,
+        'dest_filter_active': destFilterActive.value,
+        'dest_filter_location': destFilterLocation.value,
+        'destination_uses': destinationUses.value,
+        'last_reset': lastReset.value.toIso8601String(),
+        'accepts_cash': acceptsCash.value,
+        'accepts_debit': acceptsDebit.value,
+        'accepts_credit': acceptsCredit.value,
+        'accepts_prepaid': acceptsPrepaid.value,
+        'vibration_enabled': vibrationEnabled.value,
       });
     } catch (e) {
       debugPrint('SettingsController Sync Error: $e');
     }
   }
 
-  // --- Mapbox Search (Geocoding) ---
-  
+  // --- Chave Geral de Vibração ---
+
+  Future<void> toggleVibration(bool value) async {
+    vibrationEnabled.value = value;
+    
+    // Feedback tátil ao ligar
+    if (value) {
+      HapticService.vibrateViperPulse();
+    } else {
+      Vibration.cancel(); // Silêncio total ao desligar
+    }
+
+    // Persistência local
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('vibration_enabled', value);
+
+    // Persistência remota
+    await _syncToSupabase();
+    
+    update();
+  }
+
+  // --- Setters Reativos ---
+
   void searchLocation(String query) {
     if (_debounce?.isActive ?? false) _debounce!.cancel();
-    
     if (query.isEmpty) {
-      _searchResults = [];
-      _isSearching = false;
-      notifyListeners();
+      searchResults.value = [];
+      isSearching.value = false;
       return;
     }
 
-    _isSearching = true;
-    notifyListeners();
-
+    isSearching.value = true;
     _debounce = Timer(const Duration(milliseconds: 500), () async {
       try {
         final token = dotenv.env['MAPBOX_PUBLIC_TOKEN'];
         final url = 'https://api.mapbox.com/geocoding/v5/mapbox.places/$query.json?access_token=$token&autocomplete=true&language=pt&country=br&limit=5';
-        
         final response = await http.get(Uri.parse(url));
         if (response.statusCode == 200) {
           final data = json.decode(response.body);
-          _searchResults = (data['features'] as List).map((f) => {
+          searchResults.value = (data['features'] as List).map((f) => {
             'text': f['text'],
             'place_name': f['place_name'],
             'center': f['center'],
@@ -187,118 +204,97 @@ class SettingsController extends ChangeNotifier {
       } catch (e) {
         debugPrint('Mapbox Search Error: $e');
       } finally {
-        _isSearching = false;
-        notifyListeners();
+        isSearching.value = false;
       }
     });
   }
 
   void selectLocation(Map<String, dynamic> result) {
-    _destFilterLocation = result['text'];
-    _searchResults = [];
-    notifyListeners();
+    destFilterLocation.value = result['text'];
+    searchResults.value = [];
     _syncToSupabase();
   }
 
-  // --- Setters with Sync ---
-
   Future<void> setDestFilterActive(bool active) async {
-    if (active && _destinationUses <= 0) return; // No more uses today
-    
-    _destFilterActive = active;
-    notifyListeners();
+    if (active && destinationUses.value <= 0) return;
+    destFilterActive.value = active;
     await _syncToSupabase();
+    update();
   }
 
-  /// Consome um uso do filtro de destino. 
-  /// Deve ser chamado no controller de viagens ao aceitar uma entrega com o filtro ativo.
   Future<bool> consumeDestinationUse() async {
-    if (_destFilterActive && _destinationUses > 0) {
-      _destinationUses--;
-      
-      // Se acabarem os usos, desativamos o filtro automaticamente
-      if (_destinationUses == 0) {
-        _destFilterActive = false;
-      }
-      
-      notifyListeners();
+    if (destFilterActive.value && destinationUses.value > 0) {
+      destinationUses.value--;
+      if (destinationUses.value == 0) destFilterActive.value = false;
       await _syncToSupabase();
+      update();
       return true;
     }
     return false;
   }
 
   Future<void> setAcceptsCash(bool value) async {
-    _acceptsCash = value;
-    notifyListeners();
+    acceptsCash.value = value;
     await _syncToSupabase();
+    update();
   }
 
   Future<void> setAcceptsDebit(bool value) async {
-    _acceptsDebit = value;
-    notifyListeners();
+    acceptsDebit.value = value;
     await _syncToSupabase();
+    update();
   }
 
   Future<void> setAcceptsCredit(bool value) async {
-    _acceptsCredit = value;
-    notifyListeners();
+    acceptsCredit.value = value;
     await _syncToSupabase();
+    update();
   }
 
   Future<void> setAcceptsPrepaid(bool value) async {
-    _acceptsPrepaid = value;
-    notifyListeners();
+    acceptsPrepaid.value = value;
     await _syncToSupabase();
+    update();
   }
 
-  // --- Existing Setters ---
-
   Future<void> setNavigationApp(NavigationApp app) async {
-    _navigationApp = app;
+    navigationApp.value = app;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt('navigation_app', app.index);
-    notifyListeners();
+    update();
   }
 
   Future<void> setThemeMode(ViperThemeMode mode) async {
-    _themeMode = mode;
+    themeMode.value = mode;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt('theme_mode', mode.index);
-    notifyListeners();
+    update();
   }
 
   Future<void> setSoundEnabled(bool enabled) async {
-    _isSoundEnabled = enabled;
+    isSoundEnabled.value = enabled;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('sound_enabled', enabled);
-    notifyListeners();
-  }
-
-  Future<void> setVibrationEnabled(bool enabled) async {
-    _isVibrationEnabled = enabled;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('vibration_enabled', enabled);
-    notifyListeners();
+    update();
   }
 
   Future<void> setPanicButtonEnabled(bool enabled) async {
-    _isPanicButtonEnabled = enabled;
+    isPanicButtonEnabled.value = enabled;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('panic_enabled', enabled);
-    notifyListeners();
+    update();
   }
 
   Future<void> setEmergencyContact(String contact) async {
-    _emergencyContact = contact;
+    emergencyContact.value = contact;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('emergency_contact', contact);
-    notifyListeners();
+    update();
   }
 
   void reevaluateAutoTheme() {
-    if (_themeMode == ViperThemeMode.automatic) {
-      notifyListeners();
+    if (themeMode.value == ViperThemeMode.automatic) {
+      update(); // Força atualização para listeners manuais se necessário
     }
   }
 }

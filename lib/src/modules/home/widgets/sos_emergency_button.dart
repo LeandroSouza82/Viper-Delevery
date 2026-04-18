@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:get/get.dart';
 import 'package:viper_delivery/src/modules/home/controllers/settings_controller.dart';
+import 'package:viper_delivery/src/modules/profile/controllers/profile_controller.dart';
+import 'package:viper_delivery/src/modules/profile/widgets/emergency_contact_modal.dart';
+import 'package:viper_delivery/src/core/services/haptic_service.dart';
 
 class SOSEmergencyButton extends StatelessWidget {
   final SettingsController settingsController;
@@ -12,25 +14,9 @@ class SOSEmergencyButton extends StatelessWidget {
   });
 
   Future<void> _launchSOS() async {
-    // Vibração tátil para confirmar a intenção do motorista
-    await HapticFeedback.vibrate();
-
-    final Uri telLaunchUri = Uri(
-      scheme: 'tel',
-      path: '190',
-    );
-
-    try {
-      if (await canLaunchUrl(telLaunchUri)) {
-        await launchUrl(telLaunchUri);
-      } else {
-        debugPrint('Não foi possível abrir o discador para o número 190');
-      }
-    } catch (e) {
-      debugPrint('Erro ao tentar disparar SOS: $e');
-    }
+    final profileController = Get.find<ProfileController>();
+    await profileController.dispararSosElite();
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -39,35 +25,60 @@ class SOSEmergencyButton extends StatelessWidget {
       builder: (context, child) {
         final isDark = settingsController.isDarkTheme;
         
-        // Cores baseadas no padrão modular da Viper
         final bgColor = isDark 
-            ? Colors.black.withOpacity(0.7) 
+            ? const Color(0xFF121212).withOpacity(0.9) 
             : Colors.white;
-        const iconColor = Colors.red; // Vermelho Vivo para Alerta
-        final borderColor = isDark ? Colors.red.withOpacity(0.3) : Colors.black;
+        const iconColor = Colors.redAccent;
+        final borderColor = isDark ? Colors.redAccent.withOpacity(0.5) : Colors.red.withOpacity(0.3);
 
         return GestureDetector(
+          onTap: () {
+            final profileController = Get.find<ProfileController>();
+            if (profileController.emergencyPhone.value.isEmpty) {
+              HapticService.vibrateViperPulse();
+              Get.bottomSheet(
+                EmergencyContactModal(controller: profileController),
+                isScrollControlled: true,
+                ignoreSafeArea: false,
+              );
+            } else {
+              Get.snackbar(
+                'SOS Elite', 
+                'Segure firme por 1 segundo para disparar o socorro!',
+                backgroundColor: Colors.redAccent.withOpacity(0.9),
+                colorText: Colors.white,
+                snackPosition: SnackPosition.TOP,
+                margin: const EdgeInsets.all(15),
+              );
+            }
+          },
           onLongPress: _launchSOS,
           child: Container(
-            width: 48,
-            height: 48,
+            width: 52,
+            height: 52,
             decoration: BoxDecoration(
+// ...
               color: bgColor,
               shape: BoxShape.circle,
-              border: Border.all(color: borderColor, width: 1.5),
+              border: Border.all(color: borderColor, width: 2),
               boxShadow: [
+                // Efeito Red Neon Glow intenso
                 BoxShadow(
-                  color: Colors.red.withOpacity(0.2),
-                  blurRadius: 12,
+                  color: Colors.red.withOpacity(0.6),
+                  blurRadius: 15,
                   spreadRadius: 2,
-                  offset: const Offset(0, 4),
+                ),
+                BoxShadow(
+                  color: Colors.redAccent.withOpacity(0.3),
+                  blurRadius: 30,
+                  spreadRadius: 5,
                 ),
               ],
             ),
             child: const Icon(
               Icons.notifications_active_rounded,
               color: iconColor,
-              size: 26,
+              size: 28,
             ),
           ),
         );

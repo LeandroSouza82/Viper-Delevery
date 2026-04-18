@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:viper_delivery/src/modules/home/controllers/settings_controller.dart';
 import 'package:viper_delivery/src/modules/home/controllers/viper_menu_controller.dart';
+import 'package:viper_delivery/src/modules/profile/controllers/profile_controller.dart';
+import 'package:viper_delivery/src/modules/profile/widgets/emergency_contact_modal.dart';
+import 'package:viper_delivery/src/core/services/haptic_service.dart';
 import 'package:viper_delivery/src/modules/profile/widgets/edit_pix_modal.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -19,13 +22,14 @@ class SettingsView extends StatefulWidget {
 
 class _SettingsViewState extends State<SettingsView> {
   final _menuController = Get.find<ViperMenuController>();
+  final _profileController = Get.find<ProfileController>();
   final _searchController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _menuController.fetchAllData();
-    _searchController.text = widget.settingsController.destFilterLocation;
+    _searchController.text = widget.settingsController.destFilterLocation.value;
   }
 
   @override
@@ -98,7 +102,7 @@ class _SettingsViewState extends State<SettingsView> {
                             Icons.money, 
                             'Dinheiro (Espécie)', 
                             'Pagamento em notas físicas no ato da entrega.',
-                            widget.settingsController.acceptsCash, 
+                            widget.settingsController.acceptsCash.value, 
                             (val) => widget.settingsController.setAcceptsCash(val),
                             isDark, textColor
                           ),
@@ -109,7 +113,7 @@ class _SettingsViewState extends State<SettingsView> {
                             Icons.credit_card, 
                             'Maquininha de Débito', 
                             'Receba via cartão de débito na sua maquininha.',
-                            widget.settingsController.acceptsDebit, 
+                            widget.settingsController.acceptsDebit.value, 
                             (val) => widget.settingsController.setAcceptsDebit(val),
                             isDark, textColor
                           ),
@@ -120,7 +124,7 @@ class _SettingsViewState extends State<SettingsView> {
                             Icons.credit_score, 
                             'Maquininha de Crédito', 
                             'Receba via cartão de crédito na sua maquininha.',
-                            widget.settingsController.acceptsCredit, 
+                            widget.settingsController.acceptsCredit.value, 
                             (val) => widget.settingsController.setAcceptsCredit(val),
                             isDark, textColor
                           ),
@@ -131,7 +135,7 @@ class _SettingsViewState extends State<SettingsView> {
                             Icons.account_balance_wallet_rounded, 
                             'Entregas Pré-pagas', 
                             'Entregas pagas via App/Empresa (saldo cai na carteira).',
-                            widget.settingsController.acceptsPrepaid, 
+                            widget.settingsController.acceptsPrepaid.value, 
                             (val) => widget.settingsController.setAcceptsPrepaid(val),
                             isDark, textColor
                           ),
@@ -157,14 +161,14 @@ class _SettingsViewState extends State<SettingsView> {
                         label: 'Navegador Padrão',
                         subtitle: 'App para iniciar rota',
                         icon: Icons.directions_car_outlined,
-                        value: widget.settingsController.navigationApp,
+                        value: widget.settingsController.navigationApp.value,
                         isDark: isDark,
                         textColor: textColor,
                         items: [
                           DropdownMenuItem(value: NavigationApp.googleMaps, child: Text('Google Maps', style: TextStyle(color: textColor))),
                           DropdownMenuItem(value: NavigationApp.waze, child: Text('Waze', style: TextStyle(color: textColor))),
                         ],
-                        onChanged: (val) {
+                        onChanged: (NavigationApp? val) {
                           if (val != null) widget.settingsController.setNavigationApp(val);
                         },
                       ),
@@ -175,7 +179,7 @@ class _SettingsViewState extends State<SettingsView> {
                         label: 'Aparência',
                         subtitle: 'Estilo do mapa e interface',
                         icon: Icons.palette_outlined,
-                        value: widget.settingsController.themeMode,
+                        value: widget.settingsController.themeMode.value,
                         isDark: isDark,
                         textColor: textColor,
                         items: [
@@ -183,7 +187,7 @@ class _SettingsViewState extends State<SettingsView> {
                           DropdownMenuItem(value: ViperThemeMode.night, child: Text('Modo Noite', style: TextStyle(color: textColor))),
                           DropdownMenuItem(value: ViperThemeMode.automatic, child: Text('Automático', style: TextStyle(color: textColor))),
                         ],
-                        onChanged: (val) {
+                        onChanged: (ViperThemeMode? val) {
                           if (val != null) widget.settingsController.setThemeMode(val);
                         },
                       ),
@@ -205,7 +209,7 @@ class _SettingsViewState extends State<SettingsView> {
                         label: 'Alertas Sonoros',
                         subtitle: 'Som para novas entregas',
                         icon: Icons.volume_up_outlined,
-                        value: widget.settingsController.isSoundEnabled,
+                        value: widget.settingsController.isSoundEnabled.value,
                         onChanged: (val) => widget.settingsController.setSoundEnabled(val),
                         isDark: isDark,
                         textColor: textColor,
@@ -213,15 +217,15 @@ class _SettingsViewState extends State<SettingsView> {
                       const SizedBox(height: 16),
                       Divider(color: borderColor.withOpacity(0.1)),
                       const SizedBox(height: 16),
-                      _buildViperSwitchTile(
-                        label: 'Vibração',
-                        subtitle: 'Feedback tátil em ações',
+                      Obx(() => _buildViperSwitchTile(
+                        label: 'Vibração do Aplicativo',
+                        subtitle: 'Ativa o feedback tátil para alertas e ações',
                         icon: Icons.vibration,
-                        value: widget.settingsController.isVibrationEnabled,
-                        onChanged: (val) => widget.settingsController.setVibrationEnabled(val),
+                        value: widget.settingsController.vibrationEnabled.value,
+                        onChanged: (val) => widget.settingsController.toggleVibration(val),
                         isDark: isDark,
                         textColor: textColor,
-                      ),
+                      )),
                     ],
                   ),
                 ),
@@ -236,16 +240,23 @@ class _SettingsViewState extends State<SettingsView> {
                   borderColor: borderColor,
                   child: Column(
                     children: [
-                      _buildInfoTile(
+                      Obx(() => _buildInfoTile(
                         label: 'Contato de Emergência',
-                        subtitle: widget.settingsController.emergencyContact.isEmpty ? 'Não configurado' : widget.settingsController.emergencyContact,
+                        subtitle: _profileController.emergencyPhone.value.isEmpty 
+                            ? 'Não configurado' 
+                            : _profileController.emergencyPhone.value,
                         icon: Icons.contact_phone_outlined,
                         onTap: () {
-                          // TODO: Implementar edição de contato
+                          HapticService.vibrateViperPulse();
+                          Get.bottomSheet(
+                            EmergencyContactModal(controller: _profileController),
+                            isScrollControlled: true,
+                            ignoreSafeArea: false,
+                          );
                         },
                         isDark: isDark,
                         textColor: textColor,
-                      ),
+                      )),
                       const SizedBox(height: 16),
                       Divider(color: borderColor.withOpacity(0.1)),
                       const SizedBox(height: 16),
@@ -458,7 +469,7 @@ class _SettingsViewState extends State<SettingsView> {
           borderSide: BorderSide.none,
         ),
         contentPadding: const EdgeInsets.symmetric(vertical: 16),
-        suffixIcon: widget.settingsController.isSearching 
+        suffixIcon: widget.settingsController.isSearching.value 
             ? const Padding(
                 padding: EdgeInsets.all(12),
                 child: SizedBox(width: 10, height: 10, child: CircularProgressIndicator(strokeWidth: 2)),
@@ -497,7 +508,7 @@ class _SettingsViewState extends State<SettingsView> {
   }
 
   Widget _buildUsageCounter(Color textColor, bool isDark) {
-    final uses = widget.settingsController.destinationUses;
+    final uses = widget.settingsController.destinationUses.value;
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -536,8 +547,8 @@ class _SettingsViewState extends State<SettingsView> {
   }
 
   Widget _buildActivateButton(bool isDark) {
-    final isActive = widget.settingsController.destFilterActive;
-    final canActivate = widget.settingsController.destinationUses > 0 || isActive;
+    final isActive = widget.settingsController.destFilterActive.value;
+    final canActivate = widget.settingsController.destinationUses.value > 0 || isActive;
 
     return SizedBox(
       width: double.infinity,

@@ -14,6 +14,8 @@ class DriverModel {
   final String? cnhCategory;
   final String? pixKey;
   final String? avatarUrl;
+  final String? emergencyContactName;
+  final String? emergencyContactPhone;
   final bool? isClt;
   final List<VehicleModel>? vehicles;
 
@@ -31,6 +33,8 @@ class DriverModel {
     this.cnhCategory,
     this.pixKey,
     this.avatarUrl,
+    this.emergencyContactName,
+    this.emergencyContactPhone,
     this.isClt,
     this.vehicles,
   });
@@ -49,6 +53,8 @@ class DriverModel {
     String? cnhCategory,
     String? pixKey,
     String? avatarUrl,
+    String? emergencyContactName,
+    String? emergencyContactPhone,
     bool? isClt,
     List<VehicleModel>? vehicles,
   }) {
@@ -66,6 +72,8 @@ class DriverModel {
       cnhCategory: cnhCategory ?? this.cnhCategory,
       pixKey: pixKey ?? this.pixKey,
       avatarUrl: avatarUrl ?? this.avatarUrl,
+      emergencyContactName: emergencyContactName ?? this.emergencyContactName,
+      emergencyContactPhone: emergencyContactPhone ?? this.emergencyContactPhone,
       isClt: isClt ?? this.isClt,
       vehicles: vehicles ?? this.vehicles,
     );
@@ -85,7 +93,9 @@ class DriverModel {
       cnhNumber: map['cnh_number'],
       cnhCategory: map['cnh_category'],
       pixKey: map['pix_key'],
-      avatarUrl: map['avatar_url'], // Mapeamento crítico: chave exata do banco
+      avatarUrl: map['avatar_url'],
+      emergencyContactName: map['emergency_contact_name'],
+      emergencyContactPhone: map['emergency_contact_phone'],
       isClt: map['is_clt'],
       vehicles: (map['vehicles'] as List<dynamic>?)
           ?.map((v) => VehicleModel.fromMap(v as Map<String, dynamic>))

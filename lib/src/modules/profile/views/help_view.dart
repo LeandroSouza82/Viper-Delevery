@@ -109,10 +109,125 @@ class HelpView extends StatelessWidget {
 
             _buildSectionTitle('DÚVIDAS FREQUENTES', textColor),
             const SizedBox(height: 16),
-            _buildFaqItem('Como realizar o primeiro saque?', textColor),
-            _buildFaqItem('O que fazer em caso de acidente?', textColor),
-            _buildFaqItem('Como alterar meu veículo cadastrado?', textColor),
-            _buildFaqItem('Dúvidas sobre o cálculo de repasses', textColor),
+            _buildExpansionFaqItem(
+              title: 'Como realizar o seu primeiro saque?',
+              isDark: isDark,
+              textColor: textColor,
+              content: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildStepText('Passo 1:', 'Acesse \'Minha Carteira\' no menu principal.', textColor),
+                  _buildStepText('Passo 2:', 'Verifique se o saldo disponível atingiu o mínimo para saque.', textColor),
+                  _buildStepText('Passo 3:', 'Toque em \'Solicitar Saque\' e confirme sua chave PIX.', textColor),
+                  const SizedBox(height: 8),
+                  Text(
+                    'O dinheiro cai na conta de forma rápida e segura!',
+                    style: TextStyle(
+                      color: isDark ? const Color(0xFF00FF88) : Colors.green[700],
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            _buildExpansionFaqItem(
+              title: 'O que fazer em caso de acidente?',
+              isDark: isDark,
+              textColor: textColor,
+              iconColorOverride: isDark ? Colors.redAccent : Colors.red[700],
+              content: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildStepText('Passo 1:', 'Mantenha a calma. Sua segurança e do passageiro/carga vêm em primeiro lugar.', textColor),
+                  _buildStepText('Passo 2:', 'Se houver feridos, acione imediatamente o SAMU (192) ou a Polícia (190).', textColor),
+                  _buildStepText('Passo 3:', 'Assim que estiver seguro, tire fotos do local e dos veículos envolvidos.', textColor),
+                  _buildStepText('Passo 4:', 'Entre em contato com o nosso Suporte pelo botão de Emergência no app.', textColor),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Icon(Icons.health_and_safety_rounded, color: isDark ? Colors.redAccent : Colors.red[700], size: 16),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Protocolo de Segurança Viper: Prioridade Absoluta.',
+                          style: TextStyle(
+                            color: isDark ? Colors.redAccent : Colors.red[700],
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            _buildExpansionFaqItem(
+              title: 'Como alterar meu veículo cadastrado?',
+              isDark: isDark,
+              textColor: textColor,
+              content: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildStepText('Passo 1:', 'Acesse \'Meu Perfil\' no menu principal.', textColor),
+                  _buildStepText('Passo 2:', 'Na seção \'Veículo Ativo\', toque no ícone de edição ou em \'Trocar Veículo\'.', textColor),
+                  _buildStepText('Passo 3:', 'Insira os dados do novo veículo (Placa, Modelo, Cor) e envie a foto do documento atualizado (CRLV).', textColor),
+                  _buildStepText('Passo 4:', 'Aguarde a nossa equipe validar a documentação. Assim que aprovado, você já pode rodar com o veículo novo!', textColor),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Icon(Icons.two_wheeler_rounded, color: isDark ? const Color(0xFF00FF88) : Colors.green[700], size: 16),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'A troca é concluída após a validação da equipe de suporte.',
+                          style: TextStyle(
+                            color: textColor.withOpacity(0.5),
+                            fontSize: 12,
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            _buildExpansionFaqItem(
+              title: 'Como funciona o cálculo do meu repasse?',
+              isDark: isDark,
+              textColor: textColor,
+              content: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildStepText('Ponto 1:', 'Transparência total: O valor do repasse é calculado assim que a corrida é finalizada.', textColor),
+                  _buildStepText('Ponto 2:', 'Taxa do App: O Viper retém apenas uma taxa fixa administrativa sobre o valor total da corrida (consulte os termos vigentes).', textColor),
+                  _buildStepText('Ponto 3:', 'Ganhos 100% seus: Valores extras como pedágios ou gorjetas dadas pelo passageiro vão integralmente para a sua carteira.', textColor),
+                  _buildStepText('Ponto 4:', 'O saldo é atualizado na sua aba "Minha Carteira" em tempo real.', textColor),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Icon(Icons.calculate_outlined, color: isDark ? const Color(0xFF00FF88) : Colors.green[700], size: 16),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Cálculo preciso e auditável a cada quilômetro.',
+                          style: TextStyle(
+                            color: isDark ? const Color(0xFF00FF88) : Colors.green[700],
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 16),
+            _buildWhatsAppButton(),
 
             const SizedBox(height: 40),
             
@@ -173,6 +288,98 @@ class HelpView extends StatelessWidget {
               ),
             ),
             Icon(Icons.chevron_right_rounded, color: textColor.withOpacity(0.2)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _launchWhatsApp() async {
+    final Uri whatsappUrl = Uri.parse('https://wa.me/5548996525008?text=Olá,%20preciso%20de%20suporte%20no%20Viper%20Delivery.');
+    if (await canLaunchUrl(whatsappUrl)) {
+      await launchUrl(whatsappUrl, mode: LaunchMode.externalApplication);
+    } else {
+      Get.snackbar(
+        'Erro',
+        'Não foi possível abrir o WhatsApp. Verifique se o aplicativo está instalado.',
+        backgroundColor: Colors.redAccent,
+        colorText: Colors.white,
+      );
+    }
+  }
+
+  Widget _buildWhatsAppButton() {
+    return ElevatedButton(
+      onPressed: _launchWhatsApp,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: const Color(0xFF25D366),
+        foregroundColor: Colors.white,
+        minimumSize: const Size(double.infinity, 50),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        elevation: 0,
+      ),
+      child: const Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.chat_outlined, size: 20),
+          SizedBox(width: 12),
+          Text(
+            'Falar com um Atendente',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildExpansionFaqItem({
+    required String title,
+    required Widget content,
+    required bool isDark,
+    required Color textColor,
+    Color? iconColorOverride,
+  }) {
+    final iconColor = iconColorOverride ?? (isDark ? const Color(0xFF00FF88) : Colors.green[700]);
+    
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: textColor.withOpacity(0.05))),
+      ),
+      child: Theme(
+        data: Theme.of(Get.context!).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          tilePadding: EdgeInsets.zero,
+          title: Text(title, style: TextStyle(color: textColor, fontSize: 14, fontWeight: FontWeight.bold)),
+          iconColor: iconColor,
+          collapsedIconColor: textColor.withOpacity(0.3),
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(0, 0, 0, 16),
+              child: content,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStepText(String step, String text, Color textColor) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: RichText(
+        text: TextSpan(
+          children: [
+            TextSpan(
+              text: '$step ',
+              style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 13),
+            ),
+            TextSpan(
+              text: text,
+              style: TextStyle(color: textColor.withOpacity(0.7), fontSize: 13),
+            ),
           ],
         ),
       ),
