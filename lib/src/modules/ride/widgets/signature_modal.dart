@@ -5,13 +5,14 @@ import 'package:get/get.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:viper_delivery/src/modules/ride/services/delivery_proof_service.dart';
+import 'package:viper_delivery/src/modules/ride/controllers/ride_state_machine.dart';
 
 /// Modal de assinatura do cliente estruturado em DOIS PASSOS (Padrão Enterprise):
 /// Passo 1: Formulário de Coleta de Dados (Portrait - Vertical).
 /// Passo 2: Canvas Maximizada de Assinatura (Landscape - Horizontal).
 class SignatureModal {
   /// Exibe o modal. Retorna `true` se assinado com sucesso.
-  static Future<bool?> show(BuildContext context, {required bool isDark}) async {
+  static Future<bool?> show(BuildContext context, {required bool isDark, required String rideId}) async {
     final result = await showGeneralDialog<bool>(
       context: context,
       barrierDismissible: false,
@@ -29,7 +30,7 @@ class SignatureModal {
         );
       },
       pageBuilder: (context, _, __) {
-        return _SignatureDialog(isDark: isDark);
+        return _SignatureDialog(isDark: isDark, rideId: rideId);
       },
     );
 
@@ -44,7 +45,8 @@ class SignatureModal {
 
 class _SignatureDialog extends StatefulWidget {
   final bool isDark;
-  const _SignatureDialog({required this.isDark});
+  final String rideId;
+  const _SignatureDialog({required this.isDark, required this.rideId});
 
   @override
   State<_SignatureDialog> createState() => _SignatureDialogState();
@@ -136,26 +138,40 @@ class _SignatureDialogState extends State<_SignatureDialog> {
 
     // Repositório Desacoplado: Upload Inteligente (Database + Storage)
     final success = await _proofService.uploadPhotoProof(
-      mockOrderId: 'ORD-VIPER-8849', 
+      mockOrderId: widget.rideId, 
       photoFile: File(_photoFile!.path),
       receiverName: _nameController.text,
       document: _documentController.text,
       relation: _selectedRelation == 'Morador' ? 'Morador (${_aptoController.text})' : (_selectedRelation ?? 'Locker'),
     );
 
+
     setState(() => _isUploading = false);
 
     if (success) {
       if (!mounted) return;
+      
+      // 1. Mostrar o Get.snackbar verde
       Get.snackbar(
         'Sucesso!',
-        'Entrega concluída com sucesso!',
+        'Entrega concluída e salva com sucesso.',
         backgroundColor: Colors.green,
         colorText: Colors.white,
         snackPosition: SnackPosition.TOP,
+        duration: const Duration(seconds: 3),
+        icon: const Icon(Icons.check_circle, color: Colors.white),
       );
-      // Remove do Mapa com Glória
-      Navigator.pop(context, true);
+
+      // 2. Remover o card da lista (GetX)
+      try {
+        final rideSM = Get.find<RideStateMachine>();
+        rideSM.removerCorridaDaTela(widget.rideId);
+      } catch (e) {
+        debugPrint('Erro ao encontrar RideStateMachine: $e');
+      }
+
+      // 3. Get.back() para fechar o modal
+      Get.back(result: true); 
     } else {
       if (!mounted) return;
       Get.snackbar(

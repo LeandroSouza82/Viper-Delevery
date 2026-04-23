@@ -44,7 +44,6 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
   final DispatchService _dispatchService = DispatchService();
   
   final ValueNotifier<double> _sheetExtent = ValueNotifier<double>(0.16);
-  final ValueNotifier<List<ViperOrder>> _rideOrders = ValueNotifier<List<ViperOrder>>([]);
   Timer? _offerTimer;
   StreamSubscription? _offerSubscription;
 
@@ -87,7 +86,6 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
     _offerSubscription?.cancel();
     _offerTimer?.cancel();
     _sheetExtent.dispose();
-    _rideOrders.dispose();
     _dispatchService.dispose();
     super.dispose();
   }
@@ -126,7 +124,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
   }
 
   void _onAcceptOffer(ViperOffer offer) {
-    _rideOrders.value = [..._rideOrders.value, ...offer.orders];
+    _rideStateMachine.activeOrders.assignAll(offer.orders);
     _menuController.clearActiveOffer();
 
     // Delega para a máquina de estados — traça Fase 1 e muda estado
@@ -146,15 +144,15 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
 
       case RideState.arrivedAtPickup:
         // Dispara notificação e muda para "seguir rota"
-        final pendingOrders = _rideOrders.value
+        final pendingOrders = _rideStateMachine.activeOrders
             .where((o) => o.status == ViperOrderStatus.pending)
             .toList();
         final optimized = await _rideStateMachine.startDeliveryRoute(pendingOrders);
         // Atualiza a lista com a ordem otimizada
-        final nonPending = _rideOrders.value
+        final nonPending = _rideStateMachine.activeOrders
             .where((o) => o.status != ViperOrderStatus.pending)
             .toList();
-        _rideOrders.value = [...nonPending, ...optimized];
+        _rideStateMachine.activeOrders.assignAll([...nonPending, ...optimized]);
 
         // Abre o GPS externo apontando para o PRIMEIRO destino otimizado
         if (optimized.isNotEmpty && mounted) {
@@ -168,7 +166,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
 
       case RideState.onDeliveryRoute:
         // Navega para o próximo destino pendente
-        final nextPending = _rideOrders.value
+        final nextPending = _rideStateMachine.activeOrders
             .where((o) => o.status == ViperOrderStatus.pending)
             .toList();
         if (nextPending.isNotEmpty && mounted) {
@@ -223,7 +221,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
             drawer: ViperMenuCentral(
               settingsController: _settingsController,
               menuController: _menuController,
-              ordersNotifier: _rideOrders,
+              ordersNotifier: ValueNotifier(_rideStateMachine.activeOrders),
               onReturnToCD: () {
                 _mapController.recenter();
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -274,13 +272,14 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                           child: Opacity(
                             opacity: opacity,
                             child: ListenableBuilder(
-                              listenable: Listenable.merge([_homeController, _rideOrders]),
+                              listenable: _homeController,
                               builder: (context, child) {
-                                final isOnline = _homeController.isOnline;
-                                final orders = _rideOrders.value;
-                                final hasActive = orders.any((o) => o.status == ViperOrderStatus.pending);
-                                final hasFailed = orders.any((o) => o.status == ViperOrderStatus.failed);
-                                final isReturning = !hasActive && hasFailed && orders.isNotEmpty;
+                                return Obx(() {
+                                  final isOnline = _homeController.isOnline;
+                                  final orders = _rideStateMachine.activeOrders;
+                                  final hasActive = orders.any((o) => o.status == ViperOrderStatus.pending);
+                                  final hasFailed = orders.any((o) => o.status == ViperOrderStatus.failed);
+                                  final isReturning = !hasActive && hasFailed && orders.isNotEmpty;
 
                                 return ElevatedButton(
                                   onPressed: () {
@@ -318,7 +317,8 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                                       ),
                                     ],
                                   ),
-                                );
+                                  );
+                                });
                               },
                             ),
                           ),
@@ -393,11 +393,10 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                         key: _ridePanelKey,
                         isDark: isDark,
                         bottomSafePadding: safeBottomHeight,
-                        orders: _rideOrders,
+                        rideStateMachine: _rideStateMachine,
                         offer: _menuController.activeOffer.value,
                         menuController: _menuController,
                         settingsController: _settingsController,
-                        rideStateMachine: _rideStateMachine,
                         onFinalize: () {
                           _menuController.clearActiveOffer();
                           _rideStateMachine.reset();

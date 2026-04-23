@@ -80,7 +80,19 @@ extension RideStateUI on RideState {
 /// sem acoplar à UI. A UI apenas observa [currentState].
 class RideStateMachine extends GetxController {
   final currentState = RideState.idle.obs;
+  final activeOrders = <ViperOrder>[].obs; // LISTA REATIVA GLOBAL
   final _activeOffer = Rxn<ViperOffer>();
+
+  /// Remove a corrida da tela instantaneamente e verifica se a rota acabou.
+  void removerCorridaDaTela(String rideId) {
+    activeOrders.removeWhere((o) => o.id == rideId);
+    debugPrint('[RideStateMachine] Corrida $rideId removida da UI.');
+    
+    // Se não houver mais pedidos pendentes, finaliza a rota automaticamente
+    if (activeOrders.isEmpty && currentState.value != RideState.idle) {
+      completeRoute();
+    }
+  }
 
   ViperOffer? get activeOffer => _activeOffer.value;
 

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:viper_delivery/src/modules/home/models/viper_order.dart';
 import 'package:viper_delivery/src/modules/home/services/external_navigation_service.dart';
+import 'package:viper_delivery/src/modules/home/widgets/modals/failure_modal.dart';
 
 class ViperOrderCard extends StatelessWidget {
   final ViperOrder order;
@@ -25,102 +25,17 @@ class ViperOrderCard extends StatelessWidget {
 
   Future<void> _processDeliveryFailure(BuildContext context) async {
     try {
-      final position = await Geolocator.getCurrentPosition();
-      final distance = Geolocator.distanceBetween(
-        position.latitude,
-        position.longitude,
-        order.lat,
-        order.lng,
-      );
-
-      if (distance > 100) {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Você precisa estar no local para registrar falha'),
-              backgroundColor: Colors.orange,
-            ),
-          );
-        }
-        return;
-      }
-
+      // TODO: VOLTAR TRAVA DE CHEGADA AQUI DEPOIS DOS TESTES.
       if (context.mounted) {
-        final motivo = await _showFailureReasonSheet(context);
-        if (motivo != null) {
-          onFailure(order, motivo);
-        }
+        await FailureModal.show(context, rideId: order.id);
       }
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro de GPS: $e')),
+          SnackBar(content: Text('Erro ao processar falha: $e')),
         );
       }
     }
-  }
-
-  Future<String?> _showFailureReasonSheet(BuildContext context) async {
-    final reasons = [
-      'Cliente Ausente',
-      'Endereço não localizado',
-      'Local de risco / Sem acesso',
-      'Estabelecimento fechado',
-      'Recusado pelo destinatário',
-      'Outros',
-    ];
-
-    return showModalBottomSheet<String>(
-      context: context,
-      backgroundColor: isDark ? const Color(0xFF242424) : Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                'Motivo da Falha',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-              ),
-              const SizedBox(height: 12),
-              ...reasons.map((reason) => ListTile(
-                    title: Text(reason),
-                    onTap: () async {
-                      if (reason == 'Outros') {
-                        final otherReason = await _showOtherReasonDialog(context);
-                        if (context.mounted) Navigator.pop(context, otherReason);
-                      } else {
-                        Navigator.pop(context, reason);
-                      }
-                    },
-                  )),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Future<String?> _showOtherReasonDialog(BuildContext context) async {
-    String text = '';
-    return showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Descreva o motivo'),
-        content: TextField(
-          onChanged: (v) => text = v,
-          decoration: const InputDecoration(hintText: 'Digite aqui...'),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('CANCELAR')),
-          TextButton(onPressed: () => Navigator.pop(context, text), child: const Text('SALVAR')),
-        ],
-      ),
-    );
   }
 
   /// Texto da observação do gestor. Usa o campo [order.observacao] ou
