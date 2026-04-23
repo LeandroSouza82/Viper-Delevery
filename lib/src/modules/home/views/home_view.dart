@@ -10,7 +10,7 @@ import 'package:viper_delivery/src/modules/home/widgets/recenter_map_button.dart
 import 'package:viper_delivery/src/modules/home/widgets/sos_emergency_button.dart';
 import 'package:viper_delivery/src/modules/home/widgets/viper_menu_central.dart';
 import 'package:viper_delivery/src/modules/home/widgets/viper_map_widget.dart';
-import 'package:viper_delivery/src/modules/home/views/settings_view.dart';
+
 import 'package:viper_delivery/src/modules/home/models/viper_order.dart';
 import 'package:viper_delivery/src/modules/home/services/viper_mock_service.dart';
 import 'package:viper_delivery/src/modules/home/widgets/viper_offer_overlay.dart';
@@ -19,6 +19,9 @@ import 'package:viper_delivery/src/modules/home/widgets/viper_bottom_sheet_panel
 import 'package:viper_delivery/src/modules/home/services/dispatch_service.dart';
 import 'package:viper_delivery/src/modules/profile/controllers/performance_controller.dart';
 import 'package:viper_delivery/src/modules/profile/controllers/profile_controller.dart';
+import 'package:viper_delivery/src/modules/map/controllers/map_controller.dart';
+import 'package:viper_delivery/src/modules/ride/controllers/ride_state_machine.dart';
+import 'package:viper_delivery/src/modules/home/services/external_navigation_service.dart';
 
 class HomeView extends StatefulWidget {
   const HomeView({super.key});
@@ -33,6 +36,8 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
   final ViperMenuController _menuController = Get.put(ViperMenuController());
   final PerformanceController _performanceController = Get.put(PerformanceController());
   final ProfileController _profileController = Get.put(ProfileController()); // Inicialização Global para o SOS
+  final MapController _mapController = Get.put(MapController());
+  final RideStateMachine _rideStateMachine = Get.put(RideStateMachine());
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final GlobalKey<ViperMapWidgetState> _mapWidgetKey = GlobalKey<ViperMapWidgetState>();
   final GlobalKey<ViperBottomSheetPanelState> _ridePanelKey = GlobalKey<ViperBottomSheetPanelState>();
@@ -54,6 +59,20 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
     // Escuta mudanças na oferta para disparar o timer de 12s
     _offerSubscription = _menuController.activeOffer.listen((_) => _onOfferChanged());
     
+    // Wiring: MapController precisa da key do mapa
+    _mapController.attachMapKey(_mapWidgetKey);
+
+    // Wiring: RideStateMachine callbacks
+    _rideStateMachine.onPickupRouteReady = () {
+      _ridePanelKey.currentState?.expandToHalf();
+    };
+    _rideStateMachine.onDeliveryRouteReady = () {
+      _ridePanelKey.currentState?.expandToHalf();
+    };
+    _rideStateMachine.onRouteCompleted = () {
+      _ridePanelKey.currentState?.collapseToPeek();
+    };
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _settingsController.init();
       _homeController.initializeResilience(context);
@@ -109,11 +128,66 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
   void _onAcceptOffer(ViperOffer offer) {
     _rideOrders.value = [..._rideOrders.value, ...offer.orders];
     _menuController.clearActiveOffer();
-    
-    // Pequeno delay para garantir que o overlay sumiu antes do painel subir
-    Future.delayed(const Duration(milliseconds: 100), () {
-      _ridePanelKey.currentState?.expandToHalf();
-    });
+
+    // Delega para a máquina de estados — traça Fase 1 e muda estado
+    _rideStateMachine.acceptOffer(offer);
+  }
+
+  /// Ação do botão flutuante da máquina de estados.
+  /// Reage ao estado atual sem alterar o visual dos cards.
+  Future<void> _onStateMachineAction() async {
+    switch (_rideStateMachine.currentState.value) {
+      case RideState.goingToPickup:
+        // Abre navegador externo (Google Maps / Waze)
+        await _rideStateMachine.navigateToPickup(context);
+        // Transição automática para "arrivedAtPickup" após navegar
+        _rideStateMachine.confirmArrivalAtPickup();
+        break;
+
+      case RideState.arrivedAtPickup:
+        // Dispara notificação e muda para "seguir rota"
+        final pendingOrders = _rideOrders.value
+            .where((o) => o.status == ViperOrderStatus.pending)
+            .toList();
+        final optimized = await _rideStateMachine.startDeliveryRoute(pendingOrders);
+        // Atualiza a lista com a ordem otimizada
+        final nonPending = _rideOrders.value
+            .where((o) => o.status != ViperOrderStatus.pending)
+            .toList();
+        _rideOrders.value = [...nonPending, ...optimized];
+
+        // Abre o GPS externo apontando para o PRIMEIRO destino otimizado
+        if (optimized.isNotEmpty && mounted) {
+          await ExternalNavigationService.abrirNavegador(
+            lat: optimized.first.lat,
+            lng: optimized.first.lng,
+            context: context,
+          );
+        }
+        break;
+
+      case RideState.onDeliveryRoute:
+        // Navega para o próximo destino pendente
+        final nextPending = _rideOrders.value
+            .where((o) => o.status == ViperOrderStatus.pending)
+            .toList();
+        if (nextPending.isNotEmpty && mounted) {
+          await ExternalNavigationService.abrirNavegador(
+            lat: nextPending.first.lat,
+            lng: nextPending.first.lng,
+            context: context,
+          );
+        }
+        _ridePanelKey.currentState?.expandToHalf();
+        break;
+
+      case RideState.routeCompleted:
+        _rideStateMachine.reset();
+        break;
+
+      default:
+        break;
+    }
   }
 
   @override
@@ -149,6 +223,16 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
             drawer: ViperMenuCentral(
               settingsController: _settingsController,
               menuController: _menuController,
+              ordersNotifier: _rideOrders,
+              onReturnToCD: () {
+                _mapController.recenter();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Traçando rota de volta ao Centro de Distribuição...'),
+                    backgroundColor: Colors.orange,
+                  ),
+                );
+              },
             ),
             body: NotificationListener<DraggableScrollableNotification>(
               onNotification: (notification) {
@@ -263,6 +347,28 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                     ),
                   ),
 
+                  // 4.6 Botão Reativo da Máquina de Estados
+                  Obx(() {
+                    final state = _rideStateMachine.currentState.value;
+                    if (state == RideState.idle) return const SizedBox.shrink();
+                    return Positioned(
+                      top: topPadding + 135,
+                      left: 15,
+                      child: FloatingActionButton.extended(
+                        heroTag: 'ride_state_btn',
+                        onPressed: _onStateMachineAction,
+                        backgroundColor: state.buttonColor,
+                        foregroundColor: Colors.white,
+                        elevation: 6,
+                        icon: Icon(state.buttonIcon, size: 18),
+                        label: Text(
+                          state.buttonLabel,
+                          style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 11, letterSpacing: 0.5),
+                        ),
+                      ),
+                    );
+                  }),
+
                   // 5. Botão Recentalizar
                   Positioned(
                     top: topPadding + 15,
@@ -291,8 +397,10 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                         offer: _menuController.activeOffer.value,
                         menuController: _menuController,
                         settingsController: _settingsController,
+                        rideStateMachine: _rideStateMachine,
                         onFinalize: () {
                           _menuController.clearActiveOffer();
+                          _rideStateMachine.reset();
                         },
                         isClt: _homeController.isClt,
                       )),

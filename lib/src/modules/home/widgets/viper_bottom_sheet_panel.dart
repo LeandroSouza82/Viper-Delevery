@@ -7,6 +7,9 @@ import 'package:viper_delivery/src/modules/home/controllers/viper_menu_controlle
 import 'package:viper_delivery/src/modules/home/widgets/viper_receipt_bottom_sheet.dart';
 import 'package:viper_delivery/src/modules/home/controllers/settings_controller.dart';
 import 'package:viper_delivery/src/modules/home/views/settings_view.dart';
+import 'package:viper_delivery/src/modules/ride/controllers/ride_state_machine.dart';
+import 'package:viper_delivery/src/modules/ride/widgets/signature_modal.dart';
+import 'package:viper_delivery/src/modules/ride/widgets/failure_modal.dart';
 
 class ViperBottomSheetPanel extends StatefulWidget {
   const ViperBottomSheetPanel({
@@ -18,6 +21,7 @@ class ViperBottomSheetPanel extends StatefulWidget {
     required this.onFinalize,
     required this.menuController,
     required this.settingsController,
+    required this.rideStateMachine,
     this.isClt = false,
   });
 
@@ -28,6 +32,7 @@ class ViperBottomSheetPanel extends StatefulWidget {
   final VoidCallback onFinalize;
   final ViperMenuController menuController;
   final SettingsController settingsController;
+  final RideStateMachine rideStateMachine;
   final bool isClt;
 
   @override
@@ -115,6 +120,36 @@ class ViperBottomSheetPanelState extends State<ViperBottomSheetPanel> {
           },
         ),
       );
+    }
+  }
+
+  /// Sucesso: abre o modal de assinatura antes de completar o pedido.
+  Future<void> _onSuccessDelivery(ViperOrder order) async {
+    final signed = await SignatureModal.show(context, isDark: widget.isDark);
+    if (signed == true) {
+      _updateOrderStatus(order, ViperOrderStatus.completed);
+      // Verifica se a rota inteira acabou para notificar a state machine
+      final pending = widget.orders.value.where((o) => o.status == ViperOrderStatus.pending).toList();
+      if (pending.isEmpty) {
+        widget.rideStateMachine.completeRoute();
+      }
+    }
+  }
+
+  /// Falha: abre o modal de falha antes de mover para logística reversa.
+  Future<void> _onFailureDelivery(ViperOrder order, String legacyMotivo) async {
+    final result = await FailureModal.show(
+      context,
+      isDark: widget.isDark,
+      clienteName: order.cliente,
+    );
+    if (result != null) {
+      _updateOrderStatus(order, ViperOrderStatus.failed, motivo: result.motivo);
+      // Verifica se a rota inteira acabou
+      final pending = widget.orders.value.where((o) => o.status == ViperOrderStatus.pending).toList();
+      if (pending.isEmpty) {
+        widget.rideStateMachine.completeRoute();
+      }
     }
   }
 
@@ -244,9 +279,9 @@ class ViperBottomSheetPanelState extends State<ViperBottomSheetPanel> {
           isDark: widget.isDark,
           index: index,
           isClt: widget.isClt,
-          onRemove: () {}, 
-          onFinish: () => _updateOrderStatus(order, ViperOrderStatus.completed),
-          onFailure: (o, motivo) => _updateOrderStatus(o, ViperOrderStatus.failed, motivo: motivo),
+          onRemove: () {},
+          onFinish: () => _onSuccessDelivery(order),
+          onFailure: (o, motivo) => _onFailureDelivery(o, motivo),
         );
       },
     );

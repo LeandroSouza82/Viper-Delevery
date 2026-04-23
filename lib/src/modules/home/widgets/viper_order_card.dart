@@ -25,7 +25,6 @@ class ViperOrderCard extends StatelessWidget {
 
   Future<void> _processDeliveryFailure(BuildContext context) async {
     try {
-      // 1. Verificar Geofencing (< 100m)
       final position = await Geolocator.getCurrentPosition();
       final distance = Geolocator.distanceBetween(
         position.latitude,
@@ -46,7 +45,6 @@ class ViperOrderCard extends StatelessWidget {
         return;
       }
 
-      // 2. Abrir Bottom Sheet de Motivos
       if (context.mounted) {
         final motivo = await _showFailureReasonSheet(context);
         if (motivo != null) {
@@ -125,6 +123,22 @@ class ViperOrderCard extends StatelessWidget {
     );
   }
 
+  /// Texto da observação do gestor. Usa o campo [order.observacao] ou
+  /// simula um exemplo padrão para demonstração.
+  String get _observacaoText {
+    if (order.observacao != null && order.observacao!.isNotEmpty) {
+      return order.observacao!;
+    }
+    // Simulação: frase de exemplo alternada pelo index
+    const exemplos = [
+      'Entregar em mãos ao destinatário',
+      'Cuidado com o cão — portão lateral',
+      'Tocar interfone 2x e aguardar',
+      'Deixar na portaria se ausente',
+    ];
+    return exemplos[index % exemplos.length];
+  }
+
   @override
   Widget build(BuildContext context) {
     final serviceColor = order.tipo.color;
@@ -146,59 +160,34 @@ class ViperOrderCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Header: Cliente e Valor (No Topo)
+                // ── A. NOME DO CLIENTE ──
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Row(
-                      children: [
-                        const SizedBox(width: 28), // Espaço para o badge numérico
-                        Text(
-                          order.cliente,
-                          style: TextStyle(
-                            color: textColor,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                        ),
-                      ],
-                    ),
-                    if (isClt)
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.blue.withAlpha(30),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Text(
-                          'ORDEM DE SERVIÇO',
-                          style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold, fontSize: 10),
-                        ),
-                      )
-                    else
-                      Text(
-                        'R\$ ${order.valor.toStringAsFixed(2)}',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w900,
-                          color: Color(0xFF00C853),
+                    const SizedBox(width: 28), // Espaço para o badge numérico
+                    Expanded(
+                      child: Text(
+                        order.cliente,
+                        style: TextStyle(
+                          color: textColor,
+                          fontWeight: FontWeight.bold,
                           fontSize: 16,
                         ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
+                    ),
                   ],
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 2),
+
                 // Sub-header: Tipo de Serviço e ID
                 Row(
                   children: [
                     const SizedBox(width: 28),
-                    Icon(
-                      order.tipo == ViperOrderType.coleta ? Icons.storefront : Icons.local_shipping,
-                      size: 14,
-                      color: serviceColor,
-                    ),
+                    Icon(Icons.local_shipping, size: 14, color: serviceColor),
                     const SizedBox(width: 6),
                     Text(
-                      '${order.tipo.label} #${order.id.split('_').last}',
+                      'ENTREGA #${order.id.split('_').last}',
                       style: TextStyle(
                         color: serviceColor,
                         fontWeight: FontWeight.w900,
@@ -208,42 +197,86 @@ class ViperOrderCard extends StatelessWidget {
                     ),
                   ],
                 ),
-                const Divider(height: 24),
+                const Divider(height: 20),
 
-                // ENDEREÇOS (COLETA -> ENTREGA)
-                _buildAddressRow(
-                  label: 'COLETA',
-                  bairro: order.bairroColeta,
-                  endereco: order.enderecoColeta,
-                  icon: Icons.radio_button_checked,
-                  color: Colors.orange,
-                  isDark: isDark,
-                  textColor: textColor,
+                // ── B. ENDEREÇO DO CLIENTE (DESTINO FINAL — ÚNICO) ──
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.location_on, size: 18, color: serviceColor),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            order.bairroEntrega,
+                            style: TextStyle(
+                              color: textColor,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            order.enderecoEntrega,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: isDark ? Colors.white54 : Colors.black45,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-                const Padding(
-                  padding: EdgeInsets.only(left: 8),
-                  child: SizedBox(
-                    height: 12,
-                    child: VerticalDivider(width: 1, thickness: 1, color: Colors.grey),
+                const SizedBox(height: 12),
+
+                // ── C. BLOCO DE OBSERVAÇÃO DO GESTOR (ALERTA LARANJA) ──
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withAlpha(30),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.orange.withAlpha(60), width: 1),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Padding(
+                        padding: EdgeInsets.only(top: 1),
+                        child: Icon(Icons.info_outline, color: Colors.deepOrange, size: 16),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _observacaoText,
+                          style: const TextStyle(
+                            color: Colors.deepOrange,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            height: 1.3,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                _buildAddressRow(
-                  label: 'ENTREGA',
-                  bairro: order.bairroEntrega,
-                  endereco: order.enderecoEntrega,
-                  icon: Icons.location_on,
-                  color: Colors.blueAccent,
-                  isDark: isDark,
-                  textColor: textColor,
-                ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 16),
 
-                // Botões de Ação
+                // ── D. BOTÕES DE AÇÃO ──
                 Row(
                   children: [
                     Expanded(
                       child: OutlinedButton.icon(
-                        onPressed: () => ExternalNavigationService.openRoute(order.enderecoEntrega),
+                        onPressed: () => ExternalNavigationService.abrirNavegador(
+                          lat: order.lat,
+                          lng: order.lng,
+                          context: context,
+                        ),
                         icon: const Icon(Icons.navigation, size: 18),
                         label: const Text('ROTA', style: TextStyle(fontWeight: FontWeight.bold)),
                         style: OutlinedButton.styleFrom(
@@ -271,7 +304,7 @@ class ViperOrderCard extends StatelessWidget {
               ],
             ),
           ),
-          
+
           // Badge Numérico (Posição na Rota)
           Positioned(
             top: 14,
@@ -295,49 +328,8 @@ class ViperOrderCard extends StatelessWidget {
               ),
             ),
           ),
-          
-          // Indicador de Reordenação (Icone decorativo no topo direito se desejar, ou apenas omitir pois o ReorderableListView lida com isso)
         ],
       ),
-    );
-  }
-
-  Widget _buildAddressRow({
-    required String label,
-    required String bairro,
-    required String endereco,
-    required IconData icon,
-    required Color color,
-    required bool isDark,
-    required Color textColor,
-  }) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(icon, size: 18, color: color),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: TextStyle(color: color, fontSize: 9, fontWeight: FontWeight.bold),
-              ),
-              Text(
-                bairro,
-                style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 13),
-              ),
-              Text(
-                endereco,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(color: isDark ? Colors.white54 : Colors.black45, fontSize: 11),
-              ),
-            ],
-          ),
-        ),
-      ],
     );
   }
 

@@ -49,6 +49,14 @@ class ViperMockService {
     'Burger King',
   ];
 
+  static const List<String> _observacoes = [
+    'Cuidado com o cachorro',
+    'Entregar na portaria',
+    'Ligar antes de chegar',
+    'Não tocar campainha',
+    'Deixar com o vizinho se ausente',
+  ];
+
   /// Geradores Determinísticos para Ciclo de Testes
   static ViperOffer getMockEntrega({double? lat, double? lng}) {
     return generateOffer(userLat: lat, userLng: lng, forceSuper: false, forceType: ViperOrderType.entrega);
@@ -134,6 +142,7 @@ class ViperMockService {
         valor: valorFracionado,
         lat: o.lat,
         lng: o.lng,
+        observacao: o.observacao,
       );
     }).toList();
 
@@ -151,6 +160,8 @@ class ViperMockService {
       pickupStreet: finalOrders.first.enderecoColeta,
       dropoffNeighborhood: finalOrders.last.bairroEntrega,
       dropoffStreet: finalOrders.last.enderecoEntrega,
+      pickupLat: pCoords[0],
+      pickupLng: pCoords[1],
       contractType: _random.nextBool() ? ViperContractType.clt : ViperContractType.freelancer,
       routeType: isSuper ? ViperRouteType.super_rota : ViperRouteType.simple,
     );
@@ -159,6 +170,9 @@ class ViperMockService {
   static ViperOrder _createOrder(String addr, String pickup, List<String> pParts, String client, ViperOrderType type) {
     final parts = addr.split(',');
     final coords = _coords[addr]!;
+    final String? obs = _random.nextInt(3) == 0
+        ? _observacoes[_random.nextInt(_observacoes.length)]
+        : null;
     return ViperOrder(
       id: 'order_${_random.nextInt(10000)}',
       cliente: client,
@@ -170,6 +184,7 @@ class ViperMockService {
       valor: 0,
       lat: coords[0],
       lng: coords[1],
+      observacao: obs,
     );
   }
 

@@ -5,6 +5,16 @@ import 'package:geolocator/geolocator.dart' as geo;
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 import 'package:viper_delivery/src/core/config/env.dart';
 import 'package:viper_delivery/src/modules/home/controllers/settings_controller.dart';
+import 'package:viper_delivery/src/modules/home/models/viper_order.dart';
+import 'package:viper_delivery/src/modules/home/services/viper_directions_service.dart';
+import 'package:viper_delivery/src/modules/map/utils/marker_generator.dart';
+
+/// Fase de roteamento visual no mapa
+enum RoutePhase {
+  idle,    // Sem rota ativa
+  pickup,  // Fase 1: Motorista → Coleta (linha roxa)
+  delivery // Fase 2: Coleta → Destinos ordenados (linha azul)
+}
 
 class ViperMapWidget extends StatefulWidget {
   const ViperMapWidget({super.key});
@@ -20,6 +30,22 @@ class ViperMapWidgetState extends State<ViperMapWidget> {
   // Token Público carregado da classe Env (Envied) para segurança
   final String _accessToken = Env.mapboxPublicToken;
   final _settings = SettingsController();
+
+  // ── Annotation Managers (Pinos e Rota) ──
+  PointAnnotationManager? _pointManager;
+  PolylineAnnotationManager? _polylineManager;
+
+  // Cache de imagens dos pinos registradas no estilo
+  final Set<String> _registeredPinImages = {};
+
+  // ── Máquina de Estados da Rota ──
+  RoutePhase _currentPhase = RoutePhase.idle;
+  double _pickupLat = 0;
+  double _pickupLng = 0;
+  bool _isFetchingRoute = false; // Guard contra chamadas concorrentes
+
+  /// Fase atual da rota — lida por HomeView para não sobrescrever Fase 1
+  RoutePhase get currentPhase => _currentPhase;
 
   @override
   void initState() {
@@ -62,6 +88,10 @@ class ViperMapWidgetState extends State<ViperMapWidget> {
       },
       onStyleLoadedListener: (styleLoadedEvent) async {
         if (mapboxMap != null) {
+          // Limpa managers antigos pois o estilo foi recarregado
+          _pointManager = null;
+          _polylineManager = null;
+          _registeredPinImages.clear();
           await _setupMapboxComponent(mapboxMap!);
         }
       },
@@ -97,7 +127,13 @@ class ViperMapWidgetState extends State<ViperMapWidget> {
       ),
     );
 
-    // 3. Animação de Boas-Vindas (apenas na primeira vez)
+    // 3. Inicializa os Annotation Managers para pinos e rota (A ordem define o Z-Index!)
+    // Criamos a Polyline primeiro para que ela seja renderizada POR BAIXO.
+    _polylineManager = await controller.annotations.createPolylineAnnotationManager();
+    // Criamos os Pinos depois para que eles fiquem SEMPRE POR CIMA.
+    _pointManager = await controller.annotations.createPointAnnotationManager();
+
+    // 4. Animação de Boas-Vindas (apenas na primeira vez)
     if (!_hasAnimatedToUser) {
       _hasAnimatedToUser = true;
       try {
@@ -119,6 +155,292 @@ class ViperMapWidgetState extends State<ViperMapWidget> {
       }
     }
   }
+
+  // ═══════════════════════════════════════════════════════════
+  // ██  ROTA NO MAPA: Máquina de Estados (Fase 1 / Fase 2)
+  // ═══════════════════════════════════════════════════════════
+
+  /// FASE 1 — Aceitar oferta: desenha rota Motorista → Coleta
+  /// Chamado por HomeView._onAcceptOffer()
+  Future<void> startPickupRoute({
+    required double pickupLat,
+    required double pickupLng,
+  }) async {
+    _pickupLat = pickupLat;
+    _pickupLng = pickupLng;
+    _currentPhase = RoutePhase.pickup;
+
+    await _clearAnnotations();
+
+    // Tenta obter posição real do motorista
+    double driverLat = pickupLat; // fallback = próprio pickup
+    double driverLng = pickupLng;
+    try {
+      final pos = await geo.Geolocator.getCurrentPosition(
+        desiredAccuracy: geo.LocationAccuracy.high,
+      ).timeout(const Duration(seconds: 5));
+      driverLat = pos.latitude;
+      driverLng = pos.longitude;
+    } catch (_) {}
+
+    final coords = await ViperDirectionsService.getPickupRoute(
+      driverLat: driverLat,
+      driverLng: driverLng,
+      pickupLat: pickupLat,
+      pickupLng: pickupLng,
+    );
+
+    // Desenha pino de coleta (especial)
+    await _drawPickupPin(pickupLat, pickupLng);
+
+    // Desenha polyline roxa real (sem fallback ponto a ponto)
+    if (coords != null && coords.length >= 2) {
+      await _drawPolylineFromCoords(
+        coords,
+        color: const Color(0xFF9C27B0), // Roxo = A caminho da coleta
+        casingWidth: 12.0,
+        fillWidth: 8.0,
+      );
+    }
+
+    // Enquadra câmera nos dois pontos
+    await _fitCameraToPositions([
+      (lat: driverLat, lng: driverLng),
+      (lat: pickupLat, lng: pickupLng),
+    ]);
+  }
+
+  /// FASE 2 — Sair para entrega / reordenar: desenha Coleta → Destinos
+  /// Chamado por HomeView._syncMapWithOrders() quando fase == delivery
+  /// e também diretamente quando o motorista clica em "Sair para Entrega"
+  Future<void> updateMapRoute(List<ViperOrder> activeOrders) async {
+    if (mapboxMap == null) return;
+    if (_isFetchingRoute) return; // bloqueia chamadas concorrentes
+
+    _currentPhase = RoutePhase.delivery;
+    _isFetchingRoute = true;
+
+    try {
+      await _clearAnnotations();
+      if (activeOrders.isEmpty) return;
+
+      // Pinos numerados nos destinos
+      await _drawNumberedPins(activeOrders);
+
+      // Monta waypoints: Coleta → Destino1 → Destino2 → ...
+      final destinations = activeOrders
+          .map((o) => (lat: o.lat, lng: o.lng))
+          .toList();
+
+      List<Position>? coords;
+      if (_pickupLat != 0 && _pickupLng != 0) {
+        coords = await ViperDirectionsService.getDeliveryRoute(
+          pickupLat: _pickupLat,
+          pickupLng: _pickupLng,
+          destinations: destinations,
+        );
+      }
+
+      // Polyline azul Viper real (sem fallback ponto a ponto)
+      if (coords != null && coords.length >= 2) {
+        await _drawPolylineFromCoords(
+          coords,
+          color: const Color(0xFF0055FF),
+          casingWidth: 12.0,
+          fillWidth: 8.0,
+        );
+      }
+
+      // Enquadra câmera em toda a rota
+      await _fitCameraToPositions(
+        activeOrders.map((o) => (lat: o.lat, lng: o.lng)).toList(),
+      );
+    } finally {
+      _isFetchingRoute = false;
+    }
+  }
+
+  /// Limpa toda a rota e volta ao estado idle
+  Future<void> clearMapRoute() async {
+    _currentPhase = RoutePhase.idle;
+    _pickupLat = 0;
+    _pickupLng = 0;
+    await _clearAnnotations();
+  }
+
+  // ── Internos ────────────────────────────────────────────────
+
+  Future<void> _clearAnnotations() async {
+    try {
+      await _pointManager?.deleteAll();
+      await _polylineManager?.deleteAll();
+    } catch (e) {
+      debugPrint('[ViperMap] Erro ao limpar anotações: $e');
+    }
+  }
+
+  /// Pino especial de coleta (triângulo laranja com ícone de loja)
+  Future<void> _drawPickupPin(double lat, double lng) async {
+    if (_pointManager == null || mapboxMap == null) return;
+    const imageId = 'viper-pin-pickup';
+
+    if (!_registeredPinImages.contains(imageId)) {
+      try {
+        final bytes = await MarkerGenerator.generateTeardropMarker(
+          color: Colors.orange,
+          text: 'C',
+        );
+        await mapboxMap!.style.addStyleImage(
+          imageId, 2.0,
+          MbxImage(width: 140, height: 140, data: bytes),
+          false, [], [], null,
+        );
+        _registeredPinImages.add(imageId);
+      } catch (e) {
+        debugPrint('[ViperMap] Erro ao registrar pino de coleta: $e');
+        return;
+      }
+    }
+
+    try {
+      await _pointManager!.create(PointAnnotationOptions(
+        geometry: Point(coordinates: Position(lng, lat)),
+        iconImage: imageId,
+        iconSize: 0.6,
+        iconAnchor: IconAnchor.CENTER,
+      ));
+    } catch (e) {
+      debugPrint('[ViperMap] Erro ao criar pino coleta: $e');
+    }
+  }
+
+  /// Pinos numerados dos destinos de entrega
+  Future<void> _drawNumberedPins(List<ViperOrder> orders) async {
+    if (_pointManager == null || mapboxMap == null) return;
+
+    final List<PointAnnotationOptions> pinOptions = [];
+
+    for (int i = 0; i < orders.length; i++) {
+      final order = orders[i];
+      final pinNumber = i + 1;
+      final imageId = 'viper-pin-${order.tipo.name}-$pinNumber';
+
+      if (!_registeredPinImages.contains(imageId)) {
+        try {
+          final pinBytes = await MarkerGenerator.generateTeardropMarker(
+            color: order.tipo.color,
+            text: pinNumber.toString(),
+          );
+          await mapboxMap!.style.addStyleImage(
+            imageId, 2.0,
+            MbxImage(width: 140, height: 140, data: pinBytes),
+            false, [], [], null,
+          );
+          _registeredPinImages.add(imageId);
+        } catch (e) {
+          debugPrint('[ViperMap] Erro ao registrar pino $pinNumber: $e');
+          continue;
+        }
+      }
+
+      pinOptions.add(PointAnnotationOptions(
+        geometry: Point(coordinates: Position(order.lng, order.lat)),
+        iconImage: imageId,
+        iconSize: 0.6,
+        iconAnchor: IconAnchor.CENTER,
+      ));
+    }
+
+    try {
+      await _pointManager!.createMulti(pinOptions);
+    } catch (e) {
+      debugPrint('[ViperMap] Erro ao criar pinos: $e');
+    }
+  }
+
+  /// Desenha polyline com contorno preto (casing premium).
+  /// Camada 1 (base): preto, mais grossa → cria o contorno.
+  /// Camada 2 (fill): cor do VUP, mais fina → fica por cima.
+  /// A ordem de criação garante que a camada de fill fique acima.
+  Future<void> _drawPolylineFromCoords(
+    List<Position> coords, {
+    required Color color,
+    double fillWidth = 4.5,
+    double casingWidth = 7.5,
+    double opacity = 0.95,
+  }) async {
+    if (_polylineManager == null || coords.length < 2) return;
+
+    final lineString = LineString(coordinates: coords);
+
+    try {
+      // ── 1. Contorno (Casing) — desenhado PRIMEIRO para ficar embaixo ──
+      await _polylineManager!.create(
+        PolylineAnnotationOptions(
+          geometry: lineString,
+          lineColor: Colors.black.toARGB32(),
+          lineWidth: casingWidth,
+          lineOpacity: opacity,
+          lineJoin: LineJoin.ROUND,
+        ),
+      );
+
+      // ── 2. Miolo (Fill) — desenhado DEPOIS para ficar por cima ──
+      await _polylineManager!.create(
+        PolylineAnnotationOptions(
+          geometry: lineString,
+          lineColor: color.toARGB32(),
+          lineWidth: fillWidth,
+          lineOpacity: opacity,
+          lineJoin: LineJoin.ROUND,
+        ),
+      );
+    } catch (e) {
+      debugPrint('[ViperMap] Erro ao criar polyline: $e');
+    }
+  }
+
+  /// Ajusta câmera para enquadrar uma lista de pontos lat/lng
+  Future<void> _fitCameraToPositions(
+    List<({double lat, double lng})> points,
+  ) async {
+    if (mapboxMap == null || points.isEmpty) return;
+
+    double minLat = points.first.lat;
+    double maxLat = points.first.lat;
+    double minLng = points.first.lng;
+    double maxLng = points.first.lng;
+
+    for (final p in points) {
+      if (p.lat < minLat) minLat = p.lat;
+      if (p.lat > maxLat) maxLat = p.lat;
+      if (p.lng < minLng) minLng = p.lng;
+      if (p.lng > maxLng) maxLng = p.lng;
+    }
+
+    const pad = 0.015;
+    try {
+      final bounds = CoordinateBounds(
+        southwest: Point(coordinates: Position(minLng - pad, minLat - pad)),
+        northeast: Point(coordinates: Position(maxLng + pad, maxLat + pad)),
+        infiniteBounds: false,
+      );
+      final camera = await mapboxMap!.cameraForCoordinateBounds(
+        bounds,
+        MbxEdgeInsets(top: 80, left: 60, bottom: 200, right: 60),
+        null, null, null, null,
+      );
+      await mapboxMap!.flyTo(camera, MapAnimationOptions(duration: 800));
+    } catch (e) {
+      debugPrint('[ViperMap] Erro ao ajustar câmera: $e');
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // ██  GERADORES DE IMAGEM PROGRAMÁTICA
+  // ═══════════════════════════════════════════════════════════
+
+
 
   /// Gera programaticamente a imagem do marcador de localização
   Future<Uint8List> _generatePuckImage() async {
@@ -184,3 +506,4 @@ class ViperMapWidgetState extends State<ViperMapWidget> {
     }
   }
 }
+

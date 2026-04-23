@@ -43,6 +43,7 @@ class ViperOrder {
   final double lat;
   final double lng;
   final ViperOrderStatus status;
+  final String? observacao;
   final String? motivoFalha;
 
   ViperOrder({
@@ -58,11 +59,13 @@ class ViperOrder {
     required this.lng,
     this.status = ViperOrderStatus.pending,
     this.motivoFalha,
+    this.observacao,
   });
 
   ViperOrder copyWith({
     ViperOrderStatus? status,
     String? motivoFalha,
+    String? observacao,
   }) {
     return ViperOrder(
       id: id,
@@ -77,6 +80,7 @@ class ViperOrder {
       lng: lng,
       status: status ?? this.status,
       motivoFalha: motivoFalha ?? this.motivoFalha,
+      observacao: observacao ?? this.observacao,
     );
   }
 }
@@ -99,6 +103,8 @@ class ViperOffer {
   final double valorKmIda;
   final double valorKmRota;
   final double priorityBoost;
+  final double pickupLat;
+  final double pickupLng;
 
   ViperOffer({
     required this.id,
@@ -118,6 +124,8 @@ class ViperOffer {
     this.valorKmIda = 0,
     this.valorKmRota = 0,
     this.priorityBoost = 0,
+    this.pickupLat = 0,
+    this.pickupLng = 0,
   });
 
   int get qtdPedidos => orders.length;

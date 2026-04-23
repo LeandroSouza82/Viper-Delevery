@@ -11,6 +11,8 @@ import 'package:viper_delivery/src/modules/home/views/settings_view.dart';
 import 'package:viper_delivery/src/modules/profile/views/profile_view.dart';
 import 'package:viper_delivery/src/modules/profile/views/wallet_view.dart';
 import 'package:viper_delivery/src/modules/profile/views/help_view.dart';
+import 'package:viper_delivery/src/modules/home/models/viper_order.dart';
+import 'package:viper_delivery/src/modules/home/widgets/drawer_falhas_widget.dart';
 
 enum PerformanceView { day, week, month }
 enum DocumentsView { vehicle, profile, cnh }
@@ -18,11 +20,15 @@ enum DocumentsView { vehicle, profile, cnh }
 class ViperMenuCentral extends StatefulWidget {
   final SettingsController settingsController;
   final ViperMenuController menuController;
+  final ValueNotifier<List<ViperOrder>>? ordersNotifier;
+  final VoidCallback? onReturnToCD;
 
   const ViperMenuCentral({
     super.key,
     required this.settingsController,
     required this.menuController,
+    this.ordersNotifier,
+    this.onReturnToCD,
   });
 
   @override
@@ -75,6 +81,11 @@ class _ViperMenuCentralState extends State<ViperMenuCentral> {
                               _buildSectionTitle('PERFORMANCE E GANHOS', textColor, isDark),
                               const SizedBox(height: 16),
                               _buildPerformanceDashboard(isDark, textColor),
+
+                              const SizedBox(height: 32),
+                              _buildSectionTitle('LOGÍSTICA REVERSA', textColor, isDark),
+                              const SizedBox(height: 16),
+                              _buildReverseLogisticsSection(isDark, textColor),
 
                               const SizedBox(height: 32),
                               _buildSectionTitle('SISTEMA E CONTA', textColor, isDark),
@@ -493,6 +504,40 @@ class _ViperMenuCentralState extends State<ViperMenuCentral> {
           Text('Meta: 5 entregas para bônus de R\$ 50,00', style: TextStyle(color: textColor.withOpacity(0.5), fontSize: 11)),
         ],
       ),
+    );
+  }
+
+  Widget _buildReverseLogisticsSection(bool isDark, Color textColor) {
+    final ordersNotifier = widget.ordersNotifier;
+    if (ordersNotifier == null) {
+      return DrawerFalhasWidget(
+        failedOrders: const [],
+        isDark: isDark,
+        hasActiveRoute: false,
+        onReturnToCD: () {},
+        onItemTap: (_) {},
+      );
+    }
+
+    return ValueListenableBuilder<List<ViperOrder>>(
+      valueListenable: ordersNotifier,
+      builder: (context, allOrders, _) {
+        final failedOrders = allOrders.where((o) => o.status == ViperOrderStatus.failed).toList();
+        final hasActive = allOrders.any((o) => o.status == ViperOrderStatus.pending);
+
+        return DrawerFalhasWidget(
+          failedOrders: failedOrders,
+          isDark: isDark,
+          hasActiveRoute: hasActive,
+          onReturnToCD: () {
+            Navigator.pop(context); // Fecha o Drawer
+            widget.onReturnToCD?.call();
+          },
+          onItemTap: (order) {
+            debugPrint('[DrawerFalhas] Tapped: ${order.cliente} — ${order.motivoFalha}');
+          },
+        );
+      },
     );
   }
 
