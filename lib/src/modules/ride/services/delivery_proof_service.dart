@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class DeliveryProofService {
@@ -14,37 +13,43 @@ class DeliveryProofService {
     required String document,
     required String relation,
   }) async {
+    String publicUrl;
+
+    // PASSO 1: Fazer o upload para o Supabase Storage
     try {
-      // PASSO A: Fazer o upload do ficheiro para o Supabase Storage
-      final nomeArquivo = '${DateTime.now().millisecondsSinceEpoch}_comprovante.jpg';
+      final String path = '${DateTime.now().millisecondsSinceEpoch}_entrega.jpg';
       
-      print('>>> TENTANDO UPLOAD NO BUCKET: comprovantes_entrega');
-      await _supabase.storage.from('comprovantes_entrega').upload(
-        nomeArquivo,
+      print('>>> TENTANDO UPLOAD NO BUCKET: driver_documents');
+      await _supabase.storage.from('driver_documents').upload(
+        path,
         photoFile,
         fileOptions: const FileOptions(cacheControl: '3600', upsert: false),
       ).timeout(const Duration(seconds: 15));
+      
       print('>>> UPLOAD CONCLUÍDO COM SUCESSO');
+      
+      publicUrl = _supabase.storage.from('driver_documents').getPublicUrl(path);
+    } catch (e) {
+      print('>>> ERRO NO BUCKET: $e');
+      return false; // A ViewController exibirá o snackbar de Erro vermelho!
+    }
 
-      // PASSO B: Obter a publicUrl do ficheiro recém-carregado
-      final publicUrl = _supabase.storage.from('comprovantes_entrega').getPublicUrl(nomeArquivo);
-      debugPrint('[SUPABASE UPLOAD] Foto salva no Storage -> $publicUrl');
-
-      // PASSO C: Atualizar a Base de Dados
-      await _supabase.from('viper_orders').update({
+    // PASSO 2: Atualizar a Base de Dados
+    try {
+      await _supabase.from('rides').update({
+        'foto_comprovante': publicUrl,
         'status': 'Concluída',
-        'proof_photo_url': publicUrl,
         'receiver_name': receiverName,
         'receiver_document': document,
-        'receiver_relation': relation,
-        'delivery_date': DateTime.now().toIso8601String(),
+        'receiver_vincule': relation,
       }).eq('id', mockOrderId).timeout(const Duration(seconds: 15));
-
+      // NOTA: Se o erro persistir, reinicie o servidor do Supabase 
+      // ou aguarde 1 minuto para o cache do PostgREST atualizar o schema.
+      
       return true;
     } catch (e) {
-      print('ERRO SUPABASE: $e');
-      debugPrint('[SUPABASE ERROR] Falha na operação: $e');
-      return false;
+      print('>>> ERRO NA TABELA: $e');
+      return false; // A ViewController exibirá o snackbar de Erro vermelho!
     }
   }
 }

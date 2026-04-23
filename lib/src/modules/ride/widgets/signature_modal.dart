@@ -149,7 +149,7 @@ class _SignatureDialogState extends State<_SignatureDialog> {
       if (!mounted) return;
       Get.snackbar(
         'Sucesso!',
-        'Foto salva e entrega confirmada!',
+        'Entrega concluída com sucesso!',
         backgroundColor: Colors.green,
         colorText: Colors.white,
         snackPosition: SnackPosition.TOP,

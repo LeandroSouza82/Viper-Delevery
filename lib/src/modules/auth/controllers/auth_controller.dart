@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -10,6 +11,8 @@ class AuthController extends ChangeNotifier {
 
   Future<void> signIn(String email, String password, bool keepLoggedIn, bool saveEmail) async {
     _setLoading(true);
+    // Se mudamos o projeto no Supabase, é necessário criar o usuário novamente no menu Authentication do novo projeto no navegador
+    print('>>> TENTANDO LOGIN NO PROJETO: jribfmilbdzxiaajqgm');
     try {
       final prefs = await SharedPreferences.getInstance();
       if (saveEmail) {
@@ -21,6 +24,8 @@ class AuthController extends ChangeNotifier {
 
       await _supabase.auth.signInWithPassword(email: email, password: password);
     } on AuthException catch (e) {
+      print('>>> ERRO AO LOGAR: ${e.message}');
+      Get.snackbar('Erro no Login', e.message, backgroundColor: Colors.red.withOpacity(0.9), colorText: Colors.white, snackPosition: SnackPosition.TOP);
       if (e.message.toLowerCase().contains('invalid login credentials') || e.code == 'invalid_credentials') {
         errorMessage = 'E-mail ou senha incorretos. Verifique e tente novamente.';
       } else if (e.message.toLowerCase().contains('user not found') || e.code == 'user_not_found') {
@@ -30,6 +35,8 @@ class AuthController extends ChangeNotifier {
       }
       rethrow;
     } catch (e) {
+      print('>>> ERRO AO LOGAR: ${e.toString()}');
+      Get.snackbar('Erro Crítico', e.toString(), backgroundColor: Colors.red.withOpacity(0.9), colorText: Colors.white, snackPosition: SnackPosition.TOP);
       errorMessage = 'Ops! Tivemos um problema técnico. Tente novamente em instantes.';
       rethrow;
     } finally {

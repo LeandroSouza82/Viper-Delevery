@@ -38,10 +38,14 @@ void main() async {
     systemNavigationBarDividerColor: Colors.transparent,
   ));
   
-  await Supabase.initialize(
-    url: Env.supabaseUrl,
-    anonKey: Env.supabaseKey,
-  );
+  try {
+    await Supabase.initialize(
+      url: 'https://jribfmilbdzxisaajqgm.supabase.co',
+      anonKey: 'sb_publishable_jEeo93Wu3PB0kiwMevbDuw_Vm1Ngwr4',
+    );
+  } catch (e) {
+    print('>>> ERRO CRÍTICO NA INICIALIZAÇÃO: $e');
+  }
 
   // Inicializa o controlador de configurações (Sindicato de Tema)
   Get.put(SettingsController());
