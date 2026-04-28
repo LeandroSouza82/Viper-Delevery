@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:viper_delivery/src/modules/home/models/viper_order.dart';
+import 'package:viper_delivery/src/models/ride_model.dart';
 import 'package:viper_delivery/src/modules/home/widgets/viper_map_widget.dart';
 import 'package:viper_delivery/src/modules/home/services/viper_routing_service.dart';
 
@@ -47,12 +47,12 @@ class MapController extends GetxController {
   /// Apaga a linha da Fase 1, ordena as entregas pelo algoritmo do
   /// "Vizinho Mais Próximo" e traça a polyline completa via ruas reais.
   ///
-  /// Retorna a lista de [ViperOrder] na ordem otimizada para o chamador
+  /// Retorna a lista de [RideModel] na ordem otimizada para o chamador
   /// atualizar os cards do painel.
-  Future<List<ViperOrder>> optimizeAndTraceDeliveries({
+  Future<List<RideModel>> optimizeAndTraceDeliveries({
     required double pickupLat,
     required double pickupLng,
-    required List<ViperOrder> orders,
+    required List<RideModel> orders,
   }) async {
     final map = _map;
     if (map == null || orders.isEmpty) return orders;

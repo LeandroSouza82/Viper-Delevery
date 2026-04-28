@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:viper_delivery/src/modules/home/models/viper_order.dart';
+import 'package:viper_delivery/src/models/ride_model.dart';
 
 class ReturnsTabView extends StatelessWidget {
-  final List<ViperOrder> failedOrders;
+  final List<RideModel> failedOrders;
   final bool isDark;
-  final Function(ViperOrder) onReturnToBase;
+  final Function(RideModel) onReturnToBase;
 
   const ReturnsTabView({
     super.key,
@@ -48,7 +48,7 @@ class ReturnsTabView extends StatelessWidget {
       physics: const NeverScrollableScrollPhysics(),
       itemCount: failedOrders.length,
       itemBuilder: (context, index) {
-        final order = failedOrders[index];
+        final ride = failedOrders[index];
         return Container(
           margin: const EdgeInsets.only(bottom: 12),
           padding: const EdgeInsets.all(16),
@@ -64,7 +64,7 @@ class ReturnsTabView extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    order.cliente,
+                    ride.clientName,
                     style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                   ),
                   const Icon(Icons.error_outline, color: Colors.red, size: 18),
@@ -78,7 +78,7 @@ class ReturnsTabView extends StatelessWidget {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  'Motivo: ${order.motivoFalha ?? 'Não informado'}',
+                  'Motivo: ${ride.failureReason ?? 'Não informado'}',
                   style: const TextStyle(color: Colors.red, fontSize: 11, fontWeight: FontWeight.bold),
                 ),
               ),
@@ -86,7 +86,7 @@ class ReturnsTabView extends StatelessWidget {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
-                  onPressed: () => onReturnToBase(order),
+                  onPressed: () => onReturnToBase(ride),
                   icon: const Icon(Icons.keyboard_return),
                   label: const Text('DEVOLVER NA BASE'),
                   style: ElevatedButton.styleFrom(

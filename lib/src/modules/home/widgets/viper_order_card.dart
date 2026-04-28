@@ -1,20 +1,20 @@
 import 'package:flutter/material.dart';
-import 'package:viper_delivery/src/modules/home/models/viper_order.dart';
+import 'package:viper_delivery/src/models/ride_model.dart';
 import 'package:viper_delivery/src/modules/home/services/external_navigation_service.dart';
 import 'package:viper_delivery/src/modules/home/widgets/modals/failure_modal.dart';
 
 class ViperOrderCard extends StatelessWidget {
-  final ViperOrder order;
+  final RideModel ride;
   final bool isDark;
   final VoidCallback onRemove;
-  final Function(ViperOrder, String) onFailure;
+  final Function(RideModel, String) onFailure;
   final VoidCallback onFinish;
   final int index;
   final bool isClt;
 
   const ViperOrderCard({
     required Key key,
-    required this.order,
+    required this.ride,
     required this.isDark,
     required this.onRemove,
     required this.onFailure,
@@ -27,7 +27,7 @@ class ViperOrderCard extends StatelessWidget {
     try {
       // TODO: VOLTAR TRAVA DE CHEGADA AQUI DEPOIS DOS TESTES.
       if (context.mounted) {
-        await FailureModal.show(context, rideId: order.id);
+        await FailureModal.show(context, rideId: ride.id);
       }
     } catch (e) {
       if (context.mounted) {
@@ -38,11 +38,11 @@ class ViperOrderCard extends StatelessWidget {
     }
   }
 
-  /// Texto da observação do gestor. Usa o campo [order.observacao] ou
+  /// Texto da observação do gestor. Usa o campo [ride.observations] ou
   /// simula um exemplo padrão para demonstração.
   String get _observacaoText {
-    if (order.observacao != null && order.observacao!.isNotEmpty) {
-      return order.observacao!;
+    if (ride.observations != null && ride.observations!.isNotEmpty) {
+      return ride.observations!;
     }
     // Simulação: frase de exemplo alternada pelo index
     const exemplos = [
@@ -56,7 +56,7 @@ class ViperOrderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final serviceColor = order.tipo.color;
+    final serviceColor = ride.serviceType.color;
     final cardBg = isDark ? Colors.white.withAlpha(5) : Colors.grey[50];
     final textColor = isDark ? Colors.white : Colors.black87;
 
@@ -81,7 +81,7 @@ class ViperOrderCard extends StatelessWidget {
                     const SizedBox(width: 28), // Espaço para o badge numérico
                     Expanded(
                       child: Text(
-                        order.cliente,
+                        ride.clientName,
                         style: TextStyle(
                           color: textColor,
                           fontWeight: FontWeight.bold,
@@ -101,13 +101,21 @@ class ViperOrderCard extends StatelessWidget {
                     const SizedBox(width: 28),
                     Icon(Icons.local_shipping, size: 14, color: serviceColor),
                     const SizedBox(width: 6),
-                    Text(
-                      'ENTREGA #${order.id.split('_').last}',
-                      style: TextStyle(
-                        color: serviceColor,
-                        fontWeight: FontWeight.w900,
-                        fontSize: 10,
-                        letterSpacing: 0.5,
+                    // O ID gerado pelo Supabase é um UUID longo. Para fins visuais,
+                    // cortamos para os 6 primeiros caracteres. O `Expanded` garante 
+                    // que, se a tela for muito estreita, o texto seja cortado com reticências
+                    // em vez de causar um erro de overflow (faixa amarela).
+                    Expanded(
+                      child: Text(
+                        '${ride.serviceType.label} #${ride.id.length > 6 ? ride.id.substring(0, 6) : ride.id}',
+                        style: TextStyle(
+                          color: serviceColor,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 10,
+                          letterSpacing: 0.5,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],
@@ -124,17 +132,22 @@ class ViperOrderCard extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          // O pickupAddress é renderizado primeiro. Usamos maxLines: 2
+                          // e TextOverflow.ellipsis para evitar quebra de layout em
+                          // endereços não otimizados.
                           Text(
-                            order.bairroEntrega,
+                            ride.pickupAddress,
                             style: TextStyle(
                               color: textColor,
                               fontWeight: FontWeight.bold,
                               fontSize: 14,
                             ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            order.enderecoEntrega,
+                            ride.deliveryAddress,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
@@ -167,13 +180,16 @@ class ViperOrderCard extends StatelessWidget {
                       ),
                       const SizedBox(width: 8),
                       Expanded(
-                        child: Text(
-                          _observacaoText,
-                          style: const TextStyle(
-                            color: Colors.deepOrange,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            height: 1.3,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                          child: Text(
+                            _observacaoText,
+                            style: const TextStyle(
+                              color: Colors.deepOrange,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              height: 1.3,
+                            ),
                           ),
                         ),
                       ),
@@ -188,8 +204,8 @@ class ViperOrderCard extends StatelessWidget {
                     Expanded(
                       child: OutlinedButton.icon(
                         onPressed: () => ExternalNavigationService.abrirNavegador(
-                          lat: order.lat,
-                          lng: order.lng,
+                          lat: ride.lat,
+                          lng: ride.lng,
                           context: context,
                         ),
                         icon: const Icon(Icons.navigation, size: 18),

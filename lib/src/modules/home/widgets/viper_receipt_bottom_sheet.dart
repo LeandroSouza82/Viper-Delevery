@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:viper_delivery/src/modules/home/models/viper_order.dart';
+import 'package:viper_delivery/src/models/ride_model.dart';
 import 'package:viper_delivery/src/modules/home/controllers/viper_menu_controller.dart';
 import 'package:viper_delivery/src/modules/ride/widgets/payment_selector.dart';
 import 'package:viper_delivery/src/shared/widgets/pix_qr_dialog.dart';
@@ -7,7 +7,7 @@ import 'package:viper_delivery/src/modules/ride/widgets/delivery_proof_step.dart
 import 'dart:io';
 
 class ViperReceiptBottomSheet extends StatefulWidget {
-  final ViperExecutionSummary summary;
+  final RideExecutionSummary summary;
   final bool isDark;
   final bool isClt;
   final ViperMenuController menuController;
@@ -103,7 +103,7 @@ class _ViperReceiptBottomSheetState extends State<ViperReceiptBottomSheet> {
     final bgColor = widget.isDark ? const Color(0xFF1A1A1A) : Colors.white;
     final textColor = widget.isDark ? Colors.white : Colors.black;
     final accentColor = const Color(0xFF00C853);
-    final isPending = widget.summary.paymentStatus == ViperPaymentStatus.pending && !widget.isClt;
+    final isPending = widget.summary.paymentStatus == RidePaymentStatus.pending && !widget.isClt;
 
     return Container(
       padding: EdgeInsets.fromLTRB(24, 32, 24, MediaQuery.of(context).viewInsets.bottom + 32),

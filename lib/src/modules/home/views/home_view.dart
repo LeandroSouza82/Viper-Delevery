@@ -11,9 +11,7 @@ import 'package:viper_delivery/src/modules/home/widgets/sos_emergency_button.dar
 import 'package:viper_delivery/src/modules/home/widgets/viper_menu_central.dart';
 import 'package:viper_delivery/src/modules/home/widgets/viper_map_widget.dart';
 
-import 'package:viper_delivery/src/modules/home/models/viper_order.dart';
-import 'package:viper_delivery/src/modules/home/services/viper_mock_service.dart';
-import 'package:viper_delivery/src/modules/home/widgets/viper_offer_overlay.dart';
+import 'package:viper_delivery/src/models/ride_model.dart';
 import 'package:viper_delivery/src/modules/home/controllers/viper_menu_controller.dart';
 import 'package:viper_delivery/src/modules/home/widgets/viper_bottom_sheet_panel.dart';
 import 'package:viper_delivery/src/modules/home/services/dispatch_service.dart';
@@ -44,8 +42,6 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
   final DispatchService _dispatchService = DispatchService();
   
   final ValueNotifier<double> _sheetExtent = ValueNotifier<double>(0.16);
-  Timer? _offerTimer;
-  StreamSubscription? _offerSubscription;
 
   static const double _minExtent = 0.16;
   static const double _fadeLimit = 0.5;
@@ -54,9 +50,6 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    
-    // Escuta mudanças na oferta para disparar o timer de 12s
-    _offerSubscription = _menuController.activeOffer.listen((_) => _onOfferChanged());
     
     // Wiring: MapController precisa da key do mapa
     _mapController.attachMapKey(_mapWidgetKey);
@@ -83,52 +76,14 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _offerSubscription?.cancel();
-    _offerTimer?.cancel();
     _sheetExtent.dispose();
     _dispatchService.dispose();
     super.dispose();
   }
 
-  void _onOfferChanged() {
-    _offerTimer?.cancel();
-    if (_menuController.activeOffer.value != null) {
-      // Regra dos 12 segundos: se o motorista não agir, a oferta some
-      _offerTimer = Timer(const Duration(seconds: 12), () {
-        if (mounted) {
-          print('[!!! VIPER !!!] Oferta expirada por tempo limite (12s).');
-          _menuController.clearActiveOffer();
-        }
-      });
-    }
-  }
-
   // Lógica de Dispatch simplificada para rodar apenas em background (logs)
   void _startBackgroundDispatch() {
     _dispatchService.startSearch(initialValue: 15.0);
-  }
-
-  void _onRadarPressed() {
-    HapticFeedback.selectionClick();
-    // Simula a chegada de uma nova oferta aleatória
-    _menuController.activeOffer.value = ViperMockService.generateOffer(
-      userLat: _menuController.userLatitude,
-      userLng: _menuController.userLongitude,
-    );
-  }
-
-  void _onTestSimulation() {
-    HapticFeedback.heavyImpact();
-    // Agora o ciclo é controlado pelo MenuController (Super -> Entrega -> Coleta -> Serviço)
-    _menuController.triggerNextTestOffer();
-  }
-
-  void _onAcceptOffer(ViperOffer offer) {
-    _rideStateMachine.activeOrders.assignAll(offer.orders);
-    _menuController.clearActiveOffer();
-
-    // Delega para a máquina de estados — traça Fase 1 e muda estado
-    _rideStateMachine.acceptOffer(offer);
   }
 
   /// Ação do botão flutuante da máquina de estados.
@@ -145,12 +100,12 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
       case RideState.arrivedAtPickup:
         // Dispara notificação e muda para "seguir rota"
         final pendingOrders = _rideStateMachine.activeOrders
-            .where((o) => o.status == ViperOrderStatus.pending)
+            .where((o) => o.status == RideStatus.pending)
             .toList();
         final optimized = await _rideStateMachine.startDeliveryRoute(pendingOrders);
         // Atualiza a lista com a ordem otimizada
         final nonPending = _rideStateMachine.activeOrders
-            .where((o) => o.status != ViperOrderStatus.pending)
+            .where((o) => o.status != RideStatus.pending)
             .toList();
         _rideStateMachine.activeOrders.assignAll([...nonPending, ...optimized]);
 
@@ -167,7 +122,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
       case RideState.onDeliveryRoute:
         // Navega para o próximo destino pendente
         final nextPending = _rideStateMachine.activeOrders
-            .where((o) => o.status == ViperOrderStatus.pending)
+            .where((o) => o.status == RideStatus.pending || o.status == RideStatus.onDeliveryRoute)
             .toList();
         if (nextPending.isNotEmpty && mounted) {
           await ExternalNavigationService.abrirNavegador(
@@ -201,9 +156,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
     final topPadding = MediaQuery.of(context).padding.top;
     final safeBottomHeight = MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom : 30.0;
 
-    return ListenableBuilder(
-      listenable: _settingsController,
-      builder: (context, child) {
+    return Obx(() {
         final isDark = _settingsController.isDarkTheme;
         
         return AnnotatedRegion<SystemUiOverlayStyle>(
@@ -221,7 +174,6 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
             drawer: ViperMenuCentral(
               settingsController: _settingsController,
               menuController: _menuController,
-              ordersNotifier: ValueNotifier(_rideStateMachine.activeOrders),
               onReturnToCD: () {
                 _mapController.recenter();
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -271,15 +223,12 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                           ignoring: opacity == 0,
                           child: Opacity(
                             opacity: opacity,
-                            child: ListenableBuilder(
-                              listenable: _homeController,
-                              builder: (context, child) {
-                                return Obx(() {
-                                  final isOnline = _homeController.isOnline;
-                                  final orders = _rideStateMachine.activeOrders;
-                                  final hasActive = orders.any((o) => o.status == ViperOrderStatus.pending);
-                                  final hasFailed = orders.any((o) => o.status == ViperOrderStatus.failed);
-                                  final isReturning = !hasActive && hasFailed && orders.isNotEmpty;
+                            child: Obx(() {
+                                final isOnline = _homeController.isOnline.value;
+                                final orders = _rideStateMachine.activeOrders;
+                                final hasActive = orders.any((o) => o.status != RideStatus.completed && o.status != RideStatus.failed && o.status != RideStatus.returned);
+                                final hasFailed = orders.any((o) => o.status == RideStatus.failed);
+                                final isReturning = !hasActive && hasFailed && orders.isNotEmpty;
 
                                 return ElevatedButton(
                                   onPressed: () {
@@ -318,9 +267,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                                     ],
                                   ),
                                   );
-                                });
-                              },
-                            ),
+                              }),
                           ),
                         ),
                       );
@@ -332,19 +279,6 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                     top: topPadding + 15,
                     left: 15,
                     child: HomeMenuIcon(settingsController: _settingsController),
-                  ),
-
-                  // 4.5 Gatilho de Testes (Simulação de Super Rota)
-                  Positioned(
-                    top: topPadding + 75,
-                    left: 15,
-                    child: _buildFloatingButton(
-                      icon: Icons.auto_awesome_motion_rounded,
-                      onPressed: _onTestSimulation,
-                      isDark: _settingsController.isDarkTheme,
-                      heroTag: 'test_simulation_btn',
-                      color: Colors.purpleAccent,
-                    ),
                   ),
 
                   // 4.6 Botão Reativo da Máquina de Estados
@@ -394,33 +328,16 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                         isDark: isDark,
                         bottomSafePadding: safeBottomHeight,
                         rideStateMachine: _rideStateMachine,
-                        offer: _menuController.activeOffer.value,
                         menuController: _menuController,
                         settingsController: _settingsController,
                         onFinalize: () {
-                          _menuController.clearActiveOffer();
                           _rideStateMachine.reset();
                         },
                         isClt: _homeController.isClt,
                       )),
 
-                  // 8. O REI DA TELA: Overlay de Oferta
-                  Obx(() {
-                    final offer = _menuController.activeOffer.value;
-                    if (offer == null) return const SizedBox.shrink();
-                    return Container(
-                      width: double.infinity,
-                      height: double.infinity,
-                      color: Colors.black.withOpacity(0.6),
-                      child: ViperOfferOverlay(
-                        offer: offer,
-                        isDark: isDark,
-                        onAccept: () => _onAcceptOffer(offer),
-                        onDecline: () => _menuController.clearActiveOffer(),
-                      ),
-                    );
-                  }),
-
+                  // 8. O REI DA TELA: Removido Mock Overlay pois agora os dados vem da Stream
+                  
                   // Molduras de Sistema (Dinâmicas)
                   Positioned(top: 0, left: 0, right: 0, child: Container(height: topPadding, color: isDark ? Colors.black : Colors.white)),
                   Positioned(bottom: 0, left: 0, right: 0, child: Container(height: safeBottomHeight, color: isDark ? Colors.black : Colors.white)),
@@ -429,27 +346,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
             ),
           ),
         );
-      },
-    );
+    });
   }
 
-  Widget _buildFloatingButton({
-    required IconData icon,
-    required VoidCallback onPressed,
-    required bool isDark,
-    required String heroTag,
-    Color? color,
-  }) {
-    return FloatingActionButton.small(
-      heroTag: heroTag,
-      onPressed: onPressed,
-      backgroundColor: isDark ? const Color(0xFF2A2A2A) : Colors.white,
-      foregroundColor: color ?? const Color(0xFF0055FF),
-      elevation: 4,
-      shape: CircleBorder(
-        side: BorderSide(color: isDark ? Colors.white24 : Colors.black12, width: 1),
-      ),
-      child: Icon(icon),
-    );
-  }
 }

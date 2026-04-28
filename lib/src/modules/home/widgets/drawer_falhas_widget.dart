@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:viper_delivery/src/modules/home/models/viper_order.dart';
+import 'package:viper_delivery/src/models/ride_model.dart';
 
 /// Widget do Drawer lateral para visualização de pacotes com falha
 /// e funcionalidade de Logística Reversa (devolver ao Centro de Distribuição).
@@ -7,11 +7,11 @@ import 'package:viper_delivery/src/modules/home/models/viper_order.dart';
 /// Projetado para ser embutido no menu central (ViperMenuCentral)
 /// como uma seção dedicada.
 class DrawerFalhasWidget extends StatelessWidget {
-  final List<ViperOrder> failedOrders;
+  final List<RideModel> failedOrders;
   final bool isDark;
   final bool hasActiveRoute;
   final VoidCallback onReturnToCD;
-  final Function(ViperOrder) onItemTap;
+  final Function(RideModel) onItemTap;
 
   const DrawerFalhasWidget({
     super.key,
@@ -125,7 +125,7 @@ class DrawerFalhasWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildFailedOrderTile(ViperOrder order, Color textColor) {
+  Widget _buildFailedOrderTile(RideModel order, Color textColor) {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),
@@ -155,7 +155,7 @@ class DrawerFalhasWidget extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    order.cliente,
+                    order.clientName,
                     style: TextStyle(
                       color: textColor,
                       fontWeight: FontWeight.bold,
@@ -166,7 +166,7 @@ class DrawerFalhasWidget extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    order.motivoFalha ?? 'Motivo não informado',
+                    order.failureReason ?? 'Motivo não informado',
                     style: TextStyle(
                       color: Colors.red.withOpacity(0.7),
                       fontSize: 10,

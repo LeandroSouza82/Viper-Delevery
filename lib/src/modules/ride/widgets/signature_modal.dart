@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:viper_delivery/src/modules/ride/services/delivery_proof_service.dart';
 import 'package:viper_delivery/src/modules/ride/controllers/ride_state_machine.dart';
+import 'package:viper_delivery/src/models/ride_model.dart';
 
 /// Modal de assinatura do cliente estruturado em DOIS PASSOS (Padrão Enterprise):
 /// Passo 1: Formulário de Coleta de Dados (Portrait - Vertical).
@@ -165,7 +166,7 @@ class _SignatureDialogState extends State<_SignatureDialog> {
       // 2. Remover o card da lista (GetX)
       try {
         final rideSM = Get.find<RideStateMachine>();
-        rideSM.removerCorridaDaTela(widget.rideId);
+        rideSM.removerCorridaDaTela(widget.rideId, RideStatus.completed);
       } catch (e) {
         debugPrint('Erro ao encontrar RideStateMachine: $e');
       }

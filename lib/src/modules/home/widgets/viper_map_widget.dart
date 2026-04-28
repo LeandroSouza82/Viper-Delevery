@@ -5,7 +5,7 @@ import 'package:geolocator/geolocator.dart' as geo;
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 import 'package:viper_delivery/src/core/config/env.dart';
 import 'package:viper_delivery/src/modules/home/controllers/settings_controller.dart';
-import 'package:viper_delivery/src/modules/home/models/viper_order.dart';
+import 'package:viper_delivery/src/models/ride_model.dart';
 import 'package:viper_delivery/src/modules/home/services/viper_directions_service.dart';
 import 'package:viper_delivery/src/modules/map/utils/marker_generator.dart';
 
@@ -213,7 +213,7 @@ class ViperMapWidgetState extends State<ViperMapWidget> {
   /// FASE 2 — Sair para entrega / reordenar: desenha Coleta → Destinos
   /// Chamado por HomeView._syncMapWithOrders() quando fase == delivery
   /// e também diretamente quando o motorista clica em "Sair para Entrega"
-  Future<void> updateMapRoute(List<ViperOrder> activeOrders) async {
+  Future<void> updateMapRoute(List<RideModel> activeOrders) async {
     if (mapboxMap == null) return;
     if (_isFetchingRoute) return; // bloqueia chamadas concorrentes
 
@@ -315,7 +315,7 @@ class ViperMapWidgetState extends State<ViperMapWidget> {
   }
 
   /// Pinos numerados dos destinos de entrega
-  Future<void> _drawNumberedPins(List<ViperOrder> orders) async {
+  Future<void> _drawNumberedPins(List<RideModel> orders) async {
     if (_pointManager == null || mapboxMap == null) return;
 
     final List<PointAnnotationOptions> pinOptions = [];
@@ -323,12 +323,12 @@ class ViperMapWidgetState extends State<ViperMapWidget> {
     for (int i = 0; i < orders.length; i++) {
       final order = orders[i];
       final pinNumber = i + 1;
-      final imageId = 'viper-pin-${order.tipo.name}-$pinNumber';
+      final imageId = 'viper-pin-${order.serviceType.name}-$pinNumber';
 
       if (!_registeredPinImages.contains(imageId)) {
         try {
           final pinBytes = await MarkerGenerator.generateTeardropMarker(
-            color: order.tipo.color,
+            color: order.serviceType.color,
             text: pinNumber.toString(),
           );
           await mapboxMap!.style.addStyleImage(

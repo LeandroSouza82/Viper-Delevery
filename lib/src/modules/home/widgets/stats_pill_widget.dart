@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:viper_delivery/src/modules/home/controllers/home_controller.dart';
 import 'package:viper_delivery/src/modules/home/controllers/settings_controller.dart';
 
@@ -14,69 +15,61 @@ class StatsPillWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListenableBuilder(
-      listenable: Listenable.merge([homeController, settingsController]),
-      builder: (context, child) {
-        final isDark = settingsController.isDarkTheme;
-        final mode = homeController.displayMode;
-        
-        final bgColor = isDark 
-            ? Colors.black.withOpacity(0.85) 
-            : Colors.white.withOpacity(0.9);
-        final textColor = isDark ? Colors.white : Colors.black87;
-        final borderColor = isDark ? Colors.white12 : Colors.black12;
+    return Obx(() {
+      final isDark = settingsController.isDarkTheme;
+      final mode = homeController.displayMode.value;
+      
+      final bgColor = isDark 
+          ? Colors.black.withOpacity(0.85) 
+          : Colors.white.withOpacity(0.9);
+      final textColor = isDark ? Colors.white : Colors.black87;
+      final borderColor = isDark ? Colors.white12 : Colors.black12;
 
-        return GestureDetector(
-          onTap: () {
-            homeController.cycleDisplayMode();
-            // Ação de clique original (abrir modal) se desejar, 
-            // mas o usuário pediu para o clique no comprimido alternar os estados.
-            // Para abrir o modal, o motorista pode clicar na área externa ou 
-            // podemos manter o onTap original se preferir. 
-            // Aqui, priorizamos a troca de estado conforme a instrução 2 do prompt anterior.
-          },
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 400),
-            curve: Curves.elasticOut,
-            height: 50,
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            decoration: BoxDecoration(
-              color: bgColor,
-              borderRadius: BorderRadius.circular(50),
-              border: Border.all(
-                color: _getBorderColor(mode, borderColor),
-                width: 2,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 15,
-                  offset: const Offset(0, 4),
-                )
-              ],
+      return GestureDetector(
+        onTap: () {
+          homeController.cycleDisplayMode();
+        },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 400),
+          curve: Curves.elasticOut,
+          height: 50,
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          decoration: BoxDecoration(
+            color: bgColor,
+            borderRadius: BorderRadius.circular(50),
+            border: Border.all(
+              color: _getBorderColor(mode, borderColor),
+              width: 2,
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _buildIcon(mode),
-                const SizedBox(width: 10),
-                _buildContent(mode, textColor),
-                // Pequeno indicador de conexão sempre visível como um ponto
-                const SizedBox(width: 12),
-                Container(
-                  width: 6,
-                  height: 6,
-                  decoration: BoxDecoration(
-                    color: homeController.isOnline ? Colors.green : Colors.redAccent,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-              ],
-            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 15,
+                offset: const Offset(0, 4),
+              )
+            ],
           ),
-        );
-      },
-    );
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildIcon(mode),
+              const SizedBox(width: 10),
+              _buildContent(mode, textColor),
+              // Pequeno indicador de conexão sempre visível como um ponto
+              const SizedBox(width: 12),
+              Container(
+                width: 6,
+                height: 6,
+                decoration: BoxDecoration(
+                  color: homeController.isOnline.value ? Colors.green : Colors.redAccent,
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    });
   }
 
   Color _getBorderColor(PillDisplayMode mode, Color defaultColor) {

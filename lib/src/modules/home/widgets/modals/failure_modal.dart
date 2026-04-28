@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:viper_delivery/src/modules/ride/controllers/ride_state_machine.dart';
+import 'package:viper_delivery/src/models/ride_model.dart';
 
 class FailureModal extends StatefulWidget {
   final String rideId;
@@ -95,7 +96,7 @@ class _FailureModalState extends State<FailureModal> {
 
       // 3. ATUALIZAÇÃO REATIVA (GetX): Remove o card da tela instantaneamente
       final rideSM = Get.find<RideStateMachine>();
-      rideSM.removerCorridaDaTela(widget.rideId);
+      rideSM.removerCorridaDaTela(widget.rideId, RideStatus.failed);
 
       Get.back(); // Fecha o modal
       Get.snackbar(

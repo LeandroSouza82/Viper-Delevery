@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:viper_delivery/src/modules/home/models/viper_order.dart';
+import 'package:viper_delivery/src/models/ride_model.dart';
 import 'package:viper_delivery/src/modules/home/widgets/viper_order_card.dart';
 import 'package:viper_delivery/src/modules/returns/widgets/returns_tab_view.dart';
 import 'package:viper_delivery/src/modules/home/services/pricing_service.dart';
@@ -17,7 +17,6 @@ class ViperBottomSheetPanel extends StatefulWidget {
     super.key,
     required this.isDark,
     required this.bottomSafePadding,
-    required this.offer,
     required this.onFinalize,
     required this.menuController,
     required this.settingsController,
@@ -28,7 +27,6 @@ class ViperBottomSheetPanel extends StatefulWidget {
   final bool isDark;
   final double bottomSafePadding;
 
-  final ViperOffer? offer;
   final VoidCallback onFinalize;
   final ViperMenuController menuController;
   final SettingsController settingsController;
@@ -74,26 +72,27 @@ class ViperBottomSheetPanelState extends State<ViperBottomSheetPanel> {
     );
   }
 
-  void _updateOrderStatus(ViperOrder order, ViperOrderStatus status, {String? motivo}) {
-    final index = widget.rideStateMachine.activeOrders.indexWhere((o) => o.id == order.id);
-    if (index != -1) {
-      widget.rideStateMachine.activeOrders[index] = order.copyWith(status: status, motivoFalha: motivo);
-      _checkIfTripIsDone(widget.rideStateMachine.activeOrders);
-    }
+  void _updateOrderStatus(RideModel ride, RideStatus status, {String? motivo}) {
+    // Agora o próprio RideStateMachine cuida de atualizar local e remoto
+    widget.rideStateMachine.removerCorridaDaTela(ride.id, status, motivo: motivo);
+    _checkIfTripIsDone(widget.rideStateMachine.activeOrders);
   }
 
-  void _checkIfTripIsDone(List<ViperOrder> allOrders) {
-    if (allOrders.isEmpty || widget.offer == null) return;
+  void _checkIfTripIsDone(List<RideModel> allOrders) {
+    if (allOrders.isEmpty) return;
 
     final allDone = allOrders.every((o) => 
-      o.status == ViperOrderStatus.completed || o.status == ViperOrderStatus.returned
+      o.status == RideStatus.completed || o.status == RideStatus.returned || o.status == RideStatus.failed
     );
 
     if (allDone) {
-      final summary = ViperPricingService.calculateExecutionSummary(
-        offer: widget.offer!,
-        processedOrders: allOrders,
-        isClt: widget.isClt,
+      final summary = RideExecutionSummary(
+        baseValue: 15.0, // TODO: Calc baseado em dados reais
+        successBonus: 0.0,
+        attemptFee: 0.0,
+        totalValue: 15.0,
+        countSuccess: allOrders.where((o) => o.status == RideStatus.completed).length,
+        countFailed: allOrders.where((o) => o.status == RideStatus.failed || o.status == RideStatus.returned).length,
       );
 
       showModalBottomSheet(
@@ -119,29 +118,26 @@ class ViperBottomSheetPanelState extends State<ViperBottomSheetPanel> {
     }
   }
 
-  Future<void> _onSuccessDelivery(ViperOrder order) async {
+  Future<void> _onSuccessDelivery(RideModel ride) async {
     final signed = await SignatureModal.show(
       context, 
       isDark: widget.isDark,
-      rideId: order.id,
+      rideId: ride.id,
     );
     if (signed == true) {
-      _updateOrderStatus(order, ViperOrderStatus.completed);
-      // ATUALIZAÇÃO REATIVA (GetX): Remove o card da tela instantaneamente
-      widget.rideStateMachine.removerCorridaDaTela(order.id);
+      _updateOrderStatus(ride, RideStatus.completed);
     }
   }
 
   /// Falha: abre o modal de falha antes de mover para logística reversa.
-  Future<void> _onFailureDelivery(ViperOrder order, String legacyMotivo) async {
+  Future<void> _onFailureDelivery(RideModel ride, String legacyMotivo) async {
     final result = await FailureModal.show(
       context,
       isDark: widget.isDark,
-      clienteName: order.cliente,
+      clienteName: ride.clientName,
     );
     if (result != null) {
-      // Nota: o FailureModal já chama rideStateMachine.removerCorridaDaTela internamente agora
-      _updateOrderStatus(order, ViperOrderStatus.failed, motivo: result.motivo);
+      _updateOrderStatus(ride, RideStatus.failed, motivo: result.motivo);
     }
   }
 
@@ -175,8 +171,8 @@ class ViperBottomSheetPanelState extends State<ViperBottomSheetPanel> {
               ),
               child: Obx(() {
                   final allOrders = widget.rideStateMachine.activeOrders;
-                  final activeOrders = allOrders.where((o) => o.status == ViperOrderStatus.pending).toList();
-                  final failedOrders = allOrders.where((o) => o.status == ViperOrderStatus.failed).toList();
+                  final activeOrders = allOrders.where((o) => o.status != RideStatus.completed && o.status != RideStatus.failed && o.status != RideStatus.returned).toList();
+                  final failedOrders = allOrders.where((o) => o.status == RideStatus.failed).toList();
                   
                   return Builder(builder: (context) {
                     final tabController = DefaultTabController.of(context);
@@ -214,7 +210,7 @@ class ViperBottomSheetPanelState extends State<ViperBottomSheetPanel> {
                                       : ReturnsTabView(
                                           failedOrders: failedOrders,
                                           isDark: widget.isDark,
-                                          onReturnToBase: (order) => _updateOrderStatus(order, ViperOrderStatus.returned),
+                                          onReturnToBase: (order) => _updateOrderStatus(order, RideStatus.returned),
                                         ),
                                 ),
                               ),
@@ -234,7 +230,7 @@ class ViperBottomSheetPanelState extends State<ViperBottomSheetPanel> {
     );
   }
 
-  Widget _buildActiveRouteTab(List<ViperOrder> activeOrders) {
+  Widget _buildActiveRouteTab(List<RideModel> activeOrders) {
     if (activeOrders.isEmpty) {
       return Column(
         children: [
@@ -251,26 +247,26 @@ class ViperBottomSheetPanelState extends State<ViperBottomSheetPanel> {
       itemCount: activeOrders.length,
       onReorder: (oldIndex, newIndex) {
         if (newIndex > oldIndex) newIndex -= 1;
-        final items = List<ViperOrder>.from(activeOrders);
+        final items = List<RideModel>.from(activeOrders);
         final movedItem = items.removeAt(oldIndex);
         items.insert(newIndex, movedItem);
         // Atualizar a lista global mantendo a ordem dos processados se houver
-        final List<ViperOrder> newList = [];
-        final completed = widget.rideStateMachine.activeOrders.where((o) => o.status != ViperOrderStatus.pending).toList();
+        final List<RideModel> newList = [];
+        final completed = widget.rideStateMachine.activeOrders.where((o) => o.status == RideStatus.completed || o.status == RideStatus.failed || o.status == RideStatus.returned).toList();
         newList.addAll(completed);
         newList.addAll(items);
         widget.rideStateMachine.activeOrders.assignAll(newList);
       },
       itemBuilder: (context, index) {
-        final order = activeOrders[index];
+        final ride = activeOrders[index];
         return ViperOrderCard(
-          key: ValueKey(order.id),
-          order: order,
+          key: ValueKey(ride.id),
+          ride: ride,
           isDark: widget.isDark,
           index: index,
           isClt: widget.isClt,
           onRemove: () {},
-          onFinish: () => _onSuccessDelivery(order),
+          onFinish: () => _onSuccessDelivery(ride),
           onFailure: (o, motivo) => _onFailureDelivery(o, motivo),
         );
       },

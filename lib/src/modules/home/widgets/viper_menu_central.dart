@@ -11,7 +11,9 @@ import 'package:viper_delivery/src/modules/home/views/settings_view.dart';
 import 'package:viper_delivery/src/modules/profile/views/profile_view.dart';
 import 'package:viper_delivery/src/modules/profile/views/wallet_view.dart';
 import 'package:viper_delivery/src/modules/profile/views/help_view.dart';
-import 'package:viper_delivery/src/modules/home/models/viper_order.dart';
+import 'package:viper_delivery/src/models/ride_model.dart';
+import 'package:viper_delivery/src/modules/ride/controllers/ride_state_machine.dart';
+
 import 'package:viper_delivery/src/modules/home/widgets/drawer_falhas_widget.dart';
 
 enum PerformanceView { day, week, month }
@@ -20,14 +22,12 @@ enum DocumentsView { vehicle, profile, cnh }
 class ViperMenuCentral extends StatefulWidget {
   final SettingsController settingsController;
   final ViperMenuController menuController;
-  final ValueNotifier<List<ViperOrder>>? ordersNotifier;
   final VoidCallback? onReturnToCD;
 
   const ViperMenuCentral({
     super.key,
     required this.settingsController,
     required this.menuController,
-    this.ordersNotifier,
     this.onReturnToCD,
   });
 
@@ -508,22 +508,11 @@ class _ViperMenuCentralState extends State<ViperMenuCentral> {
   }
 
   Widget _buildReverseLogisticsSection(bool isDark, Color textColor) {
-    final ordersNotifier = widget.ordersNotifier;
-    if (ordersNotifier == null) {
-      return DrawerFalhasWidget(
-        failedOrders: const [],
-        isDark: isDark,
-        hasActiveRoute: false,
-        onReturnToCD: () {},
-        onItemTap: (_) {},
-      );
-    }
-
-    return ValueListenableBuilder<List<ViperOrder>>(
-      valueListenable: ordersNotifier,
-      builder: (context, allOrders, _) {
-        final failedOrders = allOrders.where((o) => o.status == ViperOrderStatus.failed).toList();
-        final hasActive = allOrders.any((o) => o.status == ViperOrderStatus.pending);
+    return Obx(() {
+        final stateMachine = Get.find<RideStateMachine>();
+        final allOrders = stateMachine.activeOrders;
+        final failedOrders = allOrders.where((o) => o.status == RideStatus.failed || o.status == RideStatus.returned).toList();
+        final hasActive = allOrders.any((o) => o.status != RideStatus.completed && o.status != RideStatus.failed && o.status != RideStatus.returned);
 
         return DrawerFalhasWidget(
           failedOrders: failedOrders,
@@ -534,11 +523,10 @@ class _ViperMenuCentralState extends State<ViperMenuCentral> {
             widget.onReturnToCD?.call();
           },
           onItemTap: (order) {
-            debugPrint('[DrawerFalhas] Tapped: ${order.cliente} — ${order.motivoFalha}');
+            debugPrint('[DrawerFalhas] Tapped: ${order.clientName} — ${order.failureReason}');
           },
         );
-      },
-    );
+      });
   }
 
   Widget _buildPandaContainer(bool isDark, Widget child) {

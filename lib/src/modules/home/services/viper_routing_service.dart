@@ -1,8 +1,8 @@
-import 'package:viper_delivery/src/modules/home/models/viper_order.dart';
+import 'package:viper_delivery/src/models/ride_model.dart';
 import 'package:geolocator/geolocator.dart';
 
 class ViperRoutingResult {
-  final List<ViperOrder> optimizedOrders;
+  final List<RideModel> optimizedOrders;
   final double distanceDriverToPickup;
   final double distancePickupToDeliveries;
   final double totalDistance;
@@ -22,7 +22,7 @@ class ViperRoutingService {
     required double driverLng,
     required double pickupLat,
     required double pickupLng,
-    required List<ViperOrder> orders,
+    required List<RideModel> orders,
   }) {
     if (orders.isEmpty) {
       return ViperRoutingResult(
@@ -37,8 +37,8 @@ class ViperRoutingService {
     final double distDriverToPickup = _calculateRealDistance(driverLat, driverLng, pickupLat, pickupLng);
 
     // 2. Otimização das Entregas (Vizinho Mais Próximo) com Soma Acumulada
-    List<ViperOrder> unvisited = List.from(orders);
-    List<ViperOrder> optimized = [];
+    List<RideModel> unvisited = List.from(orders);
+    List<RideModel> optimized = [];
     double distEntregaAcumulada = 0;
 
     // O ponto de partida para a primeira entrega é o Ponto de Coleta
@@ -46,7 +46,7 @@ class ViperRoutingService {
     double currentLng = pickupLng;
 
     while (unvisited.isNotEmpty) {
-      ViperOrder? nearest;
+      RideModel? nearest;
       double minDistance = double.infinity;
       int nearestIndex = -1;
 

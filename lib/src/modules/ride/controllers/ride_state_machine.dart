@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:viper_delivery/src/modules/home/models/viper_order.dart';
+import 'package:viper_delivery/src/models/ride_model.dart';
+import 'package:viper_delivery/src/modules/ride/repositories/ride_repository.dart';
 import 'package:viper_delivery/src/modules/home/services/external_navigation_service.dart';
 import 'package:viper_delivery/src/modules/map/controllers/map_controller.dart';
 
@@ -80,21 +81,59 @@ extension RideStateUI on RideState {
 /// sem acoplar à UI. A UI apenas observa [currentState].
 class RideStateMachine extends GetxController {
   final currentState = RideState.idle.obs;
-  final activeOrders = <ViperOrder>[].obs; // LISTA REATIVA GLOBAL
-  final _activeOffer = Rxn<ViperOffer>();
+  final activeOrders = <RideModel>[].obs; // LISTA REATIVA GLOBAL
+  final RideRepository _rideRepository = RideRepository();
 
-  /// Remove a corrida da tela instantaneamente e verifica se a rota acabou.
-  void removerCorridaDaTela(String rideId) {
-    activeOrders.removeWhere((o) => o.id == rideId);
-    debugPrint('[RideStateMachine] Corrida $rideId removida da UI.');
+  /// Atualizado pelo HomeController a cada novo evento da stream.
+  void updateFromStream(List<RideModel> rides) {
+    activeOrders.assignAll(rides);
+
+    if (rides.isEmpty) {
+      if (currentState.value != RideState.idle) {
+        currentState.value = RideState.idle;
+      }
+      return;
+    }
+
+    final hasPendingOrAssigned = rides.any((r) => r.status == RideStatus.pending || r.status == RideStatus.assigned);
+    final isGoingToPickup = rides.any((r) => r.status == RideStatus.goingToPickup);
+    final isArrivedAtPickup = rides.any((r) => r.status == RideStatus.arrivedAtPickup);
+    final isOnDeliveryRoute = rides.any((r) => r.status == RideStatus.onDeliveryRoute);
     
-    // Se não houver mais pedidos pendentes, finaliza a rota automaticamente
-    if (activeOrders.isEmpty && currentState.value != RideState.idle) {
-      completeRoute();
+    final allCompleted = rides.every((r) => 
+      r.status == RideStatus.completed || 
+      r.status == RideStatus.failed || 
+      r.status == RideStatus.returned
+    );
+
+    if (allCompleted) {
+      if (currentState.value != RideState.routeCompleted) {
+        completeRoute();
+      }
+    } else if (isOnDeliveryRoute) {
+      currentState.value = RideState.onDeliveryRoute;
+    } else if (isArrivedAtPickup) {
+      currentState.value = RideState.arrivedAtPickup;
+    } else if (isGoingToPickup) {
+      currentState.value = RideState.goingToPickup;
+    } else if (hasPendingOrAssigned && currentState.value == RideState.idle) {
+      // Aceita implicitamente a oferta se caiu na conta
+      currentState.value = RideState.goingToPickup;
+      onPickupRouteReady?.call();
     }
   }
 
-  ViperOffer? get activeOffer => _activeOffer.value;
+  /// Remove a corrida da tela instantaneamente via update no banco.
+  Future<void> removerCorridaDaTela(String rideId, RideStatus status, {String? motivo}) async {
+    // Atualiza otimista
+    final index = activeOrders.indexWhere((o) => o.id == rideId);
+    if (index != -1) {
+      activeOrders[index] = activeOrders[index].copyWith(status: status, failureReason: motivo);
+    }
+    
+    // Atualiza o backend (que por sua vez atualizará a stream)
+    await _rideRepository.updateRideStatus(rideId, status, failureReason: motivo);
+  }
 
   // ── Callbacks — injetados pelo integrador (HomeView) ──
   VoidCallback? onPickupRouteReady;
@@ -106,71 +145,80 @@ class RideStateMachine extends GetxController {
   // ═══════════════════════════════════════════
 
   /// [1] ACEITAR OFERTA → goingToPickup
-  /// Chamado quando o motorista aceita uma oferta no overlay.
-  void acceptOffer(ViperOffer offer) {
-    _activeOffer.value = offer;
+  Future<void> acceptOffer(String firstRideLat, String firstRideLng) async {
     currentState.value = RideState.goingToPickup;
-    debugPrint('[RideStateMachine] Estado: goingToPickup — Oferta ${offer.id} aceita.');
 
     // Side-effect: traçar rota até a coleta (Fase 1)
     final mapController = Get.find<MapController>();
     mapController.traceRouteToPickup(
-      pickupLat: offer.pickupLat,
-      pickupLng: offer.pickupLng,
+      pickupLat: double.tryParse(firstRideLat) ?? 0.0,
+      pickupLng: double.tryParse(firstRideLng) ?? 0.0,
     );
 
     onPickupRouteReady?.call();
+    
+    // Atualiza o backend para todas as ordens pendentes
+    for (var order in activeOrders) {
+      if (order.status == RideStatus.pending || order.status == RideStatus.assigned) {
+        await _rideRepository.updateRideStatus(order.id, RideStatus.goingToPickup);
+      }
+    }
   }
 
   /// [2] IR PARA COLETA → Abre navegador externo (Google Maps / Waze)
-  /// Lê preferência de SharedPreferences via ExternalNavigationService.
   Future<void> navigateToPickup(BuildContext context) async {
-    final offer = _activeOffer.value;
-    if (offer == null) return;
-
-    debugPrint('[RideStateMachine] Abrindo navegador externo para coleta...');
+    if (activeOrders.isEmpty) return;
+    
+    final first = activeOrders.first;
     await ExternalNavigationService.abrirNavegador(
-      lat: offer.pickupLat,
-      lng: offer.pickupLng,
+      lat: first.lat,
+      lng: first.lng,
       context: context,
     );
   }
 
   /// [3] CHEGUEI NA COLETA → arrivedAtPickup
-  /// Dispara notificação/webhook para o painel do gestor (mockado).
-  void confirmArrivalAtPickup() {
+  Future<void> confirmArrivalAtPickup() async {
     currentState.value = RideState.arrivedAtPickup;
-    debugPrint('[RideStateMachine] Estado: arrivedAtPickup — Motorista chegou na coleta.');
 
-    // Side-effect: Webhook mockado (print)
+    // Atualiza status de todos indo para coleta
+    for (var order in activeOrders) {
+      if (order.status == RideStatus.goingToPickup) {
+        await _rideRepository.updateRideStatus(order.id, RideStatus.arrivedAtPickup);
+      }
+    }
+    
     _dispatchPickupNotification();
   }
 
   /// [4] SEGUIR ROTA → onDeliveryRoute
-  /// Aciona a Fase 2 do mapa: ordena entregas e traça polyline completa.
-  /// Retorna a lista de orders reordenada pelo Vizinho Mais Próximo.
-  Future<List<ViperOrder>> startDeliveryRoute(List<ViperOrder> pendingOrders) async {
-    final offer = _activeOffer.value;
-    if (offer == null) return pendingOrders;
+  Future<List<RideModel>> startDeliveryRoute(List<RideModel> pendingOrders) async {
+    if (activeOrders.isEmpty) return pendingOrders;
 
     currentState.value = RideState.onDeliveryRoute;
-    debugPrint('[RideStateMachine] Estado: onDeliveryRoute — Fase 2 ativada.');
 
     final mapController = Get.find<MapController>();
     final optimized = await mapController.optimizeAndTraceDeliveries(
-      pickupLat: offer.pickupLat,
-      pickupLng: offer.pickupLng,
+      pickupLat: activeOrders.first.lat,
+      pickupLng: activeOrders.first.lng,
       orders: pendingOrders,
     );
 
     onDeliveryRouteReady?.call();
-    return optimized;
+    
+    // Atualiza status de todos no ponto de coleta para rota
+    for (var order in activeOrders) {
+      if (order.status == RideStatus.arrivedAtPickup) {
+        await _rideRepository.updateRideStatus(order.id, RideStatus.onDeliveryRoute);
+      }
+    }
+    
+    return pendingOrders; // Retorna pendingOrders pois optimizeAndTraceDeliveries pode usar outra modelagem
   }
 
   /// [5] ROTA FINALIZADA → routeCompleted / idle
   void completeRoute() {
     currentState.value = RideState.routeCompleted;
-    debugPrint('[RideStateMachine] Estado: routeCompleted — Todas as entregas processadas.');
 
     onRouteCompleted?.call();
   }
@@ -178,8 +226,6 @@ class RideStateMachine extends GetxController {
   /// Reseta a máquina para o estado inicial.
   void reset() {
     currentState.value = RideState.idle;
-    _activeOffer.value = null;
-    debugPrint('[RideStateMachine] Reset — idle.');
 
     final mapController = Get.find<MapController>();
     mapController.clearRoute();
@@ -189,15 +235,8 @@ class RideStateMachine extends GetxController {
 
   /// Mock de webhook/push notification para o painel do gestor.
   void _dispatchPickupNotification() {
-    final offer = _activeOffer.value;
-    if (offer == null) return;
+    if (activeOrders.isEmpty) return;
 
     // TODO: Substituir por chamada real ao Supabase Edge Function / API
-    debugPrint('══════════════════════════════════════════════');
-    debugPrint('📦 [WEBHOOK] Motorista chegou na coleta');
-    debugPrint('   Oferta: ${offer.id}');
-    debugPrint('   Local: ${offer.pickupNeighborhood}, ${offer.pickupStreet}');
-    debugPrint('   Pedidos: ${offer.qtdPedidos}');
-    debugPrint('══════════════════════════════════════════════');
   }
 }

@@ -1,13 +1,12 @@
 import 'package:get/get.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:viper_delivery/src/modules/home/models/viper_order.dart';
+import 'package:viper_delivery/src/models/ride_model.dart';
 import 'package:viper_delivery/src/models/driver_model.dart';
 import 'package:viper_delivery/src/modules/onboarding/services/upload_service.dart';
 import 'dart:io';
 import 'package:viper_delivery/src/core/services/location_service.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter/foundation.dart'; // For debugPrint
-import 'package:viper_delivery/src/modules/home/services/viper_mock_service.dart';
 
 class ViperMenuController extends GetxController {
   final SupabaseClient _supabase = Supabase.instance.client;
@@ -28,51 +27,6 @@ class ViperMenuController extends GetxController {
   // Estado Global da Localização Real
   double? userLatitude;
   double? userLongitude;
-
-  // Oferta Ativa (Global/Reativa)
-  var activeOffer = Rx<ViperOffer?>(null);
-
-  // Controle de Ciclo de Testes
-  int _testOfferIndex = 0;
-
-  void triggerNextTestOffer() {
-    // 1. Limpeza breve para resetar animações e timers na UI
-    activeOffer.value = null;
-
-    final lat = userLatitude;
-    final lng = userLongitude;
-
-    // 2. Ciclo de scenarios
-    switch (_testOfferIndex) {
-      case 0:
-        // Super Rota (Viper Math v5)
-        activeOffer.value = ViperMockService.generateOffer(userLat: lat, userLng: lng, forceSuper: true);
-        break;
-      case 1:
-        // Rota de Entrega
-        activeOffer.value = ViperMockService.getMockEntrega(lat: lat, lng: lng);
-        break;
-      case 2:
-        // Rota de Coleta
-        activeOffer.value = ViperMockService.getMockColeta(lat: lat, lng: lng);
-        break;
-      case 3:
-        // Outros Serviços
-        activeOffer.value = ViperMockService.getMockOutros(lat: lat, lng: lng);
-        break;
-    }
-
-    // 3. Incremento e reset do ciclo
-    _testOfferIndex = (_testOfferIndex + 1) % 4;
-    
-    print('[!!! VIPER !!!] Teste Ciclo #${_testOfferIndex} disparado.');
-    update();
-  }
-
-  void clearActiveOffer() {
-    activeOffer.value = null;
-    update();
-  }
 
   // Controle de Visibilidade do Botão do Pânico (SOS) - GetX RX
   var showPanicButton = true.obs;
@@ -175,13 +129,7 @@ class ViperMenuController extends GetxController {
         }
       }
     } catch (e) {
-      debugPrint('Performance Query Error: $e. Usando mocks para visualização.');
-      // Mocks amigáveis se a tabela não existir ou estiver vazia
-      dailyEarnings = 145.50;
-      dailyDeliveries = 6;
-      weeklyEarnings = [120.0, 450.0, 300.0, 600.0, 200.0, 800.0, 500.0];
-      monthlyEarnings = 4250.75;
-      monthlyDeliveries = 158;
+      // Falha silenciosa no fetch de performance
     }
   }
 
@@ -218,7 +166,7 @@ class ViperMenuController extends GetxController {
   }
 
   Future<void> finalizeRide({
-    required ViperExecutionSummary summary,
+    required RideExecutionSummary summary,
     String? receiverName,
     String? receiverCpf,
     File? proofPhoto,
