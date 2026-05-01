@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:vibration/vibration.dart';
 import 'package:viper_delivery/src/models/ride_model.dart';
-import 'package:viper_delivery/src/modules/ride/repositories/ride_repository.dart';
+import 'package:viper_delivery/src/modules/home/controllers/home_controller.dart';
 import 'package:viper_delivery/src/modules/home/services/external_navigation_service.dart';
 import 'package:viper_delivery/src/modules/map/controllers/map_controller.dart';
+import 'package:viper_delivery/src/modules/ride/repositories/ride_repository.dart';
 
 /// Máquina de estados do fluxo logístico.
 ///
@@ -13,6 +16,9 @@ import 'package:viper_delivery/src/modules/map/controllers/map_controller.dart';
 enum RideState {
   /// Nenhuma corrida ativa. Motorista aguardando oferta.
   idle,
+
+  /// Oferta recebida. Aguardando aceite do motorista (Card de Convite).
+  offerReceived,
 
   /// Oferta aceita. Motorista indo para o ponto de coleta.
   goingToPickup,
@@ -33,6 +39,8 @@ extension RideStateUI on RideState {
     switch (this) {
       case RideState.idle:
         return 'AGUARDANDO';
+      case RideState.offerReceived:
+        return 'NOVA OFERTA';
       case RideState.goingToPickup:
         return 'IR PARA COLETA';
       case RideState.arrivedAtPickup:
@@ -48,6 +56,8 @@ extension RideStateUI on RideState {
     switch (this) {
       case RideState.idle:
         return Icons.hourglass_empty;
+      case RideState.offerReceived:
+        return Icons.local_shipping;
       case RideState.goingToPickup:
         return Icons.navigation;
       case RideState.arrivedAtPickup:
@@ -63,6 +73,8 @@ extension RideStateUI on RideState {
     switch (this) {
       case RideState.idle:
         return Colors.grey;
+      case RideState.offerReceived:
+        return const Color(0xFF00C853); // Verde Viper
       case RideState.goingToPickup:
         return const Color(0xFF9C27B0); // Roxo
       case RideState.arrivedAtPickup:
@@ -84,8 +96,18 @@ class RideStateMachine extends GetxController {
   final activeOrders = <RideModel>[].obs; // LISTA REATIVA GLOBAL
   final RideRepository _rideRepository = RideRepository();
 
+  // ── Callbacks — injetados pelo integrador (HomeView) ──
+  VoidCallback? onOfferReceived;
+  VoidCallback? onPickupRouteReady;
+  VoidCallback? onDeliveryRouteReady;
+  VoidCallback? onRouteCompleted;
+
   /// Atualizado pelo HomeController a cada novo evento da stream.
-  void updateFromStream(List<RideModel> rides) {
+  void updateFromStream(List<RideModel> rides) async {
+    // 1. Identificar novas corridas para lógica de Frotista (Silent Assignment)
+    final existingIds = activeOrders.map((r) => r.id).toSet();
+    final newRides = rides.where((r) => !existingIds.contains(r.id)).toList();
+    
     activeOrders.assignAll(rides);
 
     if (rides.isEmpty) {
@@ -95,18 +117,63 @@ class RideStateMachine extends GetxController {
       return;
     }
 
-    final hasPendingOrAssigned = rides.any((r) => r.status == RideStatus.pending || r.status == RideStatus.assigned);
-    final isGoingToPickup = rides.any((r) => r.status == RideStatus.goingToPickup);
-    final isArrivedAtPickup = rides.any((r) => r.status == RideStatus.arrivedAtPickup);
-    final isOnDeliveryRoute = rides.any((r) => r.status == RideStatus.onDeliveryRoute);
-    
-    final allCompleted = rides.every((r) => 
-      r.status == RideStatus.completed || 
-      r.status == RideStatus.failed || 
-      r.status == RideStatus.returned
+    // 2. Lógica Especial: Frotista (isCompanyDriver)
+    // Se houver novas corridas e for frotista, processamos silenciosamente
+    try {
+      final isRegistered = Get.isRegistered<HomeController>();
+      if (isRegistered) {
+        final homeController = Get.find<HomeController>();
+        if (homeController.isCompanyDriver && newRides.isNotEmpty) {
+          debugPrint('>>> [VUP SILENT] Novas rotas detectadas para Frotista. Processando...');
+          
+          // Alerta Sonoro e Vibratório (Beep Curto + Haptic)
+          SystemSound.play(SystemSoundType.click);
+          Vibration.vibrate(duration: 100);
+
+          // Notificação Visual (Mini-Card / Toast)
+          _showSilentNotification(newRides.first);
+
+          // Integração Automática: Reordenar Rota (Vizinho Mais Próximo)
+          if (currentState.value == RideState.onDeliveryRoute || currentState.value == RideState.goingToPickup) {
+            final mapController = Get.find<MapController>();
+            final first = rides.first;
+            final optimized = await mapController.optimizeAndTraceDeliveries(
+              pickupLat: first.pickupLat,
+              pickupLng: first.pickupLng,
+              orders: rides,
+            );
+            activeOrders.assignAll(optimized);
+          } else if (currentState.value == RideState.idle || currentState.value == RideState.offerReceived) {
+            // Se estava parado, aceita a oferta automaticamente
+            final first = rides.first;
+            acceptOffer(first.lat.toString(), first.lng.toString());
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Erro ao processar silent assignment: $e');
+    }
+
+    final hasAssignedOrSearching = rides.any(
+      (r) => r.status == RideStatus.assigned || r.status == RideStatus.searching,
+    );
+    final isGoingToPickup = rides.any(
+      (r) => r.status == RideStatus.goingToPickup,
+    );
+    final isArrivedAtPickup = rides.any(
+      (r) => r.status == RideStatus.arrivedAtPickup,
+    );
+    final isOnDeliveryRoute = rides.any(
+      (r) => r.status == RideStatus.onDeliveryRoute,
+    );
+    final isReturnedOrCompleted = rides.every(
+      (r) =>
+          r.status == RideStatus.completed ||
+          r.status == RideStatus.failed ||
+          r.status == RideStatus.returned,
     );
 
-    if (allCompleted) {
+    if (isReturnedOrCompleted) {
       if (currentState.value != RideState.routeCompleted) {
         completeRoute();
       }
@@ -116,29 +183,63 @@ class RideStateMachine extends GetxController {
       currentState.value = RideState.arrivedAtPickup;
     } else if (isGoingToPickup) {
       currentState.value = RideState.goingToPickup;
-    } else if (hasPendingOrAssigned && currentState.value == RideState.idle) {
-      // Aceita implicitamente a oferta se caiu na conta
-      currentState.value = RideState.goingToPickup;
-      onPickupRouteReady?.call();
+    } else if (hasAssignedOrSearching && currentState.value == RideState.idle) {
+      // CONVITE: Entra em modo oferta em vez de ir direto para coleta
+      final isRegistered = Get.isRegistered<HomeController>();
+      if (isRegistered) {
+        final homeController = Get.find<HomeController>();
+        if (!homeController.isCompanyDriver) {
+          currentState.value = RideState.offerReceived;
+          onOfferReceived?.call();
+        }
+      }
     }
+  }
+
+  void _showSilentNotification(RideModel ride) {
+    Get.snackbar(
+      'NOVA ROTA!',
+      'Nova rota adicionada automaticamente ao seu trajeto!',
+      snackPosition: SnackPosition.TOP,
+      backgroundColor: const Color(0xFF0055FF),
+      colorText: Colors.white,
+      icon: const Icon(Icons.local_shipping, color: Colors.white),
+      duration: const Duration(seconds: 5),
+      margin: const EdgeInsets.all(15),
+      borderRadius: 12,
+      mainButton: TextButton(
+        onPressed: () => Get.back(),
+        child: const Icon(Icons.close, color: Colors.white),
+      ),
+      isDismissible: true,
+      shouldIconPulse: true,
+      barBlur: 10,
+    );
   }
 
   /// Remove a corrida da tela instantaneamente via update no banco.
-  Future<void> removerCorridaDaTela(String rideId, RideStatus status, {String? motivo}) async {
+  Future<void> removerCorridaDaTela(
+    String rideId,
+    RideStatus status, {
+    String? motivo,
+  }) async {
     // Atualiza otimista
     final index = activeOrders.indexWhere((o) => o.id == rideId);
     if (index != -1) {
-      activeOrders[index] = activeOrders[index].copyWith(status: status, failureReason: motivo);
+      activeOrders[index] = activeOrders[index].copyWith(
+        status: status,
+        failureReason: motivo,
+      );
     }
-    
+
     // Atualiza o backend (que por sua vez atualizará a stream)
-    await _rideRepository.updateRideStatus(rideId, status, failureReason: motivo);
+    await _rideRepository.updateRideStatus(
+      rideId,
+      status,
+      failureReason: motivo,
+    );
   }
 
-  // ── Callbacks — injetados pelo integrador (HomeView) ──
-  VoidCallback? onPickupRouteReady;
-  VoidCallback? onDeliveryRouteReady;
-  VoidCallback? onRouteCompleted;
 
   // ═══════════════════════════════════════════
   // ██  TRANSIÇÕES DE ESTADO
@@ -156,24 +257,40 @@ class RideStateMachine extends GetxController {
     );
 
     onPickupRouteReady?.call();
-    
-    // Atualiza o backend para todas as ordens pendentes
+
+    // Atualiza o backend para todas as ordens atribuídas ou em busca
     for (var order in activeOrders) {
-      if (order.status == RideStatus.pending || order.status == RideStatus.assigned) {
-        await _rideRepository.updateRideStatus(order.id, RideStatus.goingToPickup);
+      if (order.status == RideStatus.assigned || order.status == RideStatus.searching) {
+        await _rideRepository.updateRideStatus(
+          order.id,
+          RideStatus.goingToPickup,
+        );
       }
     }
+  }
+
+  /// [1.5] RECUSAR OFERTA → Volta para idle e limpa a tela localmente
+  void rejectOffer() {
+    // TODO: Notificar Supabase sobre recusa
+    // A ação deve adicionar o ID do motorista em um array/tabela de rejected_by
+    // (motoristas que ignoraram a rota), para que a Stream pare de enviar essa mesma corrida.
+    
+    // Por enquanto, limpamos a UI localmente.
+    // A Stream pode enviar de novo se o backend não for atualizado.
+    activeOrders.clear();
+    reset();
   }
 
   /// [2] IR PARA COLETA → Abre navegador externo (Google Maps / Waze)
   Future<void> navigateToPickup(BuildContext context) async {
     if (activeOrders.isEmpty) return;
-    
+
     final first = activeOrders.first;
     await ExternalNavigationService.abrirNavegador(
       lat: first.lat,
       lng: first.lng,
       context: context,
+      address: first.pickupAddress,
     );
   }
 
@@ -184,35 +301,43 @@ class RideStateMachine extends GetxController {
     // Atualiza status de todos indo para coleta
     for (var order in activeOrders) {
       if (order.status == RideStatus.goingToPickup) {
-        await _rideRepository.updateRideStatus(order.id, RideStatus.arrivedAtPickup);
+        await _rideRepository.updateRideStatus(
+          order.id,
+          RideStatus.arrivedAtPickup,
+        );
       }
     }
-    
+
     _dispatchPickupNotification();
   }
 
   /// [4] SEGUIR ROTA → onDeliveryRoute
-  Future<List<RideModel>> startDeliveryRoute(List<RideModel> pendingOrders) async {
+  Future<List<RideModel>> startDeliveryRoute(
+    List<RideModel> pendingOrders,
+  ) async {
     if (activeOrders.isEmpty) return pendingOrders;
 
     currentState.value = RideState.onDeliveryRoute;
 
     final mapController = Get.find<MapController>();
-    final optimized = await mapController.optimizeAndTraceDeliveries(
+    await mapController.optimizeAndTraceDeliveries(
       pickupLat: activeOrders.first.lat,
       pickupLng: activeOrders.first.lng,
       orders: pendingOrders,
     );
 
     onDeliveryRouteReady?.call();
-    
+
     // Atualiza status de todos no ponto de coleta para rota
     for (var order in activeOrders) {
       if (order.status == RideStatus.arrivedAtPickup) {
-        await _rideRepository.updateRideStatus(order.id, RideStatus.onDeliveryRoute);
+        await _rideRepository.updateRideStatus(
+          order.id,
+          RideStatus.onDeliveryRoute,
+        );
       }
     }
-    
+
     return pendingOrders; // Retorna pendingOrders pois optimizeAndTraceDeliveries pode usar outra modelagem
   }
 
@@ -240,3 +365,4 @@ class RideStateMachine extends GetxController {
     // TODO: Substituir por chamada real ao Supabase Edge Function / API
   }
 }
+

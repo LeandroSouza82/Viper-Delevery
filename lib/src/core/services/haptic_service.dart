@@ -1,5 +1,6 @@
-import 'package:vibration/vibration.dart';
+import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
+import 'package:vibration/vibration.dart';
 import 'package:viper_delivery/src/modules/home/controllers/settings_controller.dart';
 
 /// Serviço tático para feedback háptico premium (Viper Sensation)
@@ -14,8 +15,8 @@ class HapticService {
     if (!settingsController.vibrationEnabled.value) return;
 
     try {
-      if (await Vibration.hasVibrator() ?? false) {
-        print('📳 [HAPTIC] Viper Pulse disparado');
+      if (await Vibration.hasVibrator()) {
+        debugPrint('📳 [HAPTIC] Viper Pulse disparado');
         // Padrão pulso duplo (batimento cardíaco): [Espera, Forte, Pausa, Curto]
         await Vibration.vibrate(
           pattern: [0, 100, 50, 60],
@@ -32,7 +33,7 @@ class HapticService {
     if (!settingsController.vibrationEnabled.value) return;
 
     try {
-      if (await Vibration.hasVibrator() ?? false) {
+      if (await Vibration.hasVibrator()) {
         await Vibration.vibrate(duration: 30, amplitude: 50);
       }
     } catch (e) {
@@ -45,7 +46,7 @@ class HapticService {
     if (!settingsController.vibrationEnabled.value) return;
 
     try {
-      if (await Vibration.hasVibrator() ?? false) {
+      if (await Vibration.hasVibrator()) {
         await Vibration.vibrate(pattern: [0, 100, 50, 100, 50, 100]);
       }
     } catch (e) {
@@ -61,10 +62,10 @@ class HapticService {
     if (_isEmergencyActive) return; // Evita múltiplas instâncias
     _isEmergencyActive = true;
 
-    print('🚨 [SOS] Iniciando ciclo de 12s de vibração');
+    debugPrint('🚨 [SOS] Iniciando ciclo de 12s de vibração');
 
     try {
-      if (await Vibration.hasVibrator() ?? false) {
+      if (await Vibration.hasVibrator()) {
         for (int i = 0; i < 12; i++) {
           if (!_isEmergencyActive || !settingsController.vibrationEnabled.value) break;
 
@@ -78,7 +79,7 @@ class HapticService {
         }
       }
     } catch (e) {
-      print('❌ [HAPTIC] Erro na vibração de emergência: $e');
+      debugPrint('❌ [HAPTIC] Erro na vibração de emergência: $e');
     } finally {
       _isEmergencyActive = false;
     }
@@ -88,6 +89,7 @@ class HapticService {
   static void stopVibration() {
     _isEmergencyActive = false;
     Vibration.cancel();
-    print('📳 [HAPTIC] Vibração interrompida manualmente');
+    debugPrint('📳 [HAPTIC] Vibração interrompida manualmente');
   }
 }
+

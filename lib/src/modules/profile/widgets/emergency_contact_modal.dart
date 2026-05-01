@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
-import 'package:viper_delivery/src/modules/profile/controllers/profile_controller.dart';
 import 'package:viper_delivery/src/modules/home/controllers/settings_controller.dart';
+import 'package:viper_delivery/src/modules/profile/controllers/profile_controller.dart';
 
 class EmergencyContactModal extends StatelessWidget {
   final ProfileController controller;
@@ -46,7 +46,7 @@ class EmergencyContactModal extends StatelessWidget {
                     height: 4,
                     margin: const EdgeInsets.only(bottom: 24),
                     decoration: BoxDecoration(
-                      color: textColor.withOpacity(0.1),
+                      color: textColor.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -56,7 +56,7 @@ class EmergencyContactModal extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Colors.red.withOpacity(0.1),
+                        color: Colors.red.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Icon(Icons.emergency_share_rounded, color: Colors.red, size: 24),
@@ -72,7 +72,7 @@ class EmergencyContactModal extends StatelessWidget {
                           ),
                           Text(
                             'Para quem devemos ligar em caso de SOS?',
-                            style: TextStyle(color: textColor.withOpacity(0.5), fontSize: 12),
+                            style: TextStyle(color: textColor.withValues(alpha: 0.5), fontSize: 12),
                           ),
                         ],
                       ),
@@ -125,7 +125,7 @@ class EmergencyContactModal extends StatelessWidget {
     return Text(
       label,
       style: TextStyle(
-        color: textColor.withOpacity(0.3),
+        color: textColor.withValues(alpha: 0.3),
         fontSize: 10,
         fontWeight: FontWeight.bold,
         letterSpacing: 1.2,
@@ -136,11 +136,12 @@ class EmergencyContactModal extends StatelessWidget {
   InputDecoration _buildInputDecoration(String hint, bool isDark, Color textColor) {
     return InputDecoration(
       hintText: hint,
-      hintStyle: TextStyle(color: textColor.withOpacity(0.2), fontSize: 14),
+      hintStyle: TextStyle(color: textColor.withValues(alpha: 0.2), fontSize: 14),
       filled: true,
-      fillColor: isDark ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.03),
+      fillColor: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.03),
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
     );
   }
 }
+

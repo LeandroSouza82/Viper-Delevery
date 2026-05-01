@@ -207,6 +207,7 @@ class ViperOrderCard extends StatelessWidget {
                           lat: ride.lat,
                           lng: ride.lng,
                           context: context,
+                          address: ride.deliveryAddress,
                         ),
                         icon: const Icon(Icons.navigation, size: 18),
                         label: const Text('ROTA', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -282,3 +283,4 @@ class ViperOrderCard extends StatelessWidget {
     );
   }
 }
+

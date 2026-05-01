@@ -1,5 +1,5 @@
-import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:viper_delivery/src/modules/home/controllers/settings_controller.dart';
 
 class ExternalNavigationService {
@@ -11,7 +11,22 @@ class ExternalNavigationService {
     required double lat,
     required double lng,
     required BuildContext context,
+    String? address,
   }) async {
+    // [VUP CHECKLIST] Validação de Coordenadas (Trava 0,0)
+    if (lat == 0.0 || lng == 0.0) {
+      debugPrint('[ViperNav] Coordenadas inválidas (0,0). Tentando fallback por endereço...');
+      if (address != null && address.isNotEmpty) {
+        await openRoute(address);
+        return;
+      } else {
+        if (context.mounted) {
+          _showInvalidCoordsAlert(context);
+        }
+        return;
+      }
+    }
+
     final settings = SettingsController();
     final preferido = settings.navApp;
 
@@ -98,6 +113,32 @@ class ExternalNavigationService {
     }
   }
 
+  static void _showInvalidCoordsAlert(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.gps_off, color: Colors.red),
+            SizedBox(width: 10),
+            Text('GPS Indisponível'),
+          ],
+        ),
+        content: const Text(
+          'Endereço sem coordenadas GPS válidas.\n'
+          'Tente usar o endereço de texto para navegar ou aguarde a sincronização.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('ENTENDI', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
   static void _showNoNavigatorAlert(BuildContext context) {
     showDialog(
       context: context,
@@ -124,3 +165,4 @@ class ExternalNavigationService {
     );
   }
 }
+

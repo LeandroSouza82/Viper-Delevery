@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:viper_delivery/src/modules/home/controllers/viper_menu_controller.dart';
-import 'package:viper_delivery/src/shared/widgets/pix_qr_dialog.dart';
 import 'package:viper_delivery/src/modules/profile/widgets/edit_pix_modal.dart';
+import 'package:viper_delivery/src/shared/widgets/pix_qr_dialog.dart';
 
 class FinanceCard extends StatelessWidget {
   final ViperMenuController menuController;
@@ -53,12 +53,12 @@ class FinanceCard extends StatelessWidget {
         color: isDark ? const Color(0xFF252525) : Colors.white,
         borderRadius: BorderRadius.circular(25),
         border: Border.all(
-          color: isDark ? Colors.white.withOpacity(0.1) : Colors.black.withOpacity(0.05),
+          color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.05),
           width: 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 15,
             offset: const Offset(0, 5),
           ),
@@ -72,7 +72,7 @@ class FinanceCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF00BFA5).withOpacity(0.1),
+                  color: const Color(0xFF00BFA5).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: const Icon(Icons.account_balance_wallet_rounded, color: Color(0xFF00BFA5), size: 20),
@@ -91,7 +91,7 @@ class FinanceCard extends StatelessWidget {
             width: double.infinity,
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: isDark ? Colors.black.withOpacity(0.2) : Colors.grey.withOpacity(0.05),
+              color: isDark ? Colors.black.withValues(alpha: 0.2) : Colors.grey.withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(15),
             ),
             child: Column(
@@ -158,3 +158,4 @@ class FinanceCard extends StatelessWidget {
     );
   }
 }
+

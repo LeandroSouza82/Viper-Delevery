@@ -1,12 +1,13 @@
-import 'package:get/get.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:viper_delivery/src/models/ride_model.dart';
-import 'package:viper_delivery/src/models/driver_model.dart';
-import 'package:viper_delivery/src/modules/onboarding/services/upload_service.dart';
 import 'dart:io';
-import 'package:viper_delivery/src/core/services/location_service.dart';
-import 'package:permission_handler/permission_handler.dart';
+
 import 'package:flutter/foundation.dart'; // For debugPrint
+import 'package:get/get.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:viper_delivery/src/core/services/location_service.dart';
+import 'package:viper_delivery/src/models/driver_model.dart';
+import 'package:viper_delivery/src/models/ride_model.dart';
+import 'package:viper_delivery/src/modules/onboarding/services/upload_service.dart';
 
 class ViperMenuController extends GetxController {
   final SupabaseClient _supabase = Supabase.instance.client;
@@ -32,8 +33,7 @@ class ViperMenuController extends GetxController {
   var showPanicButton = true.obs;
 
   Future<void> fetchAllData() async {
-    print('--------------------------------------------------');
-    print('[!!! VIPER !!!] MenuController: Iniciando fetchAllData...');
+    debugPrint('[!!! VIPER !!!] MenuController: Iniciando fetchAllData...');
     _setLoading(true);
     errorMessage = null;
     
@@ -54,12 +54,12 @@ class ViperMenuController extends GetxController {
       if (driverProfile?.avatarUrl == null || driverProfile!.avatarUrl!.isEmpty) {
         final metadataPhoto = user.userMetadata?['avatar_url'];
         if (metadataPhoto != null) {
-          print('[!!! VIPER !!!] Foto não encontrada no banco. Usando fallback de metadados: $metadataPhoto');
+          debugPrint('[!!! VIPER !!!] Foto não encontrada no banco. Usando fallback de metadados: $metadataPhoto');
           driverProfile = driverProfile?.copyWith(avatarUrl: metadataPhoto);
         }
       }
 
-      print('[!!! VIPER !!!] Perfil carregado -> Nome: ${driverProfile?.firstName}, Avatar: ${driverProfile?.avatarUrl}');
+      debugPrint('[!!! VIPER !!!] Perfil carregado -> Nome: ${driverProfile?.firstName}, Avatar: ${driverProfile?.avatarUrl}');
 
       // 2. Fetch Weekly/Daily/Monthly Performance
       await _fetchPerformanceData(user.id);
@@ -74,13 +74,13 @@ class ViperMenuController extends GetxController {
       // 4. Verificação de Sobreposição (Somente Android)
       if (Platform.isAndroid) {
         final status = await Permission.systemAlertWindow.status;
-        print('[!!! VIPER !!!] Status Sobreposição: $status');
+        debugPrint('[!!! VIPER !!!] Status Sobreposição: $status');
       }
       
       update();
     } catch (e) {
       errorMessage = 'Erro ao carregar dados: ${e.toString()}';
-      print('[!!! VIPER !!!] ERROR no MenuController: $e');
+      debugPrint('[!!! VIPER !!!] ERROR no MenuController: $e');
     } finally {
       _setLoading(false);
     }
@@ -149,11 +149,11 @@ class ViperMenuController extends GetxController {
         driverProfile = driverProfile!.copyWith(pixKey: newKey);
       }
       
-      print('[!!! VIPER !!!] Pix Key atualizada com sucesso: $newKey');
+      debugPrint('[!!! VIPER !!!] Pix Key atualizada com sucesso: $newKey');
       update();
     } catch (e) {
       errorMessage = 'Erro ao atualizar Pix: $e';
-      print('[!!! VIPER !!!] ERROR ao atualizar Pix: $e');
+      debugPrint('[!!! VIPER !!!] ERROR ao atualizar Pix: $e');
       rethrow;
     } finally {
       _setLoading(false);
@@ -167,12 +167,12 @@ class ViperMenuController extends GetxController {
 
   Future<void> finalizeRide({
     required RideExecutionSummary summary,
+    required List<String> rideIds,
     String? receiverName,
     String? receiverCpf,
     File? proofPhoto,
   }) async {
-    // Simulação de delay para feedback visual solicitado
-    await Future.delayed(const Duration(milliseconds: 1500));
+    debugPrint('>>> [CHECKOUT] Iniciando persistência final para ${rideIds.length} corridas');
     
     try {
       final user = _supabase.auth.currentUser;
@@ -181,30 +181,31 @@ class ViperMenuController extends GetxController {
       String? photoUrl;
       if (proofPhoto != null) {
         photoUrl = await _uploadService.uploadFile(
-          bucket: 'driver_documents', // Usando bucket existente para simplificação
+          bucket: 'driver_documents',
           userId: user.id,
           docType: 'delivery_proof_${DateTime.now().millisecondsSinceEpoch}',
           file: proofPhoto,
         );
       }
 
-      // Persistência no Supabase: Registrando o histórico da execução com Proof of Delivery
-      await _supabase.from('ride_history').insert({
-        'driver_id': user.id,
-        'amount': summary.totalValue,
-        'count_success': summary.countSuccess,
-        'count_failed': summary.countFailed,
-        'payment_status': summary.paymentStatus.name,
-        'receiver_name': receiverName,
-        'receiver_cpf': receiverCpf,
-        'proof_photo_url': photoUrl,
-        'completed_at': DateTime.now().toIso8601String(),
-      });
-      
-      print('[!!! VIPER !!!] Checkout BLINDADO finalizado e persistido no Supabase.');
+      // 1. Atualizar status e metadados de todas as rotas do lote (Sweep Update)
+      if (rideIds.isNotEmpty) {
+        await _supabase
+            .from('rides')
+            .update({
+              'status': 'completed',
+              'receiver_name': receiverName,
+              'receiver_cpf': receiverCpf,
+              'proof_photo_url': photoUrl,
+            })
+            .inFilter('id', rideIds);
+      }
+
+      debugPrint('[!!! VIPER !!!] Checkout finalizado e persistido com sucesso.');
     } catch (e) {
-      print('[!!! VIPER !!!] Erro no Checkout: $e');
+      debugPrint('[!!! VIPER !!!] ERRO NO CHECKOUT: $e');
       rethrow;
     }
   }
 }
+

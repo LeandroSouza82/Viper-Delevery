@@ -83,5 +83,11 @@
             android:name="com.pravera.flutter_foreground_task.service.ForegroundService"
             android:foregroundServiceType="location"
             android:exported="false" />
+
+        <!-- [VUP SYNC] Service necessário para o Workmanager (KeepAlive) -->
+        <service
+            android:name="be.tramckas.workmanager.KeepAliveService"
+            android:permission="android.permission.BIND_JOB_SERVICE"
+            android:exported="false" />
     </application>
 </manifest>

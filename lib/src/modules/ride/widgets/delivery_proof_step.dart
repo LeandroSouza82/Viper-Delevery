@@ -35,7 +35,8 @@ class _DeliveryProofStepState extends State<DeliveryProofStep> {
   Future<void> _takePhoto() async {
     final XFile? image = await _picker.pickImage(
       source: ImageSource.camera,
-      imageQuality: 70,
+      imageQuality: 25, // Máxima compressão para economizar banda e evitar timeout
+      maxWidth: 800,    // Limite de largura para Mobile
     );
     if (image != null) {
       final file = File(image.path);
@@ -99,7 +100,7 @@ class _DeliveryProofStepState extends State<DeliveryProofStep> {
         labelStyle: const TextStyle(fontSize: 13),
         prefixIcon: Icon(icon, color: Colors.blueAccent, size: 20),
         filled: true,
-        fillColor: widget.isDark ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.05),
+        fillColor: widget.isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
       ),
     );
@@ -112,10 +113,10 @@ class _DeliveryProofStepState extends State<DeliveryProofStep> {
         height: 120,
         width: double.infinity,
         decoration: BoxDecoration(
-          color: widget.isDark ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.05),
+          color: widget.isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: _photo != null ? Colors.green : Colors.grey.withOpacity(0.3),
+            color: _photo != null ? Colors.green : Colors.grey.withValues(alpha: 0.3),
             width: 1.5,
           ),
         ),
@@ -127,7 +128,7 @@ class _DeliveryProofStepState extends State<DeliveryProofStep> {
             : Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                   Icon(Icons.camera_alt_outlined, color: Colors.blueAccent.withOpacity(0.8), size: 32),
+                   Icon(Icons.camera_alt_outlined, color: Colors.blueAccent.withValues(alpha: 0.8), size: 32),
                   const SizedBox(height: 8),
                   const Text(
                     'FOTOGRAFAR PACOTE ENTREGUE',
@@ -139,3 +140,4 @@ class _DeliveryProofStepState extends State<DeliveryProofStep> {
     );
   }
 }
+

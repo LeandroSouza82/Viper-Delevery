@@ -1,19 +1,48 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import 'package:flutter/services.dart';
+import 'package:get/get.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:viper_delivery/src/core/services/foreground_service_manager.dart';
-import 'package:viper_delivery/src/core/config/env.dart';
 import 'package:viper_delivery/src/modules/auth/guards/auth_guard_view.dart';
-import 'package:viper_delivery/src/modules/auth/views/reset_password_view.dart';
 import 'package:viper_delivery/src/modules/auth/views/login_view.dart';
+import 'package:viper_delivery/src/modules/auth/views/reset_password_view.dart';
 import 'package:viper_delivery/src/modules/home/controllers/settings_controller.dart';
+import 'package:viper_delivery/src/modules/ride/services/upload_queue_service.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
+import 'package:workmanager/workmanager.dart';
 
 final navigatorKey = GlobalKey<NavigatorState>();
 
+@pragma('vm:entry-point')
+void callbackDispatcher() {
+  Workmanager().executeTask((task, inputData) async {
+    debugPrint('>>> [BG] Iniciando Background Sync Task: $task');
+    try {
+      // Inicializa Supabase em segundo plano se necessário
+      final session = Supabase.instance.client.auth.currentSession;
+      if (session != null && !session.isExpired) {
+        final queue = Get.put(UploadQueueService());
+        await queue.processQueue();
+      }
+      return true;
+    } catch (e) {
+      debugPrint('>>> [BG] Erro na Background Task: $e');
+      return false;
+    }
+  });
+}
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // [VUP SYNC] Inicialização antecipada e segura do Workmanager
+  try {
+    await Workmanager().initialize(
+      callbackDispatcher,
+    );
+  } catch (e) {
+    debugPrint('>>> [VUP WARNING] Falha ao inicializar Workmanager: $e');
+  }
 
   // Trava a tela sempre em pé
   await SystemChrome.setPreferredOrientations([
@@ -44,11 +73,12 @@ void main() async {
       anonKey: 'sb_publishable_jEeo93Wu3PB0kiwMevbDuw_Vm1Ngwr4',
     );
   } catch (e) {
-    print('>>> ERRO CRÍTICO NA INICIALIZAÇÃO: $e');
+    debugPrint('>>> ERRO CRÍTICO NA INICIALIZAÇÃO: $e');
   }
 
-  // Inicializa o controlador de configurações (Sindicato de Tema)
+  // Inicializa controladores globais
   Get.put(SettingsController());
+  Get.put(UploadQueueService());
 
   Supabase.instance.client.auth.onAuthStateChange.listen((data) {
     if (data.event == AuthChangeEvent.signedOut) {
@@ -119,9 +149,11 @@ class ViperDeliveryApp extends StatelessWidget {
         ),
         home: const AuthGuardView(),
         routes: {
+          '/home': (context) => const AuthGuardView(),
           '/reset-password': (context) => const ResetPasswordView(),
         },
       );
     });
   }
 }
+

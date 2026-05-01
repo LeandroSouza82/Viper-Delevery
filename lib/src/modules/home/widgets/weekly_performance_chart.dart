@@ -17,7 +17,7 @@ class WeeklyPerformanceChart extends StatelessWidget {
       height: 200,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey[50],
+        color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey[50],
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: isDark ? Colors.white12 : Colors.black, 
@@ -92,7 +92,7 @@ class WeeklyPerformanceChart extends StatelessWidget {
             backDrawRodData: BackgroundBarChartRodData(
               show: true,
               toY: _getMaxY() * 0.8,
-              color: isDark ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.05),
+              color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05),
             ),
           ),
         ],
@@ -110,7 +110,7 @@ class WeeklyPerformanceChart extends StatelessWidget {
 
   Widget _getBottomTitles(double value, TitleMeta meta) {
     final style = TextStyle(
-      color: isDark ? Colors.white.withOpacity(0.5) : Colors.black.withOpacity(0.5),
+      color: isDark ? Colors.white.withValues(alpha: 0.5) : Colors.black.withValues(alpha: 0.5),
       fontWeight: FontWeight.bold,
       fontSize: 12,
     );
@@ -132,3 +132,4 @@ class WeeklyPerformanceChart extends StatelessWidget {
     );
   }
 }
+

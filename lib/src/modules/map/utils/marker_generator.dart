@@ -57,7 +57,7 @@ class MarkerGenerator {
     canvas.drawPath(path, strokePaint);
 
     // 5. Máscara circular interna sutil para contraste
-    final innerPaint = Paint()..color = Colors.black.withOpacity(0.15);
+    final innerPaint = Paint()..color = Colors.black.withValues(alpha: 0.15);
     canvas.drawCircle(Offset(cx, cy), radius * 0.65, innerPaint);
 
     // 6. Texto / Numeração
@@ -94,3 +94,4 @@ class MarkerGenerator {
     return byteData!.buffer.asUint8List();
   }
 }
+

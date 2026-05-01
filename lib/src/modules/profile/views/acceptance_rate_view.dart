@@ -20,3 +20,4 @@ class AcceptanceRateView extends StatelessWidget {
     );
   }
 }
+

@@ -1,11 +1,11 @@
 import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:validatorless/validatorless.dart';
-import 'package:viper_delivery/src/modules/onboarding/services/upload_service.dart';
 import 'package:viper_delivery/src/modules/auth/controllers/auth_controller.dart';
 
 class RegisterView extends StatefulWidget {
@@ -355,7 +355,7 @@ class _RegisterViewState extends State<RegisterView> {
                         Positioned.fill(
                           child: Container(
                             decoration: BoxDecoration(
-                              color: Colors.black.withOpacity(0.3),
+                              color: Colors.black.withValues(alpha: 0.3),
                               shape: BoxShape.circle,
                             ),
                             child: const Center(
@@ -526,7 +526,7 @@ class _RegisterViewState extends State<RegisterView> {
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<String>(
-                  value: _selectedCnhCategory,
+                  initialValue: _selectedCnhCategory,
                   decoration: const InputDecoration(
                     labelText: 'Categoria da CNH',
                     border: OutlineInputBorder(),
@@ -661,3 +661,4 @@ class _RegisterViewState extends State<RegisterView> {
   );
  }
 }
+

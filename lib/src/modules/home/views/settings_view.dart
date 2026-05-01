@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:viper_delivery/src/core/services/haptic_service.dart';
 import 'package:viper_delivery/src/modules/home/controllers/settings_controller.dart';
 import 'package:viper_delivery/src/modules/home/controllers/viper_menu_controller.dart';
 import 'package:viper_delivery/src/modules/profile/controllers/profile_controller.dart';
-import 'package:viper_delivery/src/modules/profile/widgets/emergency_contact_modal.dart';
-import 'package:viper_delivery/src/core/services/haptic_service.dart';
 import 'package:viper_delivery/src/modules/profile/widgets/edit_pix_modal.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:viper_delivery/src/modules/profile/widgets/emergency_contact_modal.dart';
 
 class SettingsView extends StatefulWidget {
   final SettingsController settingsController;
@@ -90,8 +90,8 @@ class _SettingsViewState extends State<SettingsView> {
                     child: Theme(
                       data: Theme.of(context).copyWith(
                         scrollbarTheme: ScrollbarThemeData(
-                          thumbColor: MaterialStateProperty.all(borderColor.withOpacity(0.1)),
-                          thickness: MaterialStateProperty.all(3),
+                          thumbColor: WidgetStateProperty.all(borderColor.withValues(alpha: 0.1)),
+                          thickness: WidgetStateProperty.all(3),
                         ),
                       ),
                       child: ListView(
@@ -107,7 +107,7 @@ class _SettingsViewState extends State<SettingsView> {
                             isDark, textColor
                           ),
                           const SizedBox(height: 16),
-                          Divider(color: borderColor.withOpacity(0.1)),
+                          Divider(color: borderColor.withValues(alpha: 0.1)),
                           const SizedBox(height: 16),
                           _buildPaymentToggle(
                             Icons.credit_card, 
@@ -118,7 +118,7 @@ class _SettingsViewState extends State<SettingsView> {
                             isDark, textColor
                           ),
                           const SizedBox(height: 16),
-                          Divider(color: borderColor.withOpacity(0.1)),
+                          Divider(color: borderColor.withValues(alpha: 0.1)),
                           const SizedBox(height: 16),
                           _buildPaymentToggle(
                             Icons.credit_score, 
@@ -129,7 +129,7 @@ class _SettingsViewState extends State<SettingsView> {
                             isDark, textColor
                           ),
                           const SizedBox(height: 16),
-                          Divider(color: borderColor.withOpacity(0.1)),
+                          Divider(color: borderColor.withValues(alpha: 0.1)),
                           const SizedBox(height: 16),
                           _buildPaymentToggle(
                             Icons.account_balance_wallet_rounded, 
@@ -140,7 +140,7 @@ class _SettingsViewState extends State<SettingsView> {
                             isDark, textColor
                           ),
                           const SizedBox(height: 16),
-                          Divider(color: borderColor.withOpacity(0.1)),
+                          Divider(color: borderColor.withValues(alpha: 0.1)),
                           const SizedBox(height: 16),
                           _buildPixOption(isDark, textColor, borderColor),
                         ],
@@ -173,7 +173,7 @@ class _SettingsViewState extends State<SettingsView> {
                         },
                       ),
                       const SizedBox(height: 16),
-                      Divider(color: borderColor.withOpacity(0.1)),
+                      Divider(color: borderColor.withValues(alpha: 0.1)),
                       const SizedBox(height: 16),
                       _buildDropdownTile(
                         label: 'Aparência',
@@ -215,7 +215,7 @@ class _SettingsViewState extends State<SettingsView> {
                         textColor: textColor,
                       ),
                       const SizedBox(height: 16),
-                      Divider(color: borderColor.withOpacity(0.1)),
+                      Divider(color: borderColor.withValues(alpha: 0.1)),
                       const SizedBox(height: 16),
                       Obx(() => _buildViperSwitchTile(
                         label: 'Vibração do Aplicativo',
@@ -258,7 +258,7 @@ class _SettingsViewState extends State<SettingsView> {
                         textColor: textColor,
                       )),
                       const SizedBox(height: 16),
-                      Divider(color: borderColor.withOpacity(0.1)),
+                      Divider(color: borderColor.withValues(alpha: 0.1)),
                       const SizedBox(height: 16),
                       Obx(() => _buildViperSwitchTile(
                         label: 'Botão de Pânico',
@@ -284,11 +284,11 @@ class _SettingsViewState extends State<SettingsView> {
                         title: 'Sair do Viper?',
                         titleStyle: TextStyle(fontWeight: FontWeight.bold, color: textColor),
                         middleText: 'Tem certeza que deseja desconectar sua conta?',
-                        middleTextStyle: TextStyle(color: textColor.withOpacity(0.7)),
+                        middleTextStyle: TextStyle(color: textColor.withValues(alpha: 0.7)),
                         backgroundColor: dialogBgColor,
                         radius: 16,
                         textCancel: 'Cancelar',
-                        cancelTextColor: textColor.withOpacity(0.5),
+                        cancelTextColor: textColor.withValues(alpha: 0.5),
                         textConfirm: 'Sim, Sair',
                         confirmTextColor: Colors.white,
                         buttonColor: Colors.redAccent,
@@ -307,7 +307,7 @@ class _SettingsViewState extends State<SettingsView> {
                       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
-                        side: BorderSide(color: Colors.redAccent.withOpacity(0.2)),
+                        side: BorderSide(color: Colors.redAccent.withValues(alpha: 0.2)),
                       ),
                     ),
                   ),
@@ -317,7 +317,7 @@ class _SettingsViewState extends State<SettingsView> {
                 Center(
                   child: Text(
                     'Versão 1.0.0 • Viper Delivery',
-                    style: TextStyle(color: textColor.withOpacity(0.3), fontSize: 10),
+                    style: TextStyle(color: textColor.withValues(alpha: 0.3), fontSize: 10),
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -344,7 +344,7 @@ class _SettingsViewState extends State<SettingsView> {
           Text(
             'OLÁ, $firstName',
             style: TextStyle(
-              color: textColor.withOpacity(0.5),
+              color: textColor.withValues(alpha: 0.5),
               fontSize: 10,
               fontWeight: FontWeight.bold,
               letterSpacing: 1.5,
@@ -390,7 +390,7 @@ class _SettingsViewState extends State<SettingsView> {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF00BFA5).withOpacity(0.1),
+                    color: const Color(0xFF00BFA5).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Icon(Icons.qr_code_scanner_rounded, color: Color(0xFF00BFA5), size: 20),
@@ -404,14 +404,14 @@ class _SettingsViewState extends State<SettingsView> {
                       const SizedBox(height: 2),
                       Text(
                         pixKey, 
-                        style: TextStyle(color: textColor.withOpacity(0.4), fontSize: 11),
+                        style: TextStyle(color: textColor.withValues(alpha: 0.4), fontSize: 11),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ),
                 ),
-                Icon(Icons.edit_outlined, color: textColor.withOpacity(0.2), size: 14),
+                Icon(Icons.edit_outlined, color: textColor.withValues(alpha: 0.2), size: 14),
               ],
             ),
           ),
@@ -423,12 +423,12 @@ class _SettingsViewState extends State<SettingsView> {
   Widget _buildSectionHeader(String title, Color textColor, IconData icon) {
     return Row(
       children: [
-        Icon(icon, size: 16, color: textColor.withOpacity(0.4)),
+        Icon(icon, size: 16, color: textColor.withValues(alpha: 0.4)),
         const SizedBox(width: 8),
         Text(
           title,
           style: TextStyle(
-            color: textColor.withOpacity(0.4),
+            color: textColor.withValues(alpha: 0.4),
             fontSize: 11,
             fontWeight: FontWeight.bold,
             letterSpacing: 1.2,
@@ -442,7 +442,7 @@ class _SettingsViewState extends State<SettingsView> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isDark ? Colors.white.withOpacity(0.03) : Colors.black.withOpacity(0.03),
+        color: isDark ? Colors.white.withValues(alpha: 0.03) : Colors.black.withValues(alpha: 0.03),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: borderColor,
@@ -460,10 +460,10 @@ class _SettingsViewState extends State<SettingsView> {
       style: TextStyle(color: textColor, fontWeight: FontWeight.bold),
       decoration: InputDecoration(
         hintText: 'Para onde você vai hoje?',
-        hintStyle: TextStyle(color: textColor.withOpacity(0.3)),
-        prefixIcon: Icon(Icons.search, color: textColor.withOpacity(0.5)),
+        hintStyle: TextStyle(color: textColor.withValues(alpha: 0.3)),
+        prefixIcon: Icon(Icons.search, color: textColor.withValues(alpha: 0.5)),
         filled: true,
-        fillColor: isDark ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.05),
+        fillColor: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(15),
           borderSide: BorderSide.none,
@@ -495,7 +495,7 @@ class _SettingsViewState extends State<SettingsView> {
           final result = widget.settingsController.searchResults[index];
           return ListTile(
             title: Text(result['text'], style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 14)),
-            subtitle: Text(result['place_name'], style: TextStyle(color: textColor.withOpacity(0.5), fontSize: 11)),
+            subtitle: Text(result['place_name'], style: TextStyle(color: textColor.withValues(alpha: 0.5), fontSize: 11)),
             onTap: () {
               widget.settingsController.selectLocation(result);
               _searchController.text = result['text'];
@@ -515,7 +515,7 @@ class _SettingsViewState extends State<SettingsView> {
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Usos disponíveis hoje', style: TextStyle(color: textColor.withOpacity(0.5), fontSize: 12)),
+            Text('Usos disponíveis hoje', style: TextStyle(color: textColor.withValues(alpha: 0.5), fontSize: 12)),
             Text(
               '$uses / 3',
               style: TextStyle(color: textColor, fontSize: 18, fontWeight: FontWeight.w900),
@@ -526,7 +526,7 @@ class _SettingsViewState extends State<SettingsView> {
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
-            color: (uses > 0 ? const Color(0xFF00FF88) : Colors.redAccent).withOpacity(0.1),
+            color: (uses > 0 ? const Color(0xFF00FF88) : Colors.redAccent).withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
               color: isDark ? Colors.white24 : Colors.black,
@@ -586,10 +586,10 @@ class _SettingsViewState extends State<SettingsView> {
         Container(
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: (isDark ? Colors.white : Colors.black).withOpacity(0.05),
+            color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.05),
             borderRadius: BorderRadius.circular(12),
           ),
-          child: Icon(icon, color: textColor.withOpacity(0.7), size: 20),
+          child: Icon(icon, color: textColor.withValues(alpha: 0.7), size: 20),
         ),
         const SizedBox(width: 16),
         Expanded(
@@ -598,7 +598,7 @@ class _SettingsViewState extends State<SettingsView> {
             children: [
               Text(label, style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 15)),
               const SizedBox(height: 2),
-              Text(subtitle, style: TextStyle(color: textColor.withOpacity(0.4), fontSize: 11)),
+              Text(subtitle, style: TextStyle(color: textColor.withValues(alpha: 0.4), fontSize: 11)),
             ],
           ),
         ),
@@ -611,7 +611,7 @@ class _SettingsViewState extends State<SettingsView> {
             items: items,
             onChanged: onChanged,
             underline: const SizedBox(),
-            icon: Icon(Icons.keyboard_arrow_down, color: textColor.withOpacity(0.3), size: 18),
+            icon: Icon(Icons.keyboard_arrow_down, color: textColor.withValues(alpha: 0.3), size: 18),
             dropdownColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
             borderRadius: BorderRadius.circular(12),
           ),
@@ -647,10 +647,10 @@ class _SettingsViewState extends State<SettingsView> {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: (isDark ? Colors.white : Colors.black).withOpacity(0.05),
+              color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(icon, color: textColor.withOpacity(0.7), size: 20),
+            child: Icon(icon, color: textColor.withValues(alpha: 0.7), size: 20),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -659,11 +659,11 @@ class _SettingsViewState extends State<SettingsView> {
               children: [
                 Text(label, style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 15)),
                 const SizedBox(height: 2),
-                Text(subtitle, style: TextStyle(color: textColor.withOpacity(0.4), fontSize: 11)),
+                Text(subtitle, style: TextStyle(color: textColor.withValues(alpha: 0.4), fontSize: 11)),
               ],
             ),
           ),
-          Icon(Icons.arrow_forward_ios, color: textColor.withOpacity(0.2), size: 14),
+          Icon(Icons.arrow_forward_ios, color: textColor.withValues(alpha: 0.2), size: 14),
         ],
       ),
     );
@@ -683,10 +683,10 @@ class _SettingsViewState extends State<SettingsView> {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: (isDark ? Colors.white : Colors.black).withOpacity(0.05),
+              color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(icon, color: textColor.withOpacity(0.7), size: 20),
+            child: Icon(icon, color: textColor.withValues(alpha: 0.7), size: 20),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -700,7 +700,7 @@ class _SettingsViewState extends State<SettingsView> {
                 const SizedBox(height: 2),
                 Text(
                   subtitle,
-                  style: TextStyle(color: textColor.withOpacity(0.4), fontSize: 11),
+                  style: TextStyle(color: textColor.withValues(alpha: 0.4), fontSize: 11),
                 ),
               ],
             ),
@@ -735,7 +735,7 @@ class _SettingsViewState extends State<SettingsView> {
                     color: Colors.white,
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
+                        color: Colors.black.withValues(alpha: 0.1),
                         blurRadius: 4,
                         offset: const Offset(0, 2),
                       ),
@@ -750,3 +750,4 @@ class _SettingsViewState extends State<SettingsView> {
     );
   }
 }
+

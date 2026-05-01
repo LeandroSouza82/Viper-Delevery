@@ -18,7 +18,7 @@ class HomeMenuIcon extends StatelessWidget {
         
         // Cores baseadas no tema para combinar com o StatsPillWidget
         final bgColor = isDark 
-            ? Colors.black.withOpacity(0.85) 
+            ? Colors.black.withValues(alpha: 0.85) 
             : Colors.white;
         final iconColor = isDark ? Colors.white : Colors.black;
         final borderColor = isDark ? Colors.white12 : Colors.black;
@@ -39,7 +39,7 @@ class HomeMenuIcon extends StatelessWidget {
                   : Border.all(color: borderColor, width: 1),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
+                  color: Colors.black.withValues(alpha: 0.1),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
                 )
@@ -56,3 +56,4 @@ class HomeMenuIcon extends StatelessWidget {
     );
   }
 }
+

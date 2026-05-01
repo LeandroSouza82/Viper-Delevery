@@ -1,10 +1,11 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:viper_delivery/src/models/ride_model.dart';
 import 'package:viper_delivery/src/modules/home/controllers/viper_menu_controller.dart';
+import 'package:viper_delivery/src/modules/ride/widgets/delivery_proof_step.dart';
 import 'package:viper_delivery/src/modules/ride/widgets/payment_selector.dart';
 import 'package:viper_delivery/src/shared/widgets/pix_qr_dialog.dart';
-import 'package:viper_delivery/src/modules/ride/widgets/delivery_proof_step.dart';
-import 'dart:io';
 
 class ViperReceiptBottomSheet extends StatefulWidget {
   final RideExecutionSummary summary;
@@ -28,14 +29,12 @@ class ViperReceiptBottomSheet extends StatefulWidget {
 
 class _ViperReceiptBottomSheetState extends State<ViperReceiptBottomSheet> {
   bool _isLoading = false;
-  bool _paymentActionTaken = false;
   
   String? _receiverName;
   String? _receiverCpf;
   File? _proofPhoto;
 
   void _showPixQR() {
-    setState(() => _paymentActionTaken = true);
     final pixKey = widget.menuController.driverProfile?.pixKey;
     if (pixKey == null || pixKey.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -82,6 +81,7 @@ class _ViperReceiptBottomSheetState extends State<ViperReceiptBottomSheet> {
     try {
       await widget.menuController.finalizeRide(
         summary: widget.summary,
+        rideIds: widget.summary.rideIds, // Sincronização em massa
         receiverName: _receiverName,
         receiverCpf: _receiverCpf,
         proofPhoto: _proofPhoto,
@@ -203,7 +203,7 @@ class _ViperReceiptBottomSheetState extends State<ViperReceiptBottomSheet> {
                 padding: const EdgeInsets.symmetric(vertical: 18),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                 elevation: 0,
-                disabledBackgroundColor: const Color(0xFF0055FF).withOpacity(0.5),
+                disabledBackgroundColor: const Color(0xFF0055FF).withValues(alpha: 0.5),
               ),
               child: _isLoading 
                 ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
@@ -223,7 +223,7 @@ class _ViperReceiptBottomSheetState extends State<ViperReceiptBottomSheet> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: isDark ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.05),
+        color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -319,3 +319,4 @@ class _ViperReceiptBottomSheetState extends State<ViperReceiptBottomSheet> {
     );
   }
 }
+

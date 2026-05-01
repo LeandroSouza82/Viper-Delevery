@@ -12,7 +12,7 @@ class AuthController extends ChangeNotifier {
   Future<void> signIn(String email, String password, bool keepLoggedIn, bool saveEmail) async {
     _setLoading(true);
     // Se mudamos o projeto no Supabase, é necessário criar o usuário novamente no menu Authentication do novo projeto no navegador
-    print('>>> TENTANDO LOGIN NO PROJETO: jribfmilbdzxiaajqgm');
+    debugPrint('>>> TENTANDO LOGIN NO PROJETO: jribfmilbdzxiaajqgm');
     try {
       final prefs = await SharedPreferences.getInstance();
       if (saveEmail) {
@@ -24,8 +24,8 @@ class AuthController extends ChangeNotifier {
 
       await _supabase.auth.signInWithPassword(email: email, password: password);
     } on AuthException catch (e) {
-      print('>>> ERRO AO LOGAR: ${e.message}');
-      Get.snackbar('Erro no Login', e.message, backgroundColor: Colors.red.withOpacity(0.9), colorText: Colors.white, snackPosition: SnackPosition.TOP);
+      debugPrint('>>> ERRO AO LOGAR: ${e.message}');
+      Get.snackbar('Erro no Login', e.message, backgroundColor: Colors.red.withValues(alpha: 0.9), colorText: Colors.white, snackPosition: SnackPosition.TOP);
       if (e.message.toLowerCase().contains('invalid login credentials') || e.code == 'invalid_credentials') {
         errorMessage = 'E-mail ou senha incorretos. Verifique e tente novamente.';
       } else if (e.message.toLowerCase().contains('user not found') || e.code == 'user_not_found') {
@@ -35,8 +35,8 @@ class AuthController extends ChangeNotifier {
       }
       rethrow;
     } catch (e) {
-      print('>>> ERRO AO LOGAR: ${e.toString()}');
-      Get.snackbar('Erro Crítico', e.toString(), backgroundColor: Colors.red.withOpacity(0.9), colorText: Colors.white, snackPosition: SnackPosition.TOP);
+      debugPrint('>>> ERRO AO LOGAR: ${e.toString()}');
+      Get.snackbar('Erro Crítico', e.toString(), backgroundColor: Colors.red.withValues(alpha: 0.9), colorText: Colors.white, snackPosition: SnackPosition.TOP);
       errorMessage = 'Ops! Tivemos um problema técnico. Tente novamente em instantes.';
       rethrow;
     } finally {
@@ -50,23 +50,23 @@ class AuthController extends ChangeNotifier {
       // Força o reconhecimento da sessão após o cadastro
       try {
         await _supabase.auth.refreshSession();
-        print('DEBUG: Session Refreshed');
+        debugPrint('DEBUG: Session Refreshed');
       } catch (e) {
-        print('DEBUG: Falha ao renovar sessão: $e');
+        debugPrint('DEBUG: Falha ao renovar sessão: $e');
       }
 
       final String? currentAuthId = _supabase.auth.currentUser?.id;
       final String ext = file.path.split('.').last;
 
-      print('DEBUG: Bucket Name: driver_documents');
-      print('DEBUG: User ID (Param): $userId');
-      print('DEBUG: Session Active: ${_supabase.auth.currentSession != null}');
+      debugPrint('DEBUG: Bucket Name: driver_documents');
+      debugPrint('DEBUG: User ID (Param): $userId');
+      debugPrint('DEBUG: Session Active: ${_supabase.auth.currentSession != null}');
 
       if (currentAuthId == null) {
-        print('Por que a moto funciona e a selfie não? O userId do Auth está nulo no momento da selfie!');
+        debugPrint('Por que a moto funciona e a selfie não? O userId do Auth está nulo no momento da selfie!');
       }
 
-      print('Tamanho do arquivo para upload: ${await file.length()} bytes');
+      debugPrint('Tamanho do arquivo para upload: ${await file.length()} bytes');
       
       // Caminho Simplificado (Flat) para teste de RLS
       final String fileName = 'selfie_${DateTime.now().millisecondsSinceEpoch}.$ext';
@@ -87,11 +87,11 @@ class AuthController extends ChangeNotifier {
       final String publicUrl = _supabase.storage.from('driver_documents').getPublicUrl(path);
       return publicUrl;
     } on StorageException catch (e) {
-      print('ERRO_BRUTO_SUPABASE (Storage): ${e.toString()}');
+      debugPrint('ERRO_BRUTO_SUPABASE (Storage): ${e.toString()}');
       errorMessage = 'Falha no servidor de arquivos (Bucket). Status: ${e.statusCode}';
       return null;
     } catch (e) {
-      print('ERRO_BRUTO_SUPABASE (Geral): ${e.toString()}');
+      debugPrint('ERRO_BRUTO_SUPABASE (Geral): ${e.toString()}');
       errorMessage = 'Erro ao enviar foto para o servidor (bucket driver_documents).';
       return null;
     } finally {
@@ -104,7 +104,7 @@ class AuthController extends ChangeNotifier {
       await _supabase.from('profiles').update({'avatar_url': url}).eq('id', userId);
       return true;
     } catch (e) {
-      print('ERRO DATABASE UPDATE: $e');
+      debugPrint('ERRO DATABASE UPDATE: $e');
       errorMessage = 'Conta criada, mas erro ao vincular a foto de perfil.';
       return false;
     }
@@ -177,7 +177,6 @@ class AuthController extends ChangeNotifier {
     } finally {
       _setLoading(false);
     }
-    return null;
   }
 
   Future<void> resetPassword(String email) async {
@@ -234,12 +233,12 @@ class AuthController extends ChangeNotifier {
       
       // Verificação Final: Garante que a sessão local tenha o ID correto para RLS
       if (_supabase.auth.currentUser?.id == null) {
-        print('DEBUG: Sessão local ainda nula, mas update enviado via User ID parameter.');
+        debugPrint('DEBUG: Sessão local ainda nula, mas update enviado via User ID parameter.');
       }
 
       return true;
     } catch (e) {
-      print('ERRO_FINALIZE_PROFILE: $e');
+      debugPrint('ERRO_FINALIZE_PROFILE: $e');
       errorMessage = 'Conta criada, mas houve um erro ao salvar o perfil final.';
       // Note: Retornamos falso aqui para que a UI saiba que houve falha no DB,
       // mas no RegisterView vamos permitir o avanço se o erro for só no upload.
@@ -252,3 +251,4 @@ class AuthController extends ChangeNotifier {
     notifyListeners();
   }
 }
+

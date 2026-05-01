@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 
 class LocationService {
@@ -9,7 +10,7 @@ class LocationService {
     // 1. Verificar se o serviço de GPS do hardware está ligado
     serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
-      print('[!!! VIPER !!!] GPS do dispositivo desativado.');
+      debugPrint('[!!! VIPER !!!] GPS do dispositivo desativado.');
       return false;
     }
 
@@ -19,14 +20,14 @@ class LocationService {
       // Solicitar permissão pela primeira vez
       permission = await Geolocator.requestPermission();
       if (permission == LocationPermission.denied) {
-        print('[!!! VIPER !!!] Permissão de GPS negada pelo usuário.');
+        debugPrint('[!!! VIPER !!!] Permissão de GPS negada pelo usuário.');
         return false;
       }
     }
     
     // 3. Caso o usuário tenha negado permanentemente
     if (permission == LocationPermission.deniedForever) {
-      print('[!!! VIPER !!!] Permissão de GPS negada permanentemente nas configurações.');
+      debugPrint('[!!! VIPER !!!] Permissão de GPS negada permanentemente nas configurações.');
       return false;
     } 
 
@@ -42,12 +43,15 @@ class LocationService {
 
       // Usando precisão alta para operações logísticas
       return await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-        timeLimit: const Duration(seconds: 5), // Evita travamento infinito
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          timeLimit: Duration(seconds: 5),
+        ),
       );
     } catch (e) {
-      print('[!!! VIPER !!!] Falha graciosa na captura do GPS: $e');
+      debugPrint('[!!! VIPER !!!] Falha graciosa na captura do GPS: $e');
       return null;
     }
   }
 }
+

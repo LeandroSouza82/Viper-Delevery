@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:viper_delivery/src/models/ride_model.dart';
-import 'package:viper_delivery/src/modules/home/widgets/viper_order_card.dart';
-import 'package:viper_delivery/src/modules/returns/widgets/returns_tab_view.dart';
-import 'package:viper_delivery/src/modules/home/services/pricing_service.dart';
-import 'package:viper_delivery/src/modules/home/controllers/viper_menu_controller.dart';
-import 'package:viper_delivery/src/modules/home/widgets/viper_receipt_bottom_sheet.dart';
 import 'package:viper_delivery/src/modules/home/controllers/settings_controller.dart';
+import 'package:viper_delivery/src/modules/home/controllers/viper_menu_controller.dart';
 import 'package:viper_delivery/src/modules/home/views/settings_view.dart';
+import 'package:viper_delivery/src/modules/home/widgets/viper_order_card.dart';
+import 'package:viper_delivery/src/modules/home/widgets/viper_receipt_bottom_sheet.dart';
+import 'package:viper_delivery/src/modules/profile/controllers/profile_controller.dart';
+import 'package:viper_delivery/src/modules/returns/widgets/returns_tab_view.dart';
 import 'package:viper_delivery/src/modules/ride/controllers/ride_state_machine.dart';
-import 'package:viper_delivery/src/modules/ride/widgets/signature_modal.dart';
 import 'package:viper_delivery/src/modules/ride/widgets/failure_modal.dart';
+import 'package:viper_delivery/src/modules/ride/widgets/signature_modal.dart';
 
 class ViperBottomSheetPanel extends StatefulWidget {
   const ViperBottomSheetPanel({
@@ -87,6 +87,7 @@ class ViperBottomSheetPanelState extends State<ViperBottomSheetPanel> {
 
     if (allDone) {
       final summary = RideExecutionSummary(
+        rideIds: allOrders.map((o) => o.id).toList(),
         baseValue: 15.0, // TODO: Calc baseado em dados reais
         successBonus: 0.0,
         attemptFee: 0.0,
@@ -107,11 +108,18 @@ class ViperBottomSheetPanelState extends State<ViperBottomSheetPanel> {
           isClt: widget.isClt,
           menuController: widget.menuController,
           onFinish: () {
+            // 1. Fechar o BottomSheet de Resumo
             Navigator.pop(context);
-            // RESET TOTAL DO ESTADO
+            
+            // 2. RESET TOTAL DO ESTADO (Prevenção de Loops)
             widget.rideStateMachine.activeOrders.clear();
+            widget.rideStateMachine.reset(); // Volta para Idle e limpa mapa
+            
+            // 3. Notificar o MenuController para atualizar ganhos na Home
             widget.onFinalize();
-            collapseToPeek();
+            
+            // 4. NAVEGAÇÃO LIMPA: Volta para a Home resetando a pilha
+            Get.offAllNamed('/home'); // Reset total do stack via rota nomeada
           },
         ),
       );
@@ -328,9 +336,9 @@ class ViperBottomSheetPanelState extends State<ViperBottomSheetPanel> {
           // Lado Esquerdo: Engrenagem
           _buildHeaderButton(
             icon: Icons.settings_rounded,
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => SettingsView(settingsController: widget.settingsController)),
+            onPressed: () => Get.to(
+              () => SettingsView(settingsController: widget.settingsController),
+              binding: BindingsBuilder(() => Get.lazyPut(() => ProfileController())),
             ),
           ),
           
@@ -348,9 +356,9 @@ class ViperBottomSheetPanelState extends State<ViperBottomSheetPanel> {
           // Lado Direito: Ajustes (Sliders)
           _buildHeaderButton(
             icon: Icons.tune_rounded,
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => SettingsView(settingsController: widget.settingsController)),
+            onPressed: () => Get.to(
+              () => SettingsView(settingsController: widget.settingsController),
+              binding: BindingsBuilder(() => Get.lazyPut(() => ProfileController())),
             ),
           ),
         ],
@@ -372,7 +380,7 @@ class ViperBottomSheetPanelState extends State<ViperBottomSheetPanel> {
       child: Container(
         height: 45,
         decoration: BoxDecoration(
-          color: widget.isDark ? Colors.white12 : Colors.black.withOpacity(0.05),
+          color: widget.isDark ? Colors.white12 : Colors.black.withValues(alpha: 0.05),
           borderRadius: BorderRadius.circular(12),
         ),
         child: TabBar(
@@ -382,7 +390,7 @@ class ViperBottomSheetPanelState extends State<ViperBottomSheetPanel> {
             color: const Color(0xFF0055FF),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF0055FF).withOpacity(0.3),
+                color: const Color(0xFF0055FF).withValues(alpha: 0.3),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),
@@ -401,3 +409,4 @@ class ViperBottomSheetPanelState extends State<ViperBottomSheetPanel> {
   }
 
 }
+

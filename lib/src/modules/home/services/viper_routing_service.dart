@@ -1,5 +1,5 @@
-import 'package:viper_delivery/src/models/ride_model.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:viper_delivery/src/models/ride_model.dart';
 
 class ViperRoutingResult {
   final List<RideModel> optimizedOrders;
@@ -81,3 +81,4 @@ class ViperRoutingService {
     return distanceInMetres / 1000; // Converte para KM
   }
 }
+

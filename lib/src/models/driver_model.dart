@@ -17,6 +17,7 @@ class DriverModel {
   final String? emergencyContactName;
   final String? emergencyContactPhone;
   final bool? isClt;
+  final bool? isCompanyDriver;
   final List<VehicleModel>? vehicles;
 
   DriverModel({
@@ -36,6 +37,7 @@ class DriverModel {
     this.emergencyContactName,
     this.emergencyContactPhone,
     this.isClt,
+    this.isCompanyDriver,
     this.vehicles,
   });
 
@@ -56,6 +58,7 @@ class DriverModel {
     String? emergencyContactName,
     String? emergencyContactPhone,
     bool? isClt,
+    bool? isCompanyDriver,
     List<VehicleModel>? vehicles,
   }) {
     return DriverModel(
@@ -75,6 +78,7 @@ class DriverModel {
       emergencyContactName: emergencyContactName ?? this.emergencyContactName,
       emergencyContactPhone: emergencyContactPhone ?? this.emergencyContactPhone,
       isClt: isClt ?? this.isClt,
+      isCompanyDriver: isCompanyDriver ?? this.isCompanyDriver,
       vehicles: vehicles ?? this.vehicles,
     );
   }
@@ -97,9 +101,31 @@ class DriverModel {
       emergencyContactName: map['emergency_contact_name'],
       emergencyContactPhone: map['emergency_contact_phone'],
       isClt: map['is_clt'],
+      isCompanyDriver: map['is_company_driver'] ?? false,
       vehicles: (map['vehicles'] as List<dynamic>?)
           ?.map((v) => VehicleModel.fromMap(v as Map<String, dynamic>))
           .toList(),
     );
+  }
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'first_name': firstName,
+      'last_name': lastName,
+      'cpf': cpf,
+      'city': city,
+      'neighborhood': neighborhood,
+      'state': state,
+      'phone': phone,
+      'email': email,
+      'cnh_number': cnhNumber,
+      'cnh_category': cnhCategory,
+      'pix_key': pixKey,
+      'avatar_url': avatarUrl,
+      'emergency_contact_name': emergencyContactName,
+      'emergency_contact_phone': emergencyContactPhone,
+      'is_clt': isClt,
+      'is_company_driver': isCompanyDriver,
+    };
   }
 }

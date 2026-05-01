@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:safe_device/safe_device.dart';
 import 'package:get/get.dart';
+import 'package:safe_device/safe_device.dart';
 
 /// Serviço de Segurança VUP PROTECT 🛡️
 /// Focado em integridade do dispositivo e prevenção de fraudes.
@@ -60,3 +60,4 @@ class SecurityService extends GetxService {
     );
   }
 }
+

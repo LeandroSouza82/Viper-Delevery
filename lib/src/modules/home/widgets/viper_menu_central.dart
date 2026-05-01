@@ -1,20 +1,19 @@
-import 'dart:io';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:viper_delivery/src/models/ride_model.dart';
 import 'package:viper_delivery/src/modules/home/controllers/settings_controller.dart';
 import 'package:viper_delivery/src/modules/home/controllers/viper_menu_controller.dart';
-import 'package:viper_delivery/src/modules/home/widgets/weekly_performance_chart.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:viper_delivery/src/modules/profile/views/atividades_view.dart';
 import 'package:viper_delivery/src/modules/home/views/settings_view.dart';
+import 'package:viper_delivery/src/modules/home/widgets/drawer_falhas_widget.dart';
+import 'package:viper_delivery/src/modules/home/widgets/weekly_performance_chart.dart';
+import 'package:viper_delivery/src/modules/profile/controllers/profile_controller.dart';
+import 'package:viper_delivery/src/modules/profile/views/atividades_view.dart';
+import 'package:viper_delivery/src/modules/profile/views/help_view.dart';
 import 'package:viper_delivery/src/modules/profile/views/profile_view.dart';
 import 'package:viper_delivery/src/modules/profile/views/wallet_view.dart';
-import 'package:viper_delivery/src/modules/profile/views/help_view.dart';
-import 'package:viper_delivery/src/models/ride_model.dart';
 import 'package:viper_delivery/src/modules/ride/controllers/ride_state_machine.dart';
-
-import 'package:viper_delivery/src/modules/home/widgets/drawer_falhas_widget.dart';
 
 enum PerformanceView { day, week, month }
 enum DocumentsView { vehicle, profile, cnh }
@@ -111,7 +110,10 @@ class _ViperMenuCentralState extends State<ViperMenuCentral> {
                                 isDark: isDark,
                                 onPressed: () {
                                   if (!Get.isRegistered<SettingsController>()) { Get.put(SettingsController()); }
-                                  Get.to(() => const ProfileView());
+                                  Get.to(
+                                    () => const ProfileView(),
+                                    binding: BindingsBuilder(() => Get.lazyPut(() => ProfileController())),
+                                  );
                                 },
                               ),
                               const SizedBox(height: 12),
@@ -131,9 +133,10 @@ class _ViperMenuCentralState extends State<ViperMenuCentral> {
                                 label: 'Configurações',
                                 textColor: textColor,
                                 isDark: isDark,
-                                onPressed: () => Get.to(() => SettingsView(
-                                  settingsController: widget.settingsController,
-                                )),
+                                onPressed: () => Get.to(
+                                  () => SettingsView(settingsController: widget.settingsController),
+                                  binding: BindingsBuilder(() => Get.lazyPut(() => ProfileController())),
+                                ),
                               ),
                               const SizedBox(height: 12),
                               _buildSimpleMenuItem(
@@ -190,9 +193,9 @@ class _ViperMenuCentralState extends State<ViperMenuCentral> {
                         width: 70,
                         height: 70,
                         placeholder: (context, url) => const CircularProgressIndicator(strokeWidth: 2),
-                        errorWidget: (context, url, error) => Icon(Icons.person, color: textColor.withOpacity(0.5), size: 35),
+                        errorWidget: (context, url, error) => Icon(Icons.person, color: textColor.withValues(alpha: 0.5), size: 35),
                       )
-                    : Icon(Icons.person, color: textColor.withOpacity(0.5), size: 35),
+                    : Icon(Icons.person, color: textColor.withValues(alpha: 0.5), size: 35),
               ),
             ),
           ),
@@ -214,7 +217,7 @@ class _ViperMenuCentralState extends State<ViperMenuCentral> {
                     Expanded(
                       child: Text(
                         '$city - $state',
-                        style: TextStyle(color: textColor.withOpacity(0.5), fontSize: 11),
+                        style: TextStyle(color: textColor.withValues(alpha: 0.5), fontSize: 11),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -233,7 +236,7 @@ class _ViperMenuCentralState extends State<ViperMenuCentral> {
     return Text(
       title,
       style: TextStyle(
-        color: textColor.withOpacity(0.4),
+        color: textColor.withValues(alpha: 0.4),
         fontSize: 10,
         fontWeight: FontWeight.bold,
         letterSpacing: 1.5,
@@ -247,7 +250,7 @@ class _ViperMenuCentralState extends State<ViperMenuCentral> {
         Container(
           height: 40,
           decoration: BoxDecoration(
-            color: (isDark ? Colors.white : Colors.black).withOpacity(0.05),
+            color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.05),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Row(
@@ -286,7 +289,7 @@ class _ViperMenuCentralState extends State<ViperMenuCentral> {
           child: Text(
             label,
             style: TextStyle(
-              color: isSelected ? textColor : textColor.withOpacity(0.4),
+              color: isSelected ? textColor : textColor.withValues(alpha: 0.4),
               fontSize: 9,
               fontWeight: FontWeight.bold,
             ),
@@ -366,7 +369,7 @@ class _ViperMenuCentralState extends State<ViperMenuCentral> {
         Container(
           height: 40,
           decoration: BoxDecoration(
-            color: (isDark ? Colors.white : Colors.black).withOpacity(0.05),
+            color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.05),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Row(
@@ -405,7 +408,7 @@ class _ViperMenuCentralState extends State<ViperMenuCentral> {
           child: Text(
             label,
             style: TextStyle(
-              color: isSelected ? textColor : textColor.withOpacity(0.4),
+              color: isSelected ? textColor : textColor.withValues(alpha: 0.4),
               fontSize: 10,
               fontWeight: FontWeight.bold,
             ),
@@ -426,7 +429,7 @@ class _ViperMenuCentralState extends State<ViperMenuCentral> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('GANHOS DA SEMANA', style: TextStyle(color: textColor.withOpacity(0.4), fontSize: 10, fontWeight: FontWeight.bold)),
+                Text('GANHOS DA SEMANA', style: TextStyle(color: textColor.withValues(alpha: 0.4), fontSize: 10, fontWeight: FontWeight.bold)),
                 Text('R\$ ${totalWeekly.toStringAsFixed(2)}', style: TextStyle(color: textColor, fontSize: 15, fontWeight: FontWeight.w900)),
               ],
             ),
@@ -444,7 +447,7 @@ class _ViperMenuCentralState extends State<ViperMenuCentral> {
       isDark,
       Column(
         children: [
-          Text('GANHOS DE HOJE', style: TextStyle(color: textColor.withOpacity(0.4), fontSize: 10, fontWeight: FontWeight.bold)),
+          Text('GANHOS DE HOJE', style: TextStyle(color: textColor.withValues(alpha: 0.4), fontSize: 10, fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
           Text('R\$ ${widget.menuController.dailyEarnings.toStringAsFixed(2)}', style: TextStyle(color: textColor, fontSize: 28, fontWeight: FontWeight.w900)),
           const SizedBox(height: 16),
@@ -459,7 +462,7 @@ class _ViperMenuCentralState extends State<ViperMenuCentral> {
       isDark,
       Column(
         children: [
-          Text('TOTAL DO MÊS', style: TextStyle(color: textColor.withOpacity(0.4), fontSize: 10, fontWeight: FontWeight.bold)),
+          Text('TOTAL DO MÊS', style: TextStyle(color: textColor.withValues(alpha: 0.4), fontSize: 10, fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
           Text('R\$ ${widget.menuController.monthlyEarnings.toStringAsFixed(2)}', style: TextStyle(color: isDark ? const Color(0xFF00FF88) : Colors.blue, fontSize: 26, fontWeight: FontWeight.w900)),
           const SizedBox(height: 20),
@@ -479,7 +482,7 @@ class _ViperMenuCentralState extends State<ViperMenuCentral> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF0055FF).withOpacity(0.1),
+        color: const Color(0xFF0055FF).withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: isDark ? Colors.white12 : Colors.black, width: 1.5),
       ),
@@ -488,20 +491,20 @@ class _ViperMenuCentralState extends State<ViperMenuCentral> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('PROGRESSO', style: TextStyle(color: textColor.withOpacity(0.4), fontSize: 10, fontWeight: FontWeight.bold)),
+              Text('PROGRESSO', style: TextStyle(color: textColor.withValues(alpha: 0.4), fontSize: 10, fontWeight: FontWeight.bold)),
               const Text('2/5', style: TextStyle(color: Color(0xFF0055FF), fontSize: 14, fontWeight: FontWeight.w900)),
             ],
           ),
           const SizedBox(height: 12),
           LinearProgressIndicator(
             value: 0.4,
-            backgroundColor: (isDark ? Colors.white : Colors.black).withOpacity(0.05),
+            backgroundColor: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.05),
             color: const Color(0xFF0055FF),
             minHeight: 8,
             borderRadius: BorderRadius.circular(4),
           ),
           const SizedBox(height: 8),
-          Text('Meta: 5 entregas para bônus de R\$ 50,00', style: TextStyle(color: textColor.withOpacity(0.5), fontSize: 11)),
+          Text('Meta: 5 entregas para bônus de R\$ 50,00', style: TextStyle(color: textColor.withValues(alpha: 0.5), fontSize: 11)),
         ],
       ),
     );
@@ -534,7 +537,7 @@ class _ViperMenuCentralState extends State<ViperMenuCentral> {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isDark ? Colors.white.withOpacity(0.03) : Colors.black.withOpacity(0.03),
+        color: isDark ? Colors.white.withValues(alpha: 0.03) : Colors.black.withValues(alpha: 0.03),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: isDark ? Colors.white12 : Colors.black, width: 1.5),
       ),
@@ -545,13 +548,13 @@ class _ViperMenuCentralState extends State<ViperMenuCentral> {
   Widget _buildInfoItem(IconData icon, String label, String value, Color textColor, bool isDark, {bool highlight = false}) {
     return Row(
       children: [
-        Icon(icon, color: highlight ? const Color(0xFF00FF88) : textColor.withOpacity(0.5), size: 18),
+        Icon(icon, color: highlight ? const Color(0xFF00FF88) : textColor.withValues(alpha: 0.5), size: 18),
         const SizedBox(width: 12),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(label, style: TextStyle(color: textColor.withOpacity(0.4), fontSize: 8, fontWeight: FontWeight.bold)),
+              Text(label, style: TextStyle(color: textColor.withValues(alpha: 0.4), fontSize: 8, fontWeight: FontWeight.bold)),
               Text(value, style: TextStyle(color: highlight ? const Color(0xFF00FF88) : textColor, fontSize: 13, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis),
             ],
           ),
@@ -574,7 +577,7 @@ class _ViperMenuCentralState extends State<ViperMenuCentral> {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: isDark ? Colors.white.withOpacity(0.03) : Colors.black.withOpacity(0.03),
+          color: isDark ? Colors.white.withValues(alpha: 0.03) : Colors.black.withValues(alpha: 0.03),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: isDark ? Colors.white12 : Colors.black, width: 1.5),
         ),
@@ -582,7 +585,7 @@ class _ViperMenuCentralState extends State<ViperMenuCentral> {
           children: [
             Container(
               padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(color: const Color(0xFF00FF88).withOpacity(0.1), shape: BoxShape.circle),
+              decoration: BoxDecoration(color: const Color(0xFF00FF88).withValues(alpha: 0.1), shape: BoxShape.circle),
               child: Icon(icon, color: const Color(0xFF00FF88), size: 20),
             ),
             const SizedBox(width: 16),
@@ -591,11 +594,11 @@ class _ViperMenuCentralState extends State<ViperMenuCentral> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(label, style: TextStyle(color: textColor, fontSize: 14, fontWeight: FontWeight.bold)),
-                  Text(subLabel, style: TextStyle(color: textColor.withOpacity(0.4), fontSize: 10)),
+                  Text(subLabel, style: TextStyle(color: textColor.withValues(alpha: 0.4), fontSize: 10)),
                 ],
               ),
             ),
-            Icon(Icons.chevron_right_rounded, color: textColor.withOpacity(0.2)),
+            Icon(Icons.chevron_right_rounded, color: textColor.withValues(alpha: 0.2)),
           ],
         ),
       ),
@@ -615,16 +618,16 @@ class _ViperMenuCentralState extends State<ViperMenuCentral> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          color: isDark ? Colors.white.withOpacity(0.02) : Colors.black.withOpacity(0.02),
+          color: isDark ? Colors.white.withValues(alpha: 0.02) : Colors.black.withValues(alpha: 0.02),
           borderRadius: BorderRadius.circular(15),
         ),
         child: Row(
           children: [
-            Icon(icon, color: textColor.withOpacity(0.6), size: 20),
+            Icon(icon, color: textColor.withValues(alpha: 0.6), size: 20),
             const SizedBox(width: 16),
             Text(label, style: TextStyle(color: textColor, fontSize: 14, fontWeight: FontWeight.w600)),
             const Spacer(),
-            Icon(Icons.chevron_right_rounded, color: textColor.withOpacity(0.2), size: 18),
+            Icon(Icons.chevron_right_rounded, color: textColor.withValues(alpha: 0.2), size: 18),
           ],
         ),
       ),
@@ -635,12 +638,12 @@ class _ViperMenuCentralState extends State<ViperMenuCentral> {
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: (isDark ? Colors.white : Colors.black).withOpacity(0.05),
+        color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
         children: [
-          Text(label, style: TextStyle(color: textColor.withOpacity(0.4), fontSize: 8, fontWeight: FontWeight.bold)),
+          Text(label, style: TextStyle(color: textColor.withValues(alpha: 0.4), fontSize: 8, fontWeight: FontWeight.bold)),
           Text(value, style: TextStyle(color: textColor, fontSize: 12, fontWeight: FontWeight.bold)),
         ],
       ),
@@ -661,7 +664,7 @@ class _ViperMenuCentralState extends State<ViperMenuCentral> {
             textConfirm: 'SIM',
             textCancel: 'NÃO',
             titleStyle: TextStyle(color: textColor),
-            middleTextStyle: TextStyle(color: textColor.withOpacity(0.7)),
+            middleTextStyle: TextStyle(color: textColor.withValues(alpha: 0.7)),
             backgroundColor: isDark ? const Color(0xFF121212) : Colors.white,
             confirmTextColor: Colors.white,
             buttonColor: Colors.redAccent,
@@ -678,10 +681,11 @@ class _ViperMenuCentralState extends State<ViperMenuCentral> {
           minimumSize: const Size(double.infinity, 48),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
-            side: BorderSide(color: iconColor.withOpacity(0.3)),
+            side: BorderSide(color: iconColor.withValues(alpha: 0.3)),
           ),
         ),
       ),
     );
   }
 }
+

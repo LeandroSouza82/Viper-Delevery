@@ -1,14 +1,15 @@
 import 'dart:async';
 import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:http/http.dart' as http;
-import 'package:viper_delivery/src/core/services/haptic_service.dart';
+import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:vibration/vibration.dart';
 import 'package:viper_delivery/src/core/config/env.dart';
+import 'package:viper_delivery/src/core/services/haptic_service.dart';
 
 enum NavigationApp { googleMaps, waze }
 enum ViperThemeMode { day, night, automatic }
@@ -298,3 +299,4 @@ class SettingsController extends GetxController {
     }
   }
 }
+

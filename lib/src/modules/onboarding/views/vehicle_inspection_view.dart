@@ -288,3 +288,4 @@ class _VehicleInspectionViewState extends State<VehicleInspectionView> {
     );
   }
 }
+

@@ -105,3 +105,4 @@ class PermissionHelper {
     return true;
   }
 }
+

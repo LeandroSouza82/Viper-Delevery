@@ -55,7 +55,7 @@ class DrawerFalhasWidget extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: isDark ? Colors.white.withOpacity(0.03) : Colors.black.withOpacity(0.03),
+        color: isDark ? Colors.white.withValues(alpha: 0.03) : Colors.black.withValues(alpha: 0.03),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: isDark ? Colors.white12 : Colors.black12, width: 1.5),
       ),
@@ -64,13 +64,13 @@ class DrawerFalhasWidget extends StatelessWidget {
           Icon(
             Icons.check_circle_outline,
             size: 32,
-            color: const Color(0xFF00C853).withOpacity(0.6),
+            color: const Color(0xFF00C853).withValues(alpha: 0.6),
           ),
           const SizedBox(height: 10),
           Text(
             'Sem devoluções pendentes',
             style: TextStyle(
-              color: textColor.withOpacity(0.5),
+              color: textColor.withValues(alpha: 0.5),
               fontSize: 13,
               fontWeight: FontWeight.bold,
             ),
@@ -78,7 +78,7 @@ class DrawerFalhasWidget extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             'Todas as entregas foram finalizadas.',
-            style: TextStyle(color: textColor.withOpacity(0.3), fontSize: 11),
+            style: TextStyle(color: textColor.withValues(alpha: 0.3), fontSize: 11),
           ),
         ],
       ),
@@ -91,7 +91,7 @@ class DrawerFalhasWidget extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(6),
           decoration: BoxDecoration(
-            color: Colors.red.withOpacity(0.1),
+            color: Colors.red.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(8),
           ),
           child: const Icon(Icons.inventory_2_outlined, color: Colors.red, size: 16),
@@ -104,7 +104,7 @@ class DrawerFalhasWidget extends StatelessWidget {
               Text(
                 'LOGÍSTICA REVERSA',
                 style: TextStyle(
-                  color: textColor.withOpacity(0.4),
+                  color: textColor.withValues(alpha: 0.4),
                   fontSize: 10,
                   fontWeight: FontWeight.bold,
                   letterSpacing: 1.5,
@@ -113,7 +113,7 @@ class DrawerFalhasWidget extends StatelessWidget {
               Text(
                 '${failedOrders.length} pacote${failedOrders.length > 1 ? "s" : ""} para devolução',
                 style: TextStyle(
-                  color: Colors.red.withOpacity(0.8),
+                  color: Colors.red.withValues(alpha: 0.8),
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
                 ),
@@ -130,9 +130,9 @@ class DrawerFalhasWidget extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: isDark ? Colors.white.withOpacity(0.03) : Colors.black.withOpacity(0.02),
+        color: isDark ? Colors.white.withValues(alpha: 0.03) : Colors.black.withValues(alpha: 0.02),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.red.withOpacity(0.15)),
+        border: Border.all(color: Colors.red.withValues(alpha: 0.15)),
       ),
       child: InkWell(
         onTap: () => onItemTap(order),
@@ -143,7 +143,7 @@ class DrawerFalhasWidget extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Colors.red.withOpacity(0.1),
+                color: Colors.red.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: const Icon(Icons.error_outline, color: Colors.red, size: 16),
@@ -168,7 +168,7 @@ class DrawerFalhasWidget extends StatelessWidget {
                   Text(
                     order.failureReason ?? 'Motivo não informado',
                     style: TextStyle(
-                      color: Colors.red.withOpacity(0.7),
+                      color: Colors.red.withValues(alpha: 0.7),
                       fontSize: 10,
                       fontWeight: FontWeight.w600,
                     ),
@@ -180,7 +180,7 @@ class DrawerFalhasWidget extends StatelessWidget {
             Text(
               '#${order.id.split('_').last}',
               style: TextStyle(
-                color: textColor.withOpacity(0.3),
+                color: textColor.withValues(alpha: 0.3),
                 fontSize: 10,
                 fontWeight: FontWeight.bold,
               ),
@@ -203,7 +203,7 @@ class DrawerFalhasWidget extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.orange.withOpacity(0.3),
+            color: Colors.orange.withValues(alpha: 0.3),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -238,3 +238,4 @@ class DrawerFalhasWidget extends StatelessWidget {
     );
   }
 }
+

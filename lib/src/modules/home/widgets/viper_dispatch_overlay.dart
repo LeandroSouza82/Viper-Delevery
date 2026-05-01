@@ -36,7 +36,7 @@ class _ViperDispatchOverlayState extends State<ViperDispatchOverlay> with Ticker
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black.withOpacity(0.85),
+      backgroundColor: Colors.black.withValues(alpha: 0.85),
       body: StreamBuilder<Map<String, dynamic>>(
         stream: widget.dispatchService.statusStream,
         builder: (context, snapshot) {
@@ -77,7 +77,7 @@ class _ViperDispatchOverlayState extends State<ViperDispatchOverlay> with Ticker
                         Text(
                           'Onda $wave - Raio de ${radius.toInt()}km',
                           style: TextStyle(
-                            color: Colors.cyanAccent.withOpacity(0.8),
+                            color: Colors.cyanAccent.withValues(alpha: 0.8),
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
                           ),
@@ -98,7 +98,7 @@ class _ViperDispatchOverlayState extends State<ViperDispatchOverlay> with Ticker
                         child: Text(
                           'CANCELAR SOLICITAÇÃO',
                           style: TextStyle(
-                            color: Colors.white.withOpacity(0.5),
+                            color: Colors.white.withValues(alpha: 0.5),
                             fontWeight: FontWeight.bold,
                             letterSpacing: 1.2,
                           ),
@@ -142,12 +142,12 @@ class _ViperDispatchOverlayState extends State<ViperDispatchOverlay> with Ticker
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           border: Border.all(
-            color: Colors.cyanAccent.withOpacity(1.0 - animationValue),
+            color: Colors.cyanAccent.withValues(alpha: 1.0 - animationValue),
             width: 2,
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.cyanAccent.withOpacity((1.0 - animationValue) * 0.3),
+              color: Colors.cyanAccent.withValues(alpha: (1.0 - animationValue) * 0.3),
               blurRadius: 20,
               spreadRadius: 5,
             ),
@@ -161,7 +161,7 @@ class _ViperDispatchOverlayState extends State<ViperDispatchOverlay> with Ticker
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: Colors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: Colors.white10),
       ),
@@ -264,3 +264,4 @@ class _ViperDispatchOverlayState extends State<ViperDispatchOverlay> with Ticker
     );
   }
 }
+

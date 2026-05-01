@@ -1,12 +1,15 @@
 import 'dart:io';
 import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import 'package:flutter/services.dart';
+import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:viper_delivery/src/modules/ride/services/delivery_proof_service.dart';
-import 'package:viper_delivery/src/modules/ride/controllers/ride_state_machine.dart';
 import 'package:viper_delivery/src/models/ride_model.dart';
+import 'package:viper_delivery/src/modules/ride/controllers/ride_state_machine.dart';
+import 'package:viper_delivery/src/modules/ride/services/delivery_proof_service.dart';
+import 'package:viper_delivery/src/modules/ride/services/upload_queue_service.dart';
+import 'package:path_provider/path_provider.dart';
 
 /// Modal de assinatura do cliente estruturado em DOIS PASSOS (Padrão Enterprise):
 /// Passo 1: Formulário de Coleta de Dados (Portrait - Vertical).
@@ -30,7 +33,7 @@ class SignatureModal {
           ),
         );
       },
-      pageBuilder: (context, _, __) {
+      pageBuilder: (context, _, _) {
         return _SignatureDialog(isDark: isDark, rideId: rideId);
       },
     );
@@ -136,53 +139,65 @@ class _SignatureDialogState extends State<_SignatureDialog> {
     if (_photoFile == null) return;
 
     setState(() => _isUploading = true);
+    debugPrint('>>> [MODAL] Finalização Otimista por FOTO para ID: ${widget.rideId}');
 
-    // Repositório Desacoplado: Upload Inteligente (Database + Storage)
-    final success = await _proofService.uploadPhotoProof(
-      mockOrderId: widget.rideId, 
-      photoFile: File(_photoFile!.path),
-      receiverName: _nameController.text,
-      document: _documentController.text,
-      relation: _selectedRelation == 'Morador' ? 'Morador (${_aptoController.text})' : (_selectedRelation ?? 'Locker'),
-    );
-
-
-    setState(() => _isUploading = false);
+    // 1. Update de Status Imediato (Garante a entrega no banco)
+    final success = await _proofService.updateStatusOnly(widget.rideId);
 
     if (success) {
-      if (!mounted) return;
-      
-      // 1. Mostrar o Get.snackbar verde
-      Get.snackbar(
-        'Sucesso!',
-        'Entrega concluída e salva com sucesso.',
-        backgroundColor: Colors.green,
-        colorText: Colors.white,
-        snackPosition: SnackPosition.TOP,
-        duration: const Duration(seconds: 3),
-        icon: const Icon(Icons.check_circle, color: Colors.white),
+      // 2. Enfileirar Upload em Background
+      final queue = Get.find<UploadQueueService>();
+      await queue.addTask(
+        rideId: widget.rideId,
+        filePath: _photoFile!.path,
+        receiverName: _nameController.text,
+        document: _documentController.text,
+        relation: _selectedRelation == 'Morador' ? 'Morador (${_aptoController.text})' : (_selectedRelation ?? 'Locker'),
       );
 
-      // 2. Remover o card da lista (GetX)
-      try {
-        final rideSM = Get.find<RideStateMachine>();
-        rideSM.removerCorridaDaTela(widget.rideId, RideStatus.completed);
-      } catch (e) {
-        debugPrint('Erro ao encontrar RideStateMachine: $e');
-      }
-
-      // 3. Get.back() para fechar o modal
-      Get.back(result: true); 
+      // 3. Fechar Imediatamente
+      _concluirEFechar('Entrega concluída! Sincronizando comprovante...');
     } else {
-      if (!mounted) return;
-      Get.snackbar(
-        'Erro no Envio',
-        'Erro ao enviar prova pela rede. Tente de novo!',
-        backgroundColor: Colors.red.withOpacity(0.9),
-        colorText: Colors.white,
-        snackPosition: SnackPosition.TOP,
-      );
+      setState(() => _isUploading = false);
+      _mostrarErroEnvio();
     }
+  }
+
+  void _concluirEFechar(String mensagem) {
+    if (!mounted) return;
+    
+    // 1. Notificação Visual (Snackbar)
+    Get.snackbar(
+      'Sucesso!',
+      mensagem,
+      backgroundColor: Colors.green,
+      colorText: Colors.white,
+      snackPosition: SnackPosition.TOP,
+      duration: const Duration(seconds: 3),
+      icon: const Icon(Icons.check_circle, color: Colors.white),
+    );
+
+    // 2. Remover o card da lista localmente (GetX)
+    try {
+      final rideSM = Get.find<RideStateMachine>();
+      rideSM.removerCorridaDaTela(widget.rideId, RideStatus.completed);
+    } catch (e) {
+      debugPrint('Erro ao encontrar RideStateMachine: $e');
+    }
+
+    // 3. Fechar Modal
+    Navigator.of(context).pop(true);
+  }
+
+  void _mostrarErroEnvio() {
+    if (!mounted) return;
+    Get.snackbar(
+      'Erro na Finalização',
+      'Não foi possível atualizar o status da entrega. Verifique sua conexão.',
+      backgroundColor: Colors.red,
+      colorText: Colors.white,
+      snackPosition: SnackPosition.TOP,
+    );
   }
 
   void _clearCanvas() {
@@ -192,7 +207,7 @@ class _SignatureDialogState extends State<_SignatureDialog> {
     });
   }
 
-  void _confirmSignature() {
+  Future<void> _confirmSignature() async {
     if (!_hasSignature) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -203,16 +218,65 @@ class _SignatureDialogState extends State<_SignatureDialog> {
       return;
     }
 
-    // Mock: salva a assinatura (print)
-    debugPrint('══════════════════════════════════════════════');
-    debugPrint('✅ [ASSINATURA E DADOS] Capturados com sucesso');
-    debugPrint('   Nome: ${_nameController.text}');
-    debugPrint('   Doc: ${_documentController.text}');
-    debugPrint('   Vínculo: $_selectedRelation ${_selectedRelation == 'Morador' ? '(Apto: ${_aptoController.text})' : ''}');
-    debugPrint('   Traços da Assinatura: ${_strokes.length}');
-    debugPrint('══════════════════════════════════════════════');
+    setState(() => _isUploading = true);
+    debugPrint('>>> [MODAL] Finalização Otimista por ASSINATURA...');
 
-    Navigator.pop(context, true);
+    try {
+      // 1. Converter Canvas para Imagem (PNG Bytes)
+      final recorder = ui.PictureRecorder();
+      final canvas = Canvas(recorder);
+      
+      final paint = Paint()
+        ..color = widget.isDark ? Colors.white : Colors.black
+        ..strokeWidth = 4.0
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round
+        ..style = PaintingStyle.stroke;
+
+      for (final stroke in _strokes) {
+        if (stroke.length < 2) continue;
+        final path = ui.Path();
+        path.moveTo(stroke.first.dx, stroke.first.dy);
+        for (int i = 1; i < stroke.length; i++) {
+          path.lineTo(stroke[i].dx, stroke[i].dy);
+        }
+        canvas.drawPath(path, paint);
+      }
+
+      final picture = recorder.endRecording();
+      final img = await picture.toImage(1000, 400); 
+      final byteData = await img.toByteData(format: ui.ImageByteFormat.png);
+      final bytes = byteData!.buffer.asUint8List();
+
+      // 2. Salvar bytes em arquivo temporário persistente para a fila
+      final tempDir = await getTemporaryDirectory();
+      final tempFile = File('${tempDir.path}/temp_sig_${widget.rideId}.png');
+      await tempFile.writeAsBytes(bytes);
+
+      // 3. Update de Status Imediato
+      final success = await _proofService.updateStatusOnly(widget.rideId);
+
+      if (success) {
+        // 4. Enfileirar Background Sync
+        final queue = Get.find<UploadQueueService>();
+        await queue.addTask(
+          rideId: widget.rideId,
+          filePath: tempFile.path,
+          receiverName: _nameController.text,
+          document: _documentController.text,
+          relation: _selectedRelation ?? 'Próprio',
+        );
+
+        _concluirEFechar('Entrega concluída com sucesso!');
+      } else {
+        _mostrarErroEnvio();
+      }
+    } catch (e) {
+      debugPrint('>>> [MODAL] ERRO CRÍTICO NO PROCESSAMENTO: $e');
+      _mostrarErroEnvio();
+    } finally {
+      if (mounted) setState(() => _isUploading = false);
+    }
   }
 
   // Helper criador de Inputs com design dinâmico
@@ -256,7 +320,7 @@ class _SignatureDialogState extends State<_SignatureDialog> {
     final theme = Theme.of(context);
     final bgColor = theme.colorScheme.surface;
     final textColor = theme.colorScheme.onSurface;
-    final canvasBg = theme.colorScheme.onSurface.withOpacity(0.05);
+    final canvasBg = theme.colorScheme.onSurface.withValues(alpha: 0.05);
 
     return Material(
       color: Colors.transparent,
@@ -275,7 +339,7 @@ class _SignatureDialogState extends State<_SignatureDialog> {
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFF00C853).withOpacity(0.2),
+                    color: const Color(0xFF00C853).withValues(alpha: 0.2),
                     blurRadius: 30,
                     offset: const Offset(0, 10),
                   ),
@@ -330,7 +394,7 @@ class _SignatureDialogState extends State<_SignatureDialog> {
                 ),
               ),
               IconButton(
-                icon: Icon(Icons.close, color: textColor.withOpacity(0.5)),
+                icon: Icon(Icons.close, color: textColor.withValues(alpha: 0.5)),
                 onPressed: () => Navigator.pop(context),
               ),
             ],
@@ -358,7 +422,7 @@ class _SignatureDialogState extends State<_SignatureDialog> {
           Padding(
             padding: const EdgeInsets.only(bottom: 12),
             child: DropdownButtonFormField<String>(
-              value: _selectedRelation,
+              initialValue: _selectedRelation,
               dropdownColor: theme.colorScheme.surface,
               icon: const Icon(Icons.arrow_drop_down, color: Color(0xFF00C853)),
               style: TextStyle(color: textColor, fontSize: 14),
@@ -461,7 +525,7 @@ class _SignatureDialogState extends State<_SignatureDialog> {
                 ),
               ),
               IconButton(
-                icon: Icon(Icons.close, color: textColor.withOpacity(0.5)),
+                icon: Icon(Icons.close, color: textColor.withValues(alpha: 0.5)),
                 onPressed: () => Navigator.pop(context),
               ),
             ],
@@ -567,7 +631,7 @@ class _SignatureDialogState extends State<_SignatureDialog> {
                 ],
               ),
               IconButton(
-                icon: Icon(Icons.close, color: textColor.withOpacity(0.5)),
+                icon: Icon(Icons.close, color: textColor.withValues(alpha: 0.5)),
                 onPressed: () => Navigator.pop(context),
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
@@ -620,11 +684,9 @@ class _SignatureDialogState extends State<_SignatureDialog> {
           padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
           child: Row(
             children: [
-              // Voltar / Limpar Flexível
               Expanded(
                 child: OutlinedButton.icon(
                   onPressed: _hasSignature ? _clearCanvas : () {
-                    // Volta pro Passo 1 na Vertical se estiver vazio
                     setState(() => _step = 1);
                     SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
                   },
@@ -639,13 +701,10 @@ class _SignatureDialogState extends State<_SignatureDialog> {
                 ),
               ),
               const SizedBox(width: 12),
-              // Confirmar
               Expanded(
                 flex: 2,
-                child: ElevatedButton.icon(
-                  onPressed: _confirmSignature,
-                  icon: const Icon(Icons.check, size: 20),
-                  label: const Text('CONFIRMAR ENTREGA', style: TextStyle(fontWeight: FontWeight.w900)),
+                child: ElevatedButton(
+                  onPressed: _isUploading ? null : _confirmSignature,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF00C853),
                     foregroundColor: Colors.white,
@@ -653,6 +712,16 @@ class _SignatureDialogState extends State<_SignatureDialog> {
                     elevation: 4,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   ),
+                  child: _isUploading 
+                      ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                      : const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.check, size: 20),
+                            SizedBox(width: 8),
+                            Text('CONFIRMAR ENTREGA', style: TextStyle(fontWeight: FontWeight.w900)),
+                          ],
+                        ),
                 ),
               ),
             ],

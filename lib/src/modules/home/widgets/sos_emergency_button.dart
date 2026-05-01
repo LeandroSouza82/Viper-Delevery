@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:viper_delivery/src/core/services/haptic_service.dart';
 import 'package:viper_delivery/src/modules/home/controllers/settings_controller.dart';
 import 'package:viper_delivery/src/modules/profile/controllers/profile_controller.dart';
 import 'package:viper_delivery/src/modules/profile/widgets/emergency_contact_modal.dart';
-import 'package:viper_delivery/src/core/services/haptic_service.dart';
 
 class SOSEmergencyButton extends StatelessWidget {
   final SettingsController settingsController;
@@ -26,10 +26,10 @@ class SOSEmergencyButton extends StatelessWidget {
         final isDark = settingsController.isDarkTheme;
         
         final bgColor = isDark 
-            ? const Color(0xFF121212).withOpacity(0.9) 
+            ? const Color(0xFF121212).withValues(alpha: 0.9) 
             : Colors.white;
         const iconColor = Colors.redAccent;
-        final borderColor = isDark ? Colors.redAccent.withOpacity(0.5) : Colors.red.withOpacity(0.3);
+        final borderColor = isDark ? Colors.redAccent.withValues(alpha: 0.5) : Colors.red.withValues(alpha: 0.3);
 
         return GestureDetector(
           onTap: () {
@@ -45,7 +45,7 @@ class SOSEmergencyButton extends StatelessWidget {
               Get.snackbar(
                 'SOS Elite', 
                 'Segure firme por 1 segundo para disparar o socorro!',
-                backgroundColor: Colors.redAccent.withOpacity(0.9),
+                backgroundColor: Colors.redAccent.withValues(alpha: 0.9),
                 colorText: Colors.white,
                 snackPosition: SnackPosition.TOP,
                 margin: const EdgeInsets.all(15),
@@ -64,12 +64,12 @@ class SOSEmergencyButton extends StatelessWidget {
               boxShadow: [
                 // Efeito Red Neon Glow intenso
                 BoxShadow(
-                  color: Colors.red.withOpacity(0.6),
+                  color: Colors.red.withValues(alpha: 0.6),
                   blurRadius: 15,
                   spreadRadius: 2,
                 ),
                 BoxShadow(
-                  color: Colors.redAccent.withOpacity(0.3),
+                  color: Colors.redAccent.withValues(alpha: 0.3),
                   blurRadius: 30,
                   spreadRadius: 5,
                 ),
@@ -86,3 +86,4 @@ class SOSEmergencyButton extends StatelessWidget {
     );
   }
 }
+

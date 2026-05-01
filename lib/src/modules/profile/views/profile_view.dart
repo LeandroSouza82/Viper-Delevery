@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import 'package:flutter_windowmanager_plus/flutter_windowmanager_plus.dart';
+import 'package:get/get.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-
-import 'package:viper_delivery/src/modules/profile/controllers/profile_controller.dart';
 import 'package:viper_delivery/src/modules/home/controllers/settings_controller.dart';
+import 'package:viper_delivery/src/modules/profile/controllers/profile_controller.dart';
 
 import '../widgets/profile_header.dart';
 
@@ -16,7 +15,7 @@ class ProfileView extends StatefulWidget {
 }
 
 class _ProfileViewState extends State<ProfileView> {
-  final controller = Get.put(ProfileController());
+  final controller = Get.find<ProfileController>();
   final settingsController = Get.find<SettingsController>();
 
   @override
@@ -129,13 +128,13 @@ class _ProfileViewState extends State<ProfileView> {
               const SizedBox(height: 60),
               
               // Divisória Herdada
-              Divider(color: onSurface.withOpacity(0.08)),
+              Divider(color: onSurface.withValues(alpha: 0.08)),
               const SizedBox(height: 20),
               
               Text(
                 "VUP PROTECT v1.0 - PERÍMETRO SEGURO", 
                 style: theme.textTheme.bodySmall?.copyWith(
-                  color: onSurface.withOpacity(0.3), 
+                  color: onSurface.withValues(alpha: 0.3), 
                   fontWeight: FontWeight.bold,
                   letterSpacing: 2.5,
                   fontSize: 9,
@@ -155,7 +154,7 @@ class _ProfileViewState extends State<ProfileView> {
       child: Text(
         title,
         style: TextStyle(
-          color: color.withOpacity(0.3),
+          color: color.withValues(alpha: 0.3),
           fontSize: 10,
           fontWeight: FontWeight.bold,
           letterSpacing: 2.0,
@@ -176,16 +175,16 @@ class _ProfileViewState extends State<ProfileView> {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: isHighlight ? primaryColor.withOpacity(0.08) : Colors.transparent,
+        color: isHighlight ? primaryColor.withValues(alpha: 0.08) : Colors.transparent,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isHighlight ? primaryColor.withOpacity(0.3) : onSurface.withOpacity(0.08)
+          color: isHighlight ? primaryColor.withValues(alpha: 0.3) : onSurface.withValues(alpha: 0.08)
         ),
       ),
       child: ListTile(
         leading: Icon(
           icon, 
-          color: isHighlight ? primaryColor : onSurface.withOpacity(0.7), 
+          color: isHighlight ? primaryColor : onSurface.withValues(alpha: 0.7), 
           size: 22
         ),
         title: Text(
@@ -199,7 +198,7 @@ class _ProfileViewState extends State<ProfileView> {
         trailing: Icon(
           Icons.chevron_right_rounded, 
           size: 20, 
-          color: onSurface.withOpacity(0.3)
+          color: onSurface.withValues(alpha: 0.3)
         ),
         onTap: onTap,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -214,7 +213,7 @@ class _ProfileViewState extends State<ProfileView> {
         backgroundColor: theme.scaffoldBackgroundColor,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         title: Text('Sair da Conta', style: TextStyle(color: theme.colorScheme.onSurface, fontWeight: FontWeight.bold)),
-        content: Text('Tem certeza que deseja encerrar sua sessão?', style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.8))),
+        content: Text('Tem certeza que deseja encerrar sua sessão?', style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.8))),
         actions: [
           TextButton(onPressed: () => Get.back(), child: const Text('CANCELAR', style: TextStyle(color: Colors.grey))),
           TextButton(
@@ -235,7 +234,8 @@ class _ProfileViewState extends State<ProfileView> {
       backgroundColor: theme.colorScheme.surface,
       colorText: theme.colorScheme.onSurface,
       borderWidth: 1,
-      borderColor: theme.colorScheme.onSurface.withOpacity(0.1),
+      borderColor: theme.colorScheme.onSurface.withValues(alpha: 0.1),
     );
   }
 }
+

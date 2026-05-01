@@ -20,8 +20,8 @@ class StatsPillWidget extends StatelessWidget {
       final mode = homeController.displayMode.value;
       
       final bgColor = isDark 
-          ? Colors.black.withOpacity(0.85) 
-          : Colors.white.withOpacity(0.9);
+          ? Colors.black.withValues(alpha: 0.85) 
+          : Colors.white.withValues(alpha: 0.9);
       final textColor = isDark ? Colors.white : Colors.black87;
       final borderColor = isDark ? Colors.white12 : Colors.black12;
 
@@ -43,7 +43,7 @@ class StatsPillWidget extends StatelessWidget {
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.1),
+                color: Colors.black.withValues(alpha: 0.1),
                 blurRadius: 15,
                 offset: const Offset(0, 4),
               )
@@ -75,11 +75,11 @@ class StatsPillWidget extends StatelessWidget {
   Color _getBorderColor(PillDisplayMode mode, Color defaultColor) {
     switch (mode) {
       case PillDisplayMode.earnings:
-        return Colors.green.withOpacity(0.4);
+        return Colors.green.withValues(alpha: 0.4);
       case PillDisplayMode.mission:
-        return Colors.blueAccent.withOpacity(0.4);
+        return Colors.blueAccent.withValues(alpha: 0.4);
       case PillDisplayMode.rating:
-        return Colors.amber.withOpacity(0.4);
+        return Colors.amber.withValues(alpha: 0.4);
     }
   }
 
@@ -87,7 +87,12 @@ class StatsPillWidget extends StatelessWidget {
     IconData icon;
     Color color;
 
-    switch (mode) {
+    // Se for frotista e estiver no modo ganhos (fallback de segurança), força missão
+    final effectiveMode = (homeController.isCompanyDriver && mode == PillDisplayMode.earnings)
+        ? PillDisplayMode.mission
+        : mode;
+
+    switch (effectiveMode) {
       case PillDisplayMode.earnings:
         icon = Icons.payments_outlined;
         color = Colors.greenAccent;
@@ -107,7 +112,7 @@ class StatsPillWidget extends StatelessWidget {
       transitionBuilder: (Widget child, Animation<double> animation) {
         return ScaleTransition(scale: animation, child: child);
       },
-      child: Icon(icon, key: ValueKey(mode), color: color, size: 22),
+      child: Icon(icon, key: ValueKey(effectiveMode), color: color, size: 22),
     );
   }
 
@@ -116,7 +121,12 @@ class StatsPillWidget extends StatelessWidget {
     String value;
     Color valueColor;
 
-    switch (mode) {
+    // Se for frotista e estiver no modo ganhos (fallback de segurança), força missão
+    final effectiveMode = (homeController.isCompanyDriver && mode == PillDisplayMode.earnings)
+        ? PillDisplayMode.mission
+        : mode;
+
+    switch (effectiveMode) {
       case PillDisplayMode.earnings:
         label = 'GANHOS HOJE';
         value = 'R\$ 342,80';
@@ -141,7 +151,7 @@ class StatsPillWidget extends StatelessWidget {
         Text(
           label,
           style: TextStyle(
-            color: textColor.withOpacity(0.4),
+            color: textColor.withValues(alpha: 0.4),
             fontSize: 8,
             fontWeight: FontWeight.bold,
             letterSpacing: 0.8,
@@ -163,3 +173,4 @@ class StatsPillWidget extends StatelessWidget {
     );
   }
 }
+

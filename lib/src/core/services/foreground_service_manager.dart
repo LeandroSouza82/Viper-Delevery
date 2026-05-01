@@ -64,3 +64,4 @@ class ForegroundServiceManager {
     return FlutterForegroundTask.stopService();
   }
 }
+

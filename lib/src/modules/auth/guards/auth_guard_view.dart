@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:viper_delivery/src/modules/auth/views/login_view.dart';
-import 'package:viper_delivery/src/modules/onboarding/views/vehicle_registration_view.dart';
-import 'package:viper_delivery/src/modules/onboarding/views/pending_approval_view.dart';
 import 'package:viper_delivery/src/modules/home/views/home_view.dart';
+import 'package:viper_delivery/src/modules/onboarding/views/pending_approval_view.dart';
+import 'package:viper_delivery/src/modules/onboarding/views/vehicle_registration_view.dart';
 import 'package:viper_delivery/src/modules/splash/views/splash_view.dart';
 
 class AuthGuardView extends StatelessWidget {
@@ -68,3 +68,4 @@ class AuthGuardView extends StatelessWidget {
     );
   }
 }
+

@@ -57,3 +57,4 @@ class PerformanceController extends GetxController {
     return dias[index];
   }
 }
+

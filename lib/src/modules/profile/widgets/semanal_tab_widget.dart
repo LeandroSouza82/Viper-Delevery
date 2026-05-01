@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:viper_delivery/src/modules/profile/controllers/performance_controller.dart';
 import 'package:viper_delivery/src/modules/home/controllers/settings_controller.dart';
+import 'package:viper_delivery/src/modules/profile/controllers/performance_controller.dart';
 
 class SemanalTabWidget extends StatelessWidget {
   const SemanalTabWidget({super.key});
@@ -36,7 +36,7 @@ class SemanalTabWidget extends StatelessWidget {
                     Text(
                       'TOTAL DA SEMANA',
                       style: TextStyle(
-                        color: textColor.withOpacity(0.5),
+                        color: textColor.withValues(alpha: 0.5),
                         fontSize: 10,
                         fontWeight: FontWeight.bold,
                         letterSpacing: 1.2,
@@ -110,8 +110,8 @@ class SemanalTabWidget extends StatelessWidget {
                                     colors: isSelected
                                         ? [const Color(0xFF00FF88), const Color(0xFF00DD77)]
                                         : [
-                                            textColor.withOpacity(0.05),
-                                            textColor.withOpacity(0.02)
+                                            textColor.withValues(alpha: 0.05),
+                                            textColor.withValues(alpha: 0.02)
                                           ],
                                     begin: Alignment.topCenter,
                                     end: Alignment.bottomCenter,
@@ -120,7 +120,7 @@ class SemanalTabWidget extends StatelessWidget {
                                   boxShadow: isSelected
                                       ? [
                                           BoxShadow(
-                                            color: const Color(0xFF00FF88).withOpacity(0.2),
+                                            color: const Color(0xFF00FF88).withValues(alpha: 0.2),
                                             blurRadius: 10,
                                             offset: const Offset(0, 4),
                                           )
@@ -157,9 +157,9 @@ class SemanalTabWidget extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: isDark ? Colors.white.withOpacity(0.03) : Colors.black.withOpacity(0.01),
+                color: isDark ? Colors.white.withValues(alpha: 0.03) : Colors.black.withValues(alpha: 0.01),
                 borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: isDark ? Colors.white.withOpacity(0.1) : Colors.black.withOpacity(0.1)),
+                border: Border.all(color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.1)),
               ),
               child: Row(
                 children: [
@@ -175,7 +175,7 @@ class SemanalTabWidget extends StatelessWidget {
                         ),
                         Text(
                           'Mantenha a constância para atingir suas metas.',
-                          style: TextStyle(color: textColor.withOpacity(0.5), fontSize: 12),
+                          style: TextStyle(color: textColor.withValues(alpha: 0.5), fontSize: 12),
                         ),
                       ],
                     ),
@@ -189,3 +189,4 @@ class SemanalTabWidget extends StatelessWidget {
     });
   }
 }
+

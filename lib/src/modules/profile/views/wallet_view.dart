@@ -62,7 +62,7 @@ class WalletView extends StatelessWidget {
                 boxShadow: [
                   if (!isDark)
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
+                      color: Colors.black.withValues(alpha: 0.1),
                       blurRadius: 10,
                       offset: const Offset(0, 4),
                     ),
@@ -77,7 +77,7 @@ class WalletView extends StatelessWidget {
                       Text(
                         'SALDO DISPONÍVEL',
                         style: TextStyle(
-                          color: textColor.withOpacity(0.5),
+                          color: textColor.withValues(alpha: 0.5),
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
                           letterSpacing: 1.2,
@@ -134,7 +134,7 @@ class WalletView extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: isDark ? Colors.white.withOpacity(0.03) : Colors.black.withOpacity(0.03),
+                color: isDark ? Colors.white.withValues(alpha: 0.03) : Colors.black.withValues(alpha: 0.03),
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(color: isDark ? Colors.white12 : Colors.black12),
               ),
@@ -143,7 +143,7 @@ class WalletView extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: accentColor.withOpacity(0.1),
+                      color: accentColor.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(Icons.pix_rounded, color: accentColor, size: 24),
@@ -156,7 +156,7 @@ class WalletView extends StatelessWidget {
                         Text(
                           'SUA CHAVE ATUAL',
                           style: TextStyle(
-                            color: textColor.withOpacity(0.4),
+                            color: textColor.withValues(alpha: 0.4),
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
                           ),
@@ -177,7 +177,7 @@ class WalletView extends StatelessWidget {
                       // Chamar modal de edição de PIX que já existe no projeto
                       Get.dialog(PixQRDialog(pixKey: menuController.driverProfile?.pixKey ?? 'https://viperdelivery.com.br/pix'));
                     },
-                    icon: Icon(Icons.qr_code_scanner_rounded, color: textColor.withOpacity(0.5)),
+                    icon: Icon(Icons.qr_code_scanner_rounded, color: textColor.withValues(alpha: 0.5)),
                   ),
                 ],
               ),
@@ -204,7 +204,7 @@ class WalletView extends StatelessWidget {
     return Text(
       title,
       style: TextStyle(
-        color: textColor.withOpacity(0.4),
+        color: textColor.withValues(alpha: 0.4),
         fontSize: 11,
         fontWeight: FontWeight.bold,
         letterSpacing: 1.5,
@@ -217,7 +217,7 @@ class WalletView extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
-        color: isDark ? Colors.white.withOpacity(0.02) : Colors.black.withOpacity(0.02),
+        color: isDark ? Colors.white.withValues(alpha: 0.02) : Colors.black.withValues(alpha: 0.02),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
@@ -232,7 +232,7 @@ class WalletView extends StatelessWidget {
               ),
               Text(
                 date,
-                style: TextStyle(color: textColor.withOpacity(0.4), fontSize: 11),
+                style: TextStyle(color: textColor.withValues(alpha: 0.4), fontSize: 11),
               ),
             ],
           ),
@@ -245,3 +245,4 @@ class WalletView extends StatelessWidget {
     );
   }
 }
+

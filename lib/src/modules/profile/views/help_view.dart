@@ -57,7 +57,7 @@ class HelpView extends StatelessWidget {
               width: double.infinity,
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: accentColor.withOpacity(0.1),
+                color: accentColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(24),
                 border: Border.all(color: accentColor, width: 1.5),
               ),
@@ -73,7 +73,7 @@ class HelpView extends StatelessWidget {
                   Text(
                     'Nossa equipe está pronta para te atender.',
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: textColor.withOpacity(0.6), fontSize: 13),
+                    style: TextStyle(color: textColor.withValues(alpha: 0.6), fontSize: 13),
                   ),
                 ],
               ),
@@ -183,7 +183,7 @@ class HelpView extends StatelessWidget {
                         child: Text(
                           'A troca é concluída após a validação da equipe de suporte.',
                           style: TextStyle(
-                            color: textColor.withOpacity(0.5),
+                            color: textColor.withValues(alpha: 0.5),
                             fontSize: 12,
                             fontStyle: FontStyle.italic,
                           ),
@@ -234,7 +234,7 @@ class HelpView extends StatelessWidget {
             Center(
               child: Text(
                 'Viper Delivery v1.0.0 (Beta)',
-                style: TextStyle(color: textColor.withOpacity(0.3), fontSize: 12),
+                style: TextStyle(color: textColor.withValues(alpha: 0.3), fontSize: 12),
               ),
             ),
             const SizedBox(height: 20),
@@ -248,7 +248,7 @@ class HelpView extends StatelessWidget {
     return Text(
       title,
       style: TextStyle(
-        color: textColor.withOpacity(0.4),
+        color: textColor.withValues(alpha: 0.4),
         fontSize: 11,
         fontWeight: FontWeight.bold,
         letterSpacing: 1.5,
@@ -270,7 +270,7 @@ class HelpView extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: isDark ? Colors.white.withOpacity(0.03) : Colors.black.withOpacity(0.03),
+          color: isDark ? Colors.white.withValues(alpha: 0.03) : Colors.black.withValues(alpha: 0.03),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: isDark ? Colors.white12 : Colors.black12),
         ),
@@ -283,11 +283,11 @@ class HelpView extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(title, style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 15)),
-                  Text(subtitle, style: TextStyle(color: textColor.withOpacity(0.5), fontSize: 12)),
+                  Text(subtitle, style: TextStyle(color: textColor.withValues(alpha: 0.5), fontSize: 12)),
                 ],
               ),
             ),
-            Icon(Icons.chevron_right_rounded, color: textColor.withOpacity(0.2)),
+            Icon(Icons.chevron_right_rounded, color: textColor.withValues(alpha: 0.2)),
           ],
         ),
       ),
@@ -346,7 +346,7 @@ class HelpView extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: textColor.withOpacity(0.05))),
+        border: Border(bottom: BorderSide(color: textColor.withValues(alpha: 0.05))),
       ),
       child: Theme(
         data: Theme.of(Get.context!).copyWith(dividerColor: Colors.transparent),
@@ -354,7 +354,7 @@ class HelpView extends StatelessWidget {
           tilePadding: EdgeInsets.zero,
           title: Text(title, style: TextStyle(color: textColor, fontSize: 14, fontWeight: FontWeight.bold)),
           iconColor: iconColor,
-          collapsedIconColor: textColor.withOpacity(0.3),
+          collapsedIconColor: textColor.withValues(alpha: 0.3),
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(0, 0, 0, 16),
@@ -378,7 +378,7 @@ class HelpView extends StatelessWidget {
             ),
             TextSpan(
               text: text,
-              style: TextStyle(color: textColor.withOpacity(0.7), fontSize: 13),
+              style: TextStyle(color: textColor.withValues(alpha: 0.7), fontSize: 13),
             ),
           ],
         ),
@@ -386,20 +386,5 @@ class HelpView extends StatelessWidget {
     );
   }
 
-  Widget _buildFaqItem(String question, Color textColor) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: textColor.withOpacity(0.05))),
-      ),
-      child: ListTile(
-        contentPadding: EdgeInsets.zero,
-        title: Text(question, style: TextStyle(color: textColor, fontSize: 14)),
-        trailing: Icon(Icons.add, color: textColor.withOpacity(0.3), size: 20),
-        onTap: () {
-          // TODO: Expandir resposta
-        },
-      ),
-    );
-  }
 }
+

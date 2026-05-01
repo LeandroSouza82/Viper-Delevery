@@ -26,8 +26,8 @@ extension RideTypeExtension on RideType {
   }
 }
 
-enum RideStatus { pending, assigned, goingToPickup, arrivedAtPickup, onDeliveryRoute, completed, failed, returned }
-enum RidePaymentStatus { paid_online, pending }
+enum RideStatus { searching, assigned, goingToPickup, arrivedAtPickup, onDeliveryRoute, completed, failed, returned }
+enum RidePaymentStatus { paidOnline, pending }
 enum RideContractType { clt, freelancer }
 
 class RideModel {
@@ -41,6 +41,8 @@ class RideModel {
   final double driverValue;
   final double lat;
   final double lng;
+  final double pickupLat;
+  final double pickupLng;
   final RideStatus status;
   final String? observations;
   final String? failureReason;
@@ -56,7 +58,9 @@ class RideModel {
     required this.driverValue,
     required this.lat,
     required this.lng,
-    this.status = RideStatus.pending,
+    this.pickupLat = 0.0,
+    this.pickupLng = 0.0,
+    this.status = RideStatus.searching,
     this.observations,
     this.failureReason,
   });
@@ -69,9 +73,10 @@ class RideModel {
     if (typeStr.contains('serviço') || typeStr.contains('outros')) type = RideType.outros;
 
     // Parser for RideStatus
-    RideStatus rStatus = RideStatus.pending;
-    final String statusStr = (map['status'] ?? 'pending').toString().toLowerCase();
+    RideStatus rStatus = RideStatus.searching;
+    final String statusStr = (map['status'] ?? 'searching').toString().toLowerCase();
     switch (statusStr) {
+      case 'searching': rStatus = RideStatus.searching; break;
       case 'assigned': rStatus = RideStatus.assigned; break;
       case 'going_to_pickup': rStatus = RideStatus.goingToPickup; break;
       case 'arrived_at_pickup': rStatus = RideStatus.arrivedAtPickup; break;
@@ -92,6 +97,8 @@ class RideModel {
       driverValue: double.tryParse(map['driver_value']?.toString() ?? '0.0') ?? 0.0,
       lat: double.tryParse(map['lat']?.toString() ?? '0.0') ?? 0.0,
       lng: double.tryParse(map['lng']?.toString() ?? '0.0') ?? 0.0,
+      pickupLat: double.tryParse(map['pickup_lat']?.toString() ?? '0.0') ?? 0.0,
+      pickupLng: double.tryParse(map['pickup_lng']?.toString() ?? '0.0') ?? 0.0,
       status: rStatus,
       observations: map['observations']?.toString(),
       failureReason: map['failure_reason']?.toString(),
@@ -113,6 +120,8 @@ class RideModel {
       driverValue: driverValue,
       lat: lat,
       lng: lng,
+      pickupLat: pickupLat,
+      pickupLng: pickupLng,
       status: status ?? this.status,
       observations: observations,
       failureReason: failureReason ?? this.failureReason,
@@ -121,6 +130,7 @@ class RideModel {
 }
 
 class RideExecutionSummary {
+  final List<String> rideIds;
   final double baseValue;
   final double successBonus;
   final double attemptFee;
@@ -131,13 +141,15 @@ class RideExecutionSummary {
   final RideContractType contractType;
 
   RideExecutionSummary({
+    required this.rideIds,
     required this.baseValue,
     required this.successBonus,
     required this.attemptFee,
     required this.totalValue,
     required this.countSuccess,
     required this.countFailed,
-    this.paymentStatus = RidePaymentStatus.paid_online,
+    this.paymentStatus = RidePaymentStatus.paidOnline,
     this.contractType = RideContractType.freelancer,
   });
 }
+

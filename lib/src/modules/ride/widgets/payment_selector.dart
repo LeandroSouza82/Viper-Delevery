@@ -34,7 +34,7 @@ class PaymentSelector extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: isDark ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.05),
+        color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(15),
       ),
       child: Material(
@@ -49,7 +49,7 @@ class PaymentSelector extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF00BFA5).withOpacity(0.1),
+                    color: const Color(0xFF00BFA5).withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(Icons.qr_code_rounded, color: Color(0xFF00BFA5), size: 20),
@@ -79,3 +79,4 @@ class PaymentSelector extends StatelessWidget {
     );
   }
 }
+

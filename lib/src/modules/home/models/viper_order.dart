@@ -3,9 +3,9 @@ import 'package:flutter/material.dart';
 enum ViperOrderType { coleta, entrega, outros }
 
 enum ViperOrderStatus { pending, completed, failed, returned }
-enum ViperPaymentStatus { paid_online, pending }
+enum ViperPaymentStatus { paidOnline, pending }
 enum ViperContractType { clt, freelancer }
-enum ViperRouteType { simple, super_rota }
+enum ViperRouteType { simple, superRota }
 
 extension ViperOrderTypeExtension on ViperOrderType {
   Color get color {
@@ -118,7 +118,7 @@ class ViperOffer {
     required this.dropoffNeighborhood,
     required this.dropoffStreet,
     required this.distanciaDeslocamento,
-    this.paymentStatus = ViperPaymentStatus.paid_online,
+    this.paymentStatus = ViperPaymentStatus.paidOnline,
     this.contractType = ViperContractType.freelancer,
     this.routeType = ViperRouteType.simple,
     this.valorKmIda = 0,
@@ -148,7 +148,8 @@ class ViperExecutionSummary {
     required this.totalValue,
     required this.countSuccess,
     required this.countFailed,
-    this.paymentStatus = ViperPaymentStatus.paid_online,
+    this.paymentStatus = ViperPaymentStatus.paidOnline,
     this.contractType = ViperContractType.freelancer,
   });
 }
+

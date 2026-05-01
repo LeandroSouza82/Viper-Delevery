@@ -1,25 +1,28 @@
-import 'package:flutter/material.dart';
-import 'package:get/get.dart';
-import 'package:flutter/services.dart';
 import 'dart:async';
+
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:get/get.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+import 'package:viper_delivery/src/models/ride_model.dart';
 import 'package:viper_delivery/src/modules/home/controllers/home_controller.dart';
 import 'package:viper_delivery/src/modules/home/controllers/settings_controller.dart';
-import 'package:viper_delivery/src/modules/home/widgets/stats_pill_widget.dart';
+import 'package:viper_delivery/src/modules/home/controllers/viper_menu_controller.dart';
+import 'package:viper_delivery/src/modules/home/models/viper_order.dart';
+import 'package:viper_delivery/src/modules/home/services/external_navigation_service.dart';
+import 'package:viper_delivery/src/modules/home/services/viper_routing_service.dart';
 import 'package:viper_delivery/src/modules/home/widgets/home_menu_icon.dart';
 import 'package:viper_delivery/src/modules/home/widgets/recenter_map_button.dart';
 import 'package:viper_delivery/src/modules/home/widgets/sos_emergency_button.dart';
-import 'package:viper_delivery/src/modules/home/widgets/viper_menu_central.dart';
-import 'package:viper_delivery/src/modules/home/widgets/viper_map_widget.dart';
-
-import 'package:viper_delivery/src/models/ride_model.dart';
-import 'package:viper_delivery/src/modules/home/controllers/viper_menu_controller.dart';
+import 'package:viper_delivery/src/modules/home/widgets/stats_pill_widget.dart';
 import 'package:viper_delivery/src/modules/home/widgets/viper_bottom_sheet_panel.dart';
-import 'package:viper_delivery/src/modules/home/services/dispatch_service.dart';
-import 'package:viper_delivery/src/modules/profile/controllers/performance_controller.dart';
-import 'package:viper_delivery/src/modules/profile/controllers/profile_controller.dart';
+import 'package:viper_delivery/src/modules/home/widgets/viper_map_widget.dart';
+import 'package:viper_delivery/src/modules/home/widgets/viper_menu_central.dart';
+import 'package:viper_delivery/src/modules/home/widgets/viper_offer_overlay.dart';
 import 'package:viper_delivery/src/modules/map/controllers/map_controller.dart';
+import 'package:viper_delivery/src/modules/profile/controllers/performance_controller.dart';
 import 'package:viper_delivery/src/modules/ride/controllers/ride_state_machine.dart';
-import 'package:viper_delivery/src/modules/home/services/external_navigation_service.dart';
+import 'package:viper_delivery/src/modules/ride/services/upload_queue_service.dart';
 
 class HomeView extends StatefulWidget {
   const HomeView({super.key});
@@ -33,18 +36,15 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
   final HomeController _homeController = HomeController();
   final ViperMenuController _menuController = Get.put(ViperMenuController());
   final PerformanceController _performanceController = Get.put(PerformanceController());
-  final ProfileController _profileController = Get.put(ProfileController()); // Inicialização Global para o SOS
   final MapController _mapController = Get.put(MapController());
   final RideStateMachine _rideStateMachine = Get.put(RideStateMachine());
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final GlobalKey<ViperMapWidgetState> _mapWidgetKey = GlobalKey<ViperMapWidgetState>();
   final GlobalKey<ViperBottomSheetPanelState> _ridePanelKey = GlobalKey<ViperBottomSheetPanelState>();
-  final DispatchService _dispatchService = DispatchService();
   
   final ValueNotifier<double> _sheetExtent = ValueNotifier<double>(0.16);
 
   static const double _minExtent = 0.16;
-  static const double _fadeLimit = 0.5;
 
   @override
   void initState() {
@@ -77,13 +77,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _sheetExtent.dispose();
-    _dispatchService.dispose();
     super.dispose();
-  }
-
-  // Lógica de Dispatch simplificada para rodar apenas em background (logs)
-  void _startBackgroundDispatch() {
-    _dispatchService.startSearch(initialValue: 15.0);
   }
 
   /// Ação do botão flutuante da máquina de estados.
@@ -100,12 +94,12 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
       case RideState.arrivedAtPickup:
         // Dispara notificação e muda para "seguir rota"
         final pendingOrders = _rideStateMachine.activeOrders
-            .where((o) => o.status == RideStatus.pending)
+            .where((o) => o.status == RideStatus.assigned)
             .toList();
         final optimized = await _rideStateMachine.startDeliveryRoute(pendingOrders);
         // Atualiza a lista com a ordem otimizada
         final nonPending = _rideStateMachine.activeOrders
-            .where((o) => o.status != RideStatus.pending)
+            .where((o) => o.status != RideStatus.assigned)
             .toList();
         _rideStateMachine.activeOrders.assignAll([...nonPending, ...optimized]);
 
@@ -115,6 +109,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
             lat: optimized.first.lat,
             lng: optimized.first.lng,
             context: context,
+            address: optimized.first.deliveryAddress,
           );
         }
         break;
@@ -122,13 +117,14 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
       case RideState.onDeliveryRoute:
         // Navega para o próximo destino pendente
         final nextPending = _rideStateMachine.activeOrders
-            .where((o) => o.status == RideStatus.pending || o.status == RideStatus.onDeliveryRoute)
+            .where((o) => o.status == RideStatus.assigned || o.status == RideStatus.onDeliveryRoute)
             .toList();
         if (nextPending.isNotEmpty && mounted) {
           await ExternalNavigationService.abrirNavegador(
             lat: nextPending.first.lat,
             lng: nextPending.first.lng,
             context: context,
+            address: nextPending.first.deliveryAddress,
           );
         }
         _ridePanelKey.currentState?.expandToHalf();
@@ -199,11 +195,42 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                     top: topPadding + 15,
                     left: 0,
                     right: 0,
-                    child: Center(
-                      child: StatsPillWidget(
-                        homeController: _homeController,
-                        settingsController: _settingsController,
-                      ),
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        StatsPillWidget(
+                          homeController: _homeController,
+                          settingsController: _settingsController,
+                        ),
+                        // [VUP SYNC] Indicador de Upload Pendente
+                        Positioned(
+                          right: 40,
+                          child: Obx(() {
+                            final queue = Get.find<UploadQueueService>();
+                            if (!queue.hasPendingUploads) return const SizedBox.shrink();
+                            return Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: Colors.blueAccent.withValues(alpha: 0.9),
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.blueAccent.withValues(alpha: 0.3),
+                                    blurRadius: 10,
+                                    spreadRadius: 2,
+                                  )
+                                ],
+                              ),
+                              child: const Icon(
+                                Icons.cloud_upload,
+                                color: Colors.white,
+                                size: 14,
+                              ),
+                            ).animate(onPlay: (controller) => controller.repeat())
+                             .shimmer(duration: const Duration(seconds: 2));
+                          }),
+                        ),
+                      ],
                     ),
                   ),
 
@@ -336,7 +363,81 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                         isClt: _homeController.isClt,
                       )),
 
-                  // 8. O REI DA TELA: Removido Mock Overlay pois agora os dados vem da Stream
+                  // 8. O REI DA TELA: Card de Convite (Super Rota)
+                  Obx(() {
+                    if (_rideStateMachine.currentState.value == RideState.offerReceived && _rideStateMachine.activeOrders.isNotEmpty) {
+                      final orders = _rideStateMachine.activeOrders;
+                      final first = orders.first;
+                      final pos = _homeController.currentPosition.value;
+
+                      // [VUP MODULAR] Cálculo de Rota Otimizada e Distâncias Reais (GPS)
+                      final routeResult = ViperRoutingService.optimize(
+                        driverLat: pos?.latitude ?? first.pickupLat,
+                        driverLng: pos?.longitude ?? first.pickupLng,
+                        pickupLat: first.pickupLat,
+                        pickupLng: first.pickupLng,
+                        orders: orders,
+                      );
+
+                      // Bloqueio de Rota Inválida (0.0 KM)
+                      if (routeResult.totalDistance <= 0) return const SizedBox.shrink();
+
+                      final firstRide = routeResult.optimizedOrders.first;
+                      final lastRide = routeResult.optimizedOrders.last;
+                      final totalValue = orders.fold(0.0, (sum, r) => sum + r.driverValue);
+                      
+                      // Regra de Negócio: Frotista (Company) vs Freelancer
+                      final canDeclineOffer = !_homeController.isCompanyDriver;
+
+                      final offer = ViperOffer(
+                        id: firstRide.id,
+                        orders: routeResult.optimizedOrders.map((r) => ViperOrder(
+                          id: r.id,
+                          cliente: r.clientName,
+                          enderecoColeta: r.pickupAddress,
+                          bairroColeta: '', 
+                          enderecoEntrega: r.deliveryAddress,
+                          bairroEntrega: r.deliveryNeighborhood,
+                          tipo: ViperOrderType.entrega, 
+                          valor: r.driverValue,
+                          lat: r.lat,
+                          lng: r.lng,
+                          status: ViperOrderStatus.pending,
+                        )).toList(),
+                        distanciaTotal: routeResult.totalDistance,
+                        valorTotal: totalValue,
+                        valorPorKm: totalValue / routeResult.totalDistance, 
+                        isSuper: orders.length > 1,
+                        pickupNeighborhood: 'Ponto de Coleta',
+                        pickupStreet: firstRide.pickupAddress,
+                        dropoffNeighborhood: lastRide.deliveryNeighborhood,
+                        dropoffStreet: lastRide.deliveryAddress,
+                        distanciaDeslocamento: routeResult.distanceDriverToPickup,
+                        valorKmIda: 0.85,
+                        valorKmRota: routeResult.distancePickupToDeliveries > 0 ? (totalValue / routeResult.distancePickupToDeliveries) : 0.0,
+                        pickupLat: firstRide.pickupLat,
+                        pickupLng: firstRide.pickupLng,
+                      );
+
+                      return Positioned.fill(
+                        child: Container(
+                          color: Colors.black.withValues(alpha: 0.6), // Escurece o fundo
+                          child: ViperOfferOverlay(
+                            offer: offer,
+                            isDark: isDark,
+                            canDecline: canDeclineOffer,
+                            onAccept: () {
+                              _rideStateMachine.acceptOffer(first.lat.toString(), first.lng.toString());
+                            },
+                            onDecline: () {
+                              _rideStateMachine.rejectOffer();
+                            },
+                          ),
+                        ),
+                      );
+                    }
+                    return const SizedBox.shrink();
+                  }),
                   
                   // Molduras de Sistema (Dinâmicas)
                   Positioned(top: 0, left: 0, right: 0, child: Container(height: topPadding, color: isDark ? Colors.black : Colors.white)),
@@ -350,3 +451,4 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
   }
 
 }
+

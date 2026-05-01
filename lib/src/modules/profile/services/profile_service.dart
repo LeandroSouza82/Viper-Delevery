@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:viper_delivery/src/modules/profile/models/profile_reputation_model.dart';
 
@@ -67,7 +68,7 @@ class ProfileService {
           .single();
       return response;
     } catch (e) {
-      print('Erro ao buscar perfil: $e');
+      debugPrint('Erro ao buscar perfil: $e');
       return {};
     }
   }
@@ -125,7 +126,7 @@ class ProfileService {
           .single();
       return response;
     } catch (e) {
-      print('Erro ao buscar contato de emergência: $e');
+      debugPrint('Erro ao buscar contato de emergência: $e');
       return null;
     }
   }
@@ -151,3 +152,4 @@ class ProfileService {
     };
   }
 }
+

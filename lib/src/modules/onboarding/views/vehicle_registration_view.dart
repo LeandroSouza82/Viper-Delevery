@@ -1,13 +1,14 @@
 import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_windowmanager_plus/flutter_windowmanager_plus.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:validatorless/validatorless.dart';
 import 'package:viper_delivery/src/modules/onboarding/controllers/vehicle_controller.dart';
 import 'package:viper_delivery/src/modules/onboarding/views/pending_approval_view.dart';
 import 'package:viper_delivery/src/modules/onboarding/views/vehicle_inspection_view.dart';
-import 'package:url_launcher/url_launcher.dart';
-import 'package:flutter_windowmanager_plus/flutter_windowmanager_plus.dart';
 
 class VehicleRegistrationView extends StatefulWidget {
   const VehicleRegistrationView({super.key});
@@ -393,3 +394,4 @@ class _VehicleRegistrationViewState extends State<VehicleRegistrationView> {
     );
   }
 }
+

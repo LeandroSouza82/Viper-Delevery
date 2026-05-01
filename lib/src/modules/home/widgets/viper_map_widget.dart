@@ -1,11 +1,12 @@
-import 'dart:ui' as ui;
 import 'dart:typed_data';
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart' as geo;
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 import 'package:viper_delivery/src/core/config/env.dart';
-import 'package:viper_delivery/src/modules/home/controllers/settings_controller.dart';
 import 'package:viper_delivery/src/models/ride_model.dart';
+import 'package:viper_delivery/src/modules/home/controllers/settings_controller.dart';
 import 'package:viper_delivery/src/modules/home/services/viper_directions_service.dart';
 import 'package:viper_delivery/src/modules/map/utils/marker_generator.dart';
 
@@ -177,8 +178,11 @@ class ViperMapWidgetState extends State<ViperMapWidget> {
     double driverLng = pickupLng;
     try {
       final pos = await geo.Geolocator.getCurrentPosition(
-        desiredAccuracy: geo.LocationAccuracy.high,
-      ).timeout(const Duration(seconds: 5));
+        locationSettings: const geo.LocationSettings(
+          accuracy: geo.LocationAccuracy.high,
+          timeLimit: Duration(seconds: 5),
+        ),
+      );
       driverLat = pos.latitude;
       driverLng = pos.longitude;
     } catch (_) {}
@@ -450,7 +454,7 @@ class ViperMapWidgetState extends State<ViperMapWidget> {
 
     // 1. Sombra suave para profundidade
     final shadowPaint = Paint()
-      ..color = Colors.black.withOpacity(0.3)
+      ..color = Colors.black.withValues(alpha: 0.3)
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10);
     canvas.drawCircle(const Offset(size / 2, size / 2 + 4), size / 2 - 15, shadowPaint);
 
@@ -506,4 +510,5 @@ class ViperMapWidgetState extends State<ViperMapWidget> {
     }
   }
 }
+
 

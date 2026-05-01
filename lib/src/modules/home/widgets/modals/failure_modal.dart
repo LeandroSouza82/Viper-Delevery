@@ -1,10 +1,11 @@
 import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:viper_delivery/src/modules/ride/controllers/ride_state_machine.dart';
 import 'package:viper_delivery/src/models/ride_model.dart';
+import 'package:viper_delivery/src/modules/ride/controllers/ride_state_machine.dart';
 
 class FailureModal extends StatefulWidget {
   final String rideId;
@@ -15,7 +16,7 @@ class FailureModal extends StatefulWidget {
     return Get.dialog(
       FailureModal(rideId: rideId),
       barrierDismissible: true,
-      barrierColor: Colors.black.withOpacity(0.5),
+      barrierColor: Colors.black.withValues(alpha: 0.5),
     );
   }
 
@@ -108,7 +109,7 @@ class _FailureModalState extends State<FailureModal> {
         icon: const Icon(Icons.check_circle, color: Colors.white),
       );
     } catch (e) {
-      print('>>> ERRO AO REPORTAR FALHA: $e');
+      debugPrint('>>> ERRO AO REPORTAR FALHA: $e');
       Get.snackbar('Erro no Envio', 'Tivemos um problema com a rede. Tente de novo.', 
         backgroundColor: Colors.redAccent, 
         colorText: Colors.white
@@ -167,14 +168,14 @@ class _FailureModalState extends State<FailureModal> {
                   isExpanded: true,
                   decoration: InputDecoration(
                     labelText: 'Motivo da Falha',
-                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: textColor.withOpacity(0.1))),
+                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: textColor.withValues(alpha: 0.1))),
                     focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.redAccent)),
                     filled: true,
-                    fillColor: isDark ? Colors.white.withOpacity(0.05) : Colors.grey[50],
+                    fillColor: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey[50],
                   ),
                   dropdownColor: isDark ? const Color(0xFF2C2C2C) : Colors.white,
                   style: TextStyle(color: textColor, fontSize: 15),
-                  value: _selectedReason,
+                  initialValue: _selectedReason,
                   items: _reasons.map((r) => DropdownMenuItem(value: r, child: Text(r))).toList(),
                   onChanged: (val) => setState(() => _selectedReason = val),
                 ),
@@ -187,10 +188,10 @@ class _FailureModalState extends State<FailureModal> {
                   style: TextStyle(color: textColor),
                   decoration: InputDecoration(
                     hintText: 'Digite detalhes extras...',
-                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: textColor.withOpacity(0.1))),
+                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: textColor.withValues(alpha: 0.1))),
                     focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.redAccent)),
                     filled: true,
-                    fillColor: isDark ? Colors.white.withOpacity(0.05) : Colors.grey[50],
+                    fillColor: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey[50],
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -243,3 +244,4 @@ class _FailureModalState extends State<FailureModal> {
     );
   }
 }
+

@@ -1,16 +1,16 @@
 import 'dart:io';
+
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:geolocator/geolocator.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:viper_delivery/src/core/services/haptic_service.dart';
 import 'package:viper_delivery/src/models/driver_model.dart';
 import 'package:viper_delivery/src/modules/profile/models/profile_reputation_model.dart';
 import 'package:viper_delivery/src/modules/profile/services/profile_service.dart';
 import 'package:viper_delivery/src/modules/profile/widgets/emergency_contact_modal.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:viper_delivery/src/core/services/haptic_service.dart';
 
 class ProfileController extends GetxController {
   final ProfileService _profileService = ProfileService();
@@ -208,7 +208,9 @@ class ProfileController extends GetxController {
       }
 
       Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+        ),
       );
 
       String mapLink = 'https://www.google.com/maps?q=${position.latitude},${position.longitude}';
@@ -228,7 +230,7 @@ class ProfileController extends GetxController {
       await launchUrl(smsUri, mode: LaunchMode.externalApplication);
 
     } catch (e) {
-      print("🔥 [SOS] ERRO FATAL: $e");
+      debugPrint("🔥 [SOS] ERRO FATAL: $e");
       Get.snackbar('ERRO CRÍTICO', 'Falha no disparo: $e', 
         backgroundColor: Colors.red, colorText: Colors.white);
     }
@@ -277,7 +279,7 @@ class ProfileController extends GetxController {
       starDistribution.assignAll(_profileService.getStarDistribution(userId));
 
     } catch (e) {
-      print('Erro no ProfileController: $e');
+      debugPrint('Erro no ProfileController: $e');
     } finally {
       isLoading(false);
     }
@@ -290,3 +292,4 @@ class ProfileController extends GetxController {
     return (starDistribution[star] ?? 0) / total;
   }
 }
+

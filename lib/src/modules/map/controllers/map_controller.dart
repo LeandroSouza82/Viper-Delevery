@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:get/get.dart';
 import 'package:viper_delivery/src/models/ride_model.dart';
-import 'package:viper_delivery/src/modules/home/widgets/viper_map_widget.dart';
 import 'package:viper_delivery/src/modules/home/services/viper_routing_service.dart';
+import 'package:viper_delivery/src/modules/home/widgets/viper_map_widget.dart';
 
 /// Controlador centralizado de mapa e polyline.
 /// Orquestra as duas fases de roteamento sem tocar no visual.
@@ -64,8 +64,11 @@ class MapController extends GetxController {
     double driverLng = pickupLng;
     try {
       final pos = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-      ).timeout(const Duration(seconds: 5));
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          timeLimit: Duration(seconds: 5),
+        ),
+      );
       driverLat = pos.latitude;
       driverLng = pos.longitude;
     } catch (_) {}
@@ -98,3 +101,4 @@ class MapController extends GetxController {
     await _map?.recenter();
   }
 }
+

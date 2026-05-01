@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:viper_delivery/src/modules/profile/views/history_view.dart';
-import 'package:viper_delivery/src/modules/profile/views/acceptance_rate_view.dart';
 import 'package:viper_delivery/src/modules/home/controllers/settings_controller.dart';
+import 'package:viper_delivery/src/modules/profile/views/acceptance_rate_view.dart';
+import 'package:viper_delivery/src/modules/profile/views/history_view.dart';
 
 class HojeTabWidget extends StatelessWidget {
   const HojeTabWidget({super.key});
@@ -22,7 +22,7 @@ class HojeTabWidget extends StatelessWidget {
               Text(
                 'Ganhos totais',
                 style: TextStyle(
-                  color: textColor.withOpacity(0.5),
+                  color: textColor.withValues(alpha: 0.5),
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
                   letterSpacing: 1.2,
@@ -46,7 +46,7 @@ class HojeTabWidget extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: isDark ? Colors.white.withOpacity(0.03) : Colors.black.withOpacity(0.02),
+              color: isDark ? Colors.white.withValues(alpha: 0.03) : Colors.black.withValues(alpha: 0.02),
               borderRadius: BorderRadius.circular(28),
               border: Border.all(
                 color: isDark ? Colors.white12 : Colors.black12,
@@ -90,7 +90,7 @@ class HojeTabWidget extends StatelessWidget {
           Text(
             'Fique online para começar a lucrar!',
             style: TextStyle(
-              color: textColor.withOpacity(0.3),
+              color: textColor.withValues(alpha: 0.3),
               fontSize: 12,
               fontStyle: FontStyle.italic,
             ),
@@ -107,7 +107,7 @@ class HojeTabWidget extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: iconColor.withOpacity(0.1),
+              color: iconColor.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: Icon(icon, color: iconColor, size: 18),
@@ -117,7 +117,7 @@ class HojeTabWidget extends StatelessWidget {
             label,
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: textColor.withOpacity(0.4),
+              color: textColor.withValues(alpha: 0.4),
               fontSize: 9,
               fontWeight: FontWeight.bold,
               letterSpacing: 0.5,
@@ -144,7 +144,7 @@ class HojeTabWidget extends StatelessWidget {
         Text(
           'AÇÕES RÁPIDAS',
           style: TextStyle(
-            color: textColor.withOpacity(0.5),
+            color: textColor.withValues(alpha: 0.5),
             fontSize: 10,
             fontWeight: FontWeight.bold,
             letterSpacing: 1,
@@ -183,10 +183,10 @@ class HojeTabWidget extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: isDark ? Colors.white.withOpacity(0.02) : Colors.black.withOpacity(0.01),
+          color: isDark ? Colors.white.withValues(alpha: 0.02) : Colors.black.withValues(alpha: 0.01),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isDark ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.05),
+            color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05),
           ),
         ),
         child: Row(
@@ -202,10 +202,11 @@ class HojeTabWidget extends StatelessWidget {
               ),
             ),
             const Spacer(),
-            Icon(Icons.chevron_right_rounded, color: textColor.withOpacity(0.2), size: 18),
+            Icon(Icons.chevron_right_rounded, color: textColor.withValues(alpha: 0.2), size: 18),
           ],
         ),
       ),
     );
   }
 }
+

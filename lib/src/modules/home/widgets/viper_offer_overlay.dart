@@ -7,6 +7,7 @@ class ViperOfferOverlay extends StatefulWidget {
   final VoidCallback onAccept;
   final VoidCallback onDecline;
   final bool isDark;
+  final bool canDecline; // Adicionado para suportar frotistas vs freelancers
 
   const ViperOfferOverlay({
     super.key,
@@ -14,6 +15,7 @@ class ViperOfferOverlay extends StatefulWidget {
     required this.onAccept,
     required this.onDecline,
     required this.isDark,
+    this.canDecline = true,
   });
 
   @override
@@ -60,10 +62,28 @@ class _ViperOfferOverlayState extends State<ViperOfferOverlay> with SingleTicker
     final mainType = widget.offer.orders.isNotEmpty ? widget.offer.orders.first.tipo : ViperOrderType.entrega;
     final serviceColor = widget.offer.isSuper ? Colors.tealAccent[400]! : mainType.color;
 
-    return TweenAnimationBuilder<double>(
-      duration: const Duration(milliseconds: 600),
-      curve: Curves.elasticOut,
-      tween: Tween(begin: 0.8, end: 1.0),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        
+        if (!widget.canDecline) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Esta rota foi designada para você pela central.'),
+              backgroundColor: Colors.orange,
+              duration: Duration(seconds: 3),
+            ),
+          );
+        } else {
+          HapticService.stopVibration();
+          widget.onDecline();
+        }
+      },
+      child: TweenAnimationBuilder<double>(
+        duration: const Duration(milliseconds: 600),
+        curve: Curves.elasticOut,
+        tween: Tween(begin: 0.8, end: 1.0),
       builder: (context, scale, child) {
         return Transform.scale(
           scale: scale,
@@ -105,12 +125,12 @@ class _ViperOfferOverlayState extends State<ViperOfferOverlay> with SingleTicker
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // Título Superior (Apenas em Super Rota)
-                    if (widget.offer.isSuper)
+                    // Título Superior (Designada ou Super Rota)
+                    if (!widget.canDecline || widget.offer.isSuper)
                       Padding(
                         padding: const EdgeInsets.only(bottom: 4),
                         child: Text(
-                          'SUPER ROTA',
+                          !widget.canDecline ? 'ROTA DESIGNADA' : 'SUPER ROTA',
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             color: serviceColor,
@@ -161,7 +181,7 @@ class _ViperOfferOverlayState extends State<ViperOfferOverlay> with SingleTicker
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.bold,
-                            color: textColor.withOpacity(0.5),
+                            color: textColor.withValues(alpha: 0.5),
                             letterSpacing: 0.5,
                           ),
                         ),
@@ -239,22 +259,24 @@ class _ViperOfferOverlayState extends State<ViperOfferOverlay> with SingleTicker
                     // Buttons
                     Row(
                       children: [
-                        // RECUSAR
-                        GestureDetector(
-                          onTap: () {
-                            HapticService.stopVibration(); // PARA TUDO AO RECUSAR
-                            widget.onDecline();
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: widget.isDark ? Colors.white10 : Colors.grey[200],
-                              borderRadius: BorderRadius.circular(20),
+                        // RECUSAR (Oculto se canDecline == false)
+                        if (widget.canDecline) ...[
+                          GestureDetector(
+                            onTap: () {
+                              HapticService.stopVibration(); // PARA TUDO AO RECUSAR
+                              widget.onDecline();
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: widget.isDark ? Colors.white10 : Colors.grey[200],
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: const Icon(Icons.close, color: Colors.red, size: 28),
                             ),
-                            child: const Icon(Icons.close, color: Colors.red, size: 28),
                           ),
-                        ),
-                        const SizedBox(width: 12),
+                          const SizedBox(width: 12),
+                        ],
                         // ACEITAR
                         Expanded(
                           child: Container(
@@ -263,7 +285,7 @@ class _ViperOfferOverlayState extends State<ViperOfferOverlay> with SingleTicker
                               borderRadius: BorderRadius.circular(20),
                               boxShadow: [
                                 BoxShadow(
-                                  color: const Color(0xFF00C853).withOpacity(0.3),
+                                  color: const Color(0xFF00C853).withValues(alpha: 0.3),
                                   blurRadius: 10,
                                   offset: const Offset(0, 4),
                                 ),
@@ -272,7 +294,7 @@ class _ViperOfferOverlayState extends State<ViperOfferOverlay> with SingleTicker
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(20),
                               child: Material(
-                                color: const Color(0xFF00C853).withOpacity(0.15), // Base light green
+                                color: const Color(0xFF00C853).withValues(alpha: 0.15), // Base light green
                                 child: InkWell(
                                   onTap: () {
                                     HapticService.stopVibration(); // PARA TUDO AO ACEITAR
@@ -283,7 +305,17 @@ class _ViperOfferOverlayState extends State<ViperOfferOverlay> with SingleTicker
                                       // Camada de Progresso (Vibrante)
                                       TweenAnimationBuilder<double>(
                                         tween: Tween<double>(begin: 1.0, end: 0.0),
-                                        duration: const Duration(seconds: 12),
+                                        duration: Duration(seconds: widget.canDecline ? 12 : 5),
+                                        onEnd: () {
+                                          if (!widget.canDecline) {
+                                            HapticService.stopVibration();
+                                            widget.onAccept();
+                                          } else {
+                                            // Freelancer: Se não aceitou em 12s, recusa automaticamente
+                                            HapticService.stopVibration();
+                                            widget.onDecline();
+                                          }
+                                        },
                                         builder: (context, value, child) {
                                           return FractionallySizedBox(
                                             widthFactor: value,
@@ -297,10 +329,10 @@ class _ViperOfferOverlayState extends State<ViperOfferOverlay> with SingleTicker
                                         },
                                       ),
                                       // Texto por cima de tudo
-                                      const Center(
+                                      Center(
                                         child: Text(
-                                          'ACEITAR',
-                                          style: TextStyle(
+                                          widget.canDecline ? 'ACEITAR' : 'ACEITANDO EM 5S...',
+                                          style: const TextStyle(
                                             color: Colors.white,
                                             fontSize: 18,
                                             fontWeight: FontWeight.w900,
@@ -343,7 +375,7 @@ class _ViperOfferOverlayState extends State<ViperOfferOverlay> with SingleTicker
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.red.withOpacity(0.5),
+                          color: Colors.red.withValues(alpha: 0.5),
                           blurRadius: 12,
                           offset: const Offset(0, 4),
                         ),
@@ -371,7 +403,7 @@ class _ViperOfferOverlayState extends State<ViperOfferOverlay> with SingleTicker
           ),
         ),
       ),
-    );
+    ));
   }
 
   Widget _buildStatRow(String label, String value, bool isDark) {
@@ -457,3 +489,4 @@ class _ViperOfferOverlayState extends State<ViperOfferOverlay> with SingleTicker
     );
   }
 }
+

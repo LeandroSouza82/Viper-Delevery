@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math';
+import 'package:flutter/foundation.dart';
 
 enum DispatchStatus { 
   idle, 
@@ -83,7 +84,7 @@ class DispatchService {
     _currentRadius = 5.0;
     _status = DispatchStatus.searching;
     
-    print('[!!! VIPER RADAR !!!] Boost Prioritário (+ R\$ $boostValue). Novo valor: R\$ ${_currentOfferValue.toStringAsFixed(2)}. Reiniciando ondas...');
+    debugPrint('[!!! VIPER RADAR !!!] Boost Prioritário (+ R\$ $boostValue). Novo valor: R\$ ${_currentOfferValue.toStringAsFixed(2)}. Reiniciando ondas...');
     _processWave();
   }
 
@@ -103,7 +104,7 @@ class DispatchService {
       'value': _currentOfferValue,
     });
     
-    print('[!!! VIPER DISPATCH !!!] Status: ${_status.name.toUpperCase()} | Raio: $_currentRadius km | Oferta: R\$ ${_currentOfferValue.toStringAsFixed(2)}');
+    debugPrint('[!!! VIPER DISPATCH !!!] Status: ${_status.name.toUpperCase()} | Raio: $_currentRadius km | Oferta: R\$ ${_currentOfferValue.toStringAsFixed(2)}');
   }
 
   /// Libera recursos
@@ -112,3 +113,4 @@ class DispatchService {
     _statusController.close();
   }
 }
+

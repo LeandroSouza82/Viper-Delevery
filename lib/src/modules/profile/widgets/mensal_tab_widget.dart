@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:viper_delivery/src/modules/profile/controllers/performance_controller.dart';
 import 'package:viper_delivery/src/modules/home/controllers/settings_controller.dart';
+import 'package:viper_delivery/src/modules/profile/controllers/performance_controller.dart';
 
 class MensalTabWidget extends StatelessWidget {
   const MensalTabWidget({super.key});
@@ -28,7 +28,7 @@ class MensalTabWidget extends StatelessWidget {
                 Text(
                   'Total do Mês',
                   style: TextStyle(
-                    color: textColor.withOpacity(0.5),
+                    color: textColor.withValues(alpha: 0.5),
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
                     letterSpacing: 1.2,
@@ -87,12 +87,12 @@ class MensalTabWidget extends StatelessWidget {
               opacity: 0.3,
               child: Column(
                 children: [
-                  Icon(Icons.info_outline, size: 20, color: textColor.withOpacity(0.5)),
+                  Icon(Icons.info_outline, size: 20, color: textColor.withValues(alpha: 0.5)),
                   const SizedBox(height: 8),
                   Text(
                     'Este é um resumo do faturamento bruto mensal.',
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: textColor.withOpacity(0.5), fontSize: 11),
+                    style: TextStyle(color: textColor.withValues(alpha: 0.5), fontSize: 11),
                   ),
                 ],
               ),
@@ -117,7 +117,7 @@ class MensalTabWidget extends StatelessWidget {
         decoration: BoxDecoration(
           color: bgColor,
           borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: textColor.withOpacity(0.05)),
+          border: Border.all(color: textColor.withValues(alpha: 0.05)),
         ),
         child: Column(
           children: [
@@ -127,7 +127,7 @@ class MensalTabWidget extends StatelessWidget {
               label,
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: textColor.withOpacity(0.4),
+                color: textColor.withValues(alpha: 0.4),
                 fontSize: 9,
                 fontWeight: FontWeight.bold,
               ),
@@ -147,3 +147,4 @@ class MensalTabWidget extends StatelessWidget {
     );
   }
 }
+

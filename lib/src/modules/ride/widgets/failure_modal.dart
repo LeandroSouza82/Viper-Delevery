@@ -101,7 +101,7 @@ class _FailureSheetState extends State<_FailureSheet> {
       decoration: BoxDecoration(
         color: bgColor,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-        border: Border.all(color: Colors.red.withOpacity(0.3), width: 1.5),
+        border: Border.all(color: Colors.red.withValues(alpha: 0.3), width: 1.5),
       ),
       child: Padding(
         padding: EdgeInsets.fromLTRB(
@@ -146,7 +146,7 @@ class _FailureSheetState extends State<_FailureSheet> {
                 const SizedBox(height: 4),
                 Text(
                   'Cliente: ${widget.clienteName}',
-                  style: TextStyle(color: textColor.withOpacity(0.5), fontSize: 13),
+                  style: TextStyle(color: textColor.withValues(alpha: 0.5), fontSize: 13),
                 ),
                 const SizedBox(height: 24),
 
@@ -154,7 +154,7 @@ class _FailureSheetState extends State<_FailureSheet> {
                 Text(
                   'MOTIVO DA FALHA',
                   style: TextStyle(
-                    color: textColor.withOpacity(0.4),
+                    color: textColor.withValues(alpha: 0.4),
                     fontSize: 10,
                     fontWeight: FontWeight.bold,
                     letterSpacing: 1,
@@ -164,7 +164,7 @@ class _FailureSheetState extends State<_FailureSheet> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   decoration: BoxDecoration(
-                    color: widget.isDark ? Colors.white.withOpacity(0.05) : Colors.grey[50],
+                    color: widget.isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey[50],
                     borderRadius: BorderRadius.circular(14),
                     border: Border.all(color: cardBorder),
                   ),
@@ -174,11 +174,11 @@ class _FailureSheetState extends State<_FailureSheet> {
                       value: _selectedReason,
                       hint: Text(
                         'Selecione o motivo...',
-                        style: TextStyle(color: textColor.withOpacity(0.4)),
+                        style: TextStyle(color: textColor.withValues(alpha: 0.4)),
                       ),
                       dropdownColor: widget.isDark ? const Color(0xFF2A2A2A) : Colors.white,
                       style: TextStyle(color: textColor, fontSize: 14),
-                      icon: Icon(Icons.expand_more, color: textColor.withOpacity(0.4)),
+                      icon: Icon(Icons.expand_more, color: textColor.withValues(alpha: 0.4)),
                       items: FailureModal._defaultReasons.map((reason) {
                         return DropdownMenuItem(
                           value: reason,
@@ -195,7 +195,7 @@ class _FailureSheetState extends State<_FailureSheet> {
                 Text(
                   'OBSERVAÇÃO (OPCIONAL)',
                   style: TextStyle(
-                    color: textColor.withOpacity(0.4),
+                    color: textColor.withValues(alpha: 0.4),
                     fontSize: 10,
                     fontWeight: FontWeight.bold,
                     letterSpacing: 1,
@@ -208,9 +208,9 @@ class _FailureSheetState extends State<_FailureSheet> {
                   style: TextStyle(color: textColor, fontSize: 14),
                   decoration: InputDecoration(
                     hintText: 'Descreva detalhes adicionais se necessário...',
-                    hintStyle: TextStyle(color: textColor.withOpacity(0.3)),
+                    hintStyle: TextStyle(color: textColor.withValues(alpha: 0.3)),
                     filled: true,
-                    fillColor: widget.isDark ? Colors.white.withOpacity(0.05) : Colors.grey[50],
+                    fillColor: widget.isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey[50],
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(14),
                       borderSide: BorderSide(color: cardBorder),
@@ -234,7 +234,7 @@ class _FailureSheetState extends State<_FailureSheet> {
                       child: OutlinedButton(
                         onPressed: () => Navigator.pop(context),
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: textColor.withOpacity(0.6),
+                          foregroundColor: textColor.withValues(alpha: 0.6),
                           side: BorderSide(color: cardBorder, width: 1.5),
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -268,3 +268,4 @@ class _FailureSheetState extends State<_FailureSheet> {
     );
   }
 }
+
