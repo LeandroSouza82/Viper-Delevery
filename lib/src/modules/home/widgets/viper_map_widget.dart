@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
@@ -27,6 +28,11 @@ class ViperMapWidget extends StatefulWidget {
 class ViperMapWidgetState extends State<ViperMapWidget> {
   MapboxMap? mapboxMap;
   bool _hasAnimatedToUser = false;
+  
+  // ── Controle de Rastreamento (Viper Tracker) ──
+  bool _isTracking = true; 
+  StreamSubscription<geo.Position>? _positionStream;
+  geo.Position? _lastPos;
 
   // Token Público carregado da classe Env (Envied) para segurança
   final String _accessToken = Env.mapboxPublicToken;
@@ -62,6 +68,7 @@ class ViperMapWidgetState extends State<ViperMapWidget> {
   @override
   void dispose() {
     _settings.removeListener(_onSettingsChanged);
+    _positionStream?.cancel();
     super.dispose();
   }
 
@@ -96,7 +103,20 @@ class ViperMapWidgetState extends State<ViperMapWidget> {
           await _setupMapboxComponent(mapboxMap!);
         }
       },
+      // FASE 4: Trava de Segurança - Se o usuário mover a câmera manualmente, pausa o tracking
+      onCameraChangeListener: (cameraChangedEvent) {
+        // O Mapbox dispara esse evento para qualquer mudança. 
+        // Em implementações reais, verificaríamos a origem, mas aqui o scroll é o principal gatilho.
+      },
+      onScrollListener: (scrollEvent) => _stopTracking(),
     );
+  }
+
+  void _stopTracking() {
+    if (_isTracking) {
+      setState(() => _isTracking = false);
+      debugPrint('📍 [TRACKER] Manual: Pausando acompanhamento automático.');
+    }
   }
 
   /// Configura os componentes do Mapbox (Puck, Gestos, UI)
@@ -105,7 +125,7 @@ class ViperMapWidgetState extends State<ViperMapWidget> {
     // Configurações imperativas de UI e Gestos
     controller.compass.updateSettings(CompassSettings(enabled: false));
     controller.scaleBar.updateSettings(ScaleBarSettings(enabled: false));
-    controller.gestures.updateSettings(GesturesSettings(rotateEnabled: false));
+    controller.gestures.updateSettings(GesturesSettings(rotateEnabled: true)); // Habilitado para rotação manual
 
     // 1. Gera e Registra a imagem do marcador
     final puckImageBytes = await _generatePuckImage();
@@ -128,13 +148,14 @@ class ViperMapWidgetState extends State<ViperMapWidget> {
       ),
     );
 
-    // 3. Inicializa os Annotation Managers para pinos e rota (A ordem define o Z-Index!)
-    // Criamos a Polyline primeiro para que ela seja renderizada POR BAIXO.
+    // 3. Inicializa os Annotation Managers para pinos e rota
     _polylineManager = await controller.annotations.createPolylineAnnotationManager();
-    // Criamos os Pinos depois para que eles fiquem SEMPRE POR CIMA.
     _pointManager = await controller.annotations.createPointAnnotationManager();
 
-    // 4. Animação de Boas-Vindas (apenas na primeira vez)
+    // 4. Inicia Stream de GPS para Câmera Dinâmica (Viper Tracker)
+    _startTrackingStream(controller);
+
+    // 5. Animação de Boas-Vindas
     if (!_hasAnimatedToUser) {
       _hasAnimatedToUser = true;
       try {
@@ -144,9 +165,9 @@ class ViperMapWidgetState extends State<ViperMapWidget> {
           await controller.flyTo(
             CameraOptions(
               center: Point(coordinates: Position(position.longitude, position.latitude)),
-              zoom: 15.0,
-              bearing: 0,
-              pitch: 0,
+              zoom: 16.5,
+              bearing: position.heading,
+              pitch: 45.0,
             ),
             MapAnimationOptions(duration: 2500),
           );
@@ -155,6 +176,30 @@ class ViperMapWidgetState extends State<ViperMapWidget> {
         debugPrint("Erro na animação inicial: $e");
       }
     }
+  }
+
+  void _startTrackingStream(MapboxMap controller) {
+    _positionStream?.cancel();
+    _positionStream = geo.Geolocator.getPositionStream(
+      locationSettings: const geo.LocationSettings(
+        accuracy: geo.LocationAccuracy.bestForNavigation,
+        distanceFilter: 2, // Apenas se mover 2 metros para evitar jitter
+      ),
+    ).listen((pos) {
+      _lastPos = pos;
+      if (_isTracking && mounted && mapboxMap != null) {
+        // FASE 3: A Mágica - Auto-Follow, Auto-Rotate e Tilt 3D com movimento suave
+        mapboxMap!.easeTo(
+          CameraOptions(
+            center: Point(coordinates: Position(pos.longitude, pos.latitude)),
+            bearing: pos.heading, // Auto-Rotate
+            pitch: 45.0,          // Tilt 3D
+            zoom: 16.5,           // Zoom de Navegação
+          ),
+          MapAnimationOptions(duration: 1000),
+        );
+      }
+    });
   }
 
   // ═══════════════════════════════════════════════════════════
@@ -490,20 +535,24 @@ class ViperMapWidgetState extends State<ViperMapWidget> {
     return byteData!.buffer.asUint8List();
   }
 
-  /// Centraliza o mapa na localização atual do usuário
+  /// Centraliza o mapa na localização atual do usuário e REATIVA o tracking
   Future<void> recenter() async {
     try {
-      final geo.Position position = await geo.Geolocator.getCurrentPosition();
+      setState(() => _isTracking = true); // FASE 4: Reativa o acompanhamento
+      
+      final geo.Position position = _lastPos ?? await geo.Geolocator.getCurrentPosition();
+      
       if (mounted && mapboxMap != null) {
         await mapboxMap!.flyTo(
           CameraOptions(
             center: Point(coordinates: Position(position.longitude, position.latitude)),
             zoom: 16.5,
-            bearing: 0,
-            pitch: 0,
+            bearing: position.heading,
+            pitch: 45.0,
           ),
           MapAnimationOptions(duration: 1500),
         );
+        debugPrint('📍 [TRACKER] Auto: Retornando ao acompanhamento do GPS.');
       }
     } catch (e) {
       debugPrint("Erro ao recentralizar mapa: $e");
