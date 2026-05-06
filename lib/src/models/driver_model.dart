@@ -101,7 +101,7 @@ class DriverModel {
       emergencyContactName: map['emergency_contact_name'],
       emergencyContactPhone: map['emergency_contact_phone'],
       isClt: map['is_clt'],
-      isCompanyDriver: map['is_company_driver'] ?? false,
+      isCompanyDriver: map['is_company_driver'] != false,
       vehicles: (map['vehicles'] as List<dynamic>?)
           ?.map((v) => VehicleModel.fromMap(v as Map<String, dynamic>))
           .toList(),

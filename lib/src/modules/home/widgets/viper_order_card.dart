@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:viper_delivery/src/models/ride_model.dart';
 import 'package:viper_delivery/src/modules/home/services/external_navigation_service.dart';
 import 'package:viper_delivery/src/modules/home/widgets/modals/failure_modal.dart';
@@ -25,7 +26,28 @@ class ViperOrderCard extends StatelessWidget {
 
   Future<void> _processDeliveryFailure(BuildContext context) async {
     try {
-      // TODO: VOLTAR TRAVA DE CHEGADA AQUI DEPOIS DOS TESTES.
+      // [VUP MODULAR] TRAVA DE CHEGADA: O motorista deve estar a menos de 500m do destino
+      // para evitar fraudes ou erros de preenchimento.
+      final Position pos = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high)
+      );
+      
+      final double distance = Geolocator.distanceBetween(
+        pos.latitude, pos.longitude, ride.lat, ride.lng
+      );
+
+      if (distance > 500) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('⚠️ Bloqueio: Você precisa estar a menos de 500m do destino.'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+        return;
+      }
+
       if (context.mounted) {
         await FailureModal.show(context, rideId: ride.id);
       }

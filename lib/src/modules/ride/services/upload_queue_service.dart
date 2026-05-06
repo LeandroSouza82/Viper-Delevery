@@ -160,20 +160,33 @@ class UploadQueueService extends GetxService {
 
   Future<bool> _executeTask(UploadTask task) async {
     try {
+      debugPrint('>>> [QUEUE] Executando tarefa ${task.id} para Ride ${task.rideId}...');
+      
       // 1. Upload do Arquivo
       final url = await _proofService.uploadProofFile(task.rideId, File(task.filePath));
-      if (url == null) return false;
+      if (url == null) {
+        debugPrint('>>> [QUEUE] Abortando tarefa: Falha no upload Storage.');
+        return false;
+      }
 
       // 2. Update Metadados
-      return await _proofService.updateMetadata(
+      final dbSuccess = await _proofService.updateMetadata(
         rideId: task.rideId,
         receiverName: task.receiverName,
         document: task.document,
         relation: task.relation,
         publicUrl: url,
       );
+      
+      if (dbSuccess) {
+        debugPrint('>>> [QUEUE] Tarefa ${task.id} finalizada com sucesso TOTAL.');
+      } else {
+        debugPrint('>>> [QUEUE] Falha ao persistir metadados no banco.');
+      }
+      
+      return dbSuccess;
     } catch (e) {
-      debugPrint('>>> [QUEUE] Erro ao executar tarefa ${task.id}: $e');
+      debugPrint('>>> [QUEUE] Erro crítico na tarefa ${task.id}: $e');
       return false;
     }
   }

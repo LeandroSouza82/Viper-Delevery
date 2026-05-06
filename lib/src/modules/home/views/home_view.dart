@@ -2,8 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:get/get.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:get/get.dart';
 import 'package:viper_delivery/src/models/ride_model.dart';
 import 'package:viper_delivery/src/modules/home/controllers/home_controller.dart';
 import 'package:viper_delivery/src/modules/home/controllers/settings_controller.dart';
@@ -65,6 +65,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
       _ridePanelKey.currentState?.collapseToPeek();
     };
 
+    // Refresh de dados inicial
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _settingsController.init();
       _homeController.initializeResilience(context);

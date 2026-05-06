@@ -1,8 +1,10 @@
+import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:viper_delivery/src/modules/profile/services/performance_service.dart';
 
 class PerformanceController extends GetxController {
-  // Comentado temporariamente para evitar erro de tabela inexistente no Supabase
-  // final PerformanceService _service = PerformanceService();
+  final PerformanceService _service = PerformanceService();
   
   final isLoading = true.obs;
   final totalSemana = 0.0.obs;
@@ -18,34 +20,66 @@ class PerformanceController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    _loadMockData(); // Injeta dados falsos para renderização visual
+    refreshData();
   }
 
-  void _loadMockData() {
+  Future<void> refreshData() async {
     isLoading.value = true;
-    
-    // Simula um pequeno delay de carregamento para UX
-    Future.delayed(const Duration(milliseconds: 800), () {
-      totalSemana.value = 854.20;
-      dadosGrafico.value = [
-        120.50, // Segunda
-        85.00,  // Terça
-        210.00, // Quarta
-        0.00,   // Quinta
-        150.00, // Sexta
-        90.00,  // Sábado
-        198.70  // Domingo
-      ];
+    try {
+      final user = Supabase.instance.client.auth.currentUser;
+      if (user == null) return;
+
+      final weeklyData = await _service.getWeeklyPerformance(user.id);
+      _processWeeklyData(weeklyData);
+
+      final monthlyData = await _service.getMonthlyPerformance(user.id);
+      _processMonthlyData(monthlyData);
+
+      diaSelecionado.value = (DateTime.now().weekday % 7); // 0 = Domingo, 1 = Segunda...
       
-      // Mock Mensal
-      totalMensal.value = 3450.00;
-      diasTrabalhadosMes.value = 22;
-      horasOnlineMes.value = 145;
-      corridasMes.value = 310;
-      
-      diaSelecionado.value = DateTime.now().weekday - 1;
+    } catch (e) {
+      debugPrint('Error loading performance data: $e');
+    } finally {
       isLoading.value = false;
-    });
+    }
+  }
+
+  void _processWeeklyData(List<Map<String, dynamic>> data) {
+    double total = 0;
+    List<double> dailyValues = List.filled(7, 0.0);
+    
+    for (var ride in data) {
+      if (ride['created_at'] == null) continue;
+      final date = DateTime.parse(ride['created_at']).toLocal();
+      final value = (ride['driver_value'] as num).toDouble();
+      
+      total += value;
+      final dayIndex = date.weekday % 7; // 0=Sun, 1=Mon...
+      dailyValues[dayIndex] += value;
+    }
+    
+    totalSemana.value = total;
+    dadosGrafico.value = dailyValues;
+  }
+
+  void _processMonthlyData(List<Map<String, dynamic>> data) {
+    double total = 0;
+    Set<int> daysWorked = {};
+    
+    for (var ride in data) {
+      if (ride['created_at'] == null) continue;
+      final date = DateTime.parse(ride['created_at']).toLocal();
+      final value = (ride['driver_value'] as num).toDouble();
+      
+      total += value;
+      daysWorked.add(date.day);
+    }
+    
+    totalMensal.value = total;
+    corridasMes.value = data.length;
+    diasTrabalhadosMes.value = daysWorked.length;
+    // Horas online precisariam de uma tabela de logs de sessão, mantemos 0 por enquanto ou mock proporcional
+    horasOnlineMes.value = daysWorked.length * 8; 
   }
 
   void selecionarDia(int index) {
@@ -53,7 +87,7 @@ class PerformanceController extends GetxController {
   }
 
   String getNomeDia(int index) {
-    const dias = ['SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB', 'DOM'];
+    const dias = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB'];
     return dias[index];
   }
 }

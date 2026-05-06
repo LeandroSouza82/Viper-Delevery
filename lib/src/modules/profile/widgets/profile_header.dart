@@ -5,18 +5,21 @@ class ProfileHeader extends StatelessWidget {
   final String name;
   final String vehicle;
   final String? avatarUrl;
+  final bool isCompanyDriver;
 
   const ProfileHeader({
     super.key, 
     required this.name, 
     required this.vehicle,
     this.avatarUrl,
+    this.isCompanyDriver = false,
   });
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final primaryColor = const Color(0xFF00FF88);
+    final companyColor = const Color(0xFF0055FF); // Azul para Empresa
 
     return Column(
       children: [
@@ -36,7 +39,7 @@ class ProfileHeader extends StatelessWidget {
               )
             ],
             border: Border.all(
-              color: primaryColor.withValues(alpha: 0.2),
+              color: (isCompanyDriver ? companyColor : primaryColor).withValues(alpha: 0.2),
               width: 2,
             ),
           ),
@@ -47,11 +50,11 @@ class ProfileHeader extends StatelessWidget {
                     imageUrl: avatarUrl!,
                     fit: BoxFit.cover,
                     placeholder: (context, url) => Center(
-                      child: CircularProgressIndicator(color: primaryColor, strokeWidth: 2),
+                      child: CircularProgressIndicator(color: isCompanyDriver ? companyColor : primaryColor, strokeWidth: 2),
                     ),
-                    errorWidget: (context, url, error) => Icon(Icons.person, size: 60, color: primaryColor),
+                    errorWidget: (context, url, error) => Icon(Icons.person, size: 60, color: isCompanyDriver ? companyColor : primaryColor),
                   )
-                : Icon(Icons.person, size: 60, color: primaryColor),
+                : Icon(Icons.person, size: 60, color: isCompanyDriver ? companyColor : primaryColor),
           ),
         ),
         const SizedBox(height: 20),
@@ -64,24 +67,45 @@ class ProfileHeader extends StatelessWidget {
             color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 12),
+        
+        // Label de Status: Empresa vs Freelancer
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+          decoration: BoxDecoration(
+            color: (isCompanyDriver ? companyColor : primaryColor).withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: (isCompanyDriver ? companyColor : primaryColor).withValues(alpha: 0.3)),
+          ),
+          child: Text(
+            isCompanyDriver ? 'EMPRESA' : 'FREELANCER',
+            style: TextStyle(
+              color: isCompanyDriver ? companyColor : primaryColor,
+              fontWeight: FontWeight.w900,
+              fontSize: 11,
+              letterSpacing: 1.5,
+            ),
+          ),
+        ),
+        
+        const SizedBox(height: 16),
         // A Crosser Verde em destaque (Status do Veículo)
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           decoration: BoxDecoration(
-            color: primaryColor.withValues(alpha: 0.1),
+            color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05),
             borderRadius: BorderRadius.circular(30),
-            border: Border.all(color: primaryColor.withValues(alpha: 0.5)),
+            border: Border.all(color: isDark ? Colors.white12 : Colors.black12),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.directions_bike_rounded, color: primaryColor, size: 16),
+              Icon(Icons.directions_bike_rounded, color: isDark ? Colors.white60 : Colors.black54, size: 16),
               const SizedBox(width: 8),
               Text(
                 vehicle,
                 style: TextStyle(
-                  color: primaryColor, 
+                  color: isDark ? Colors.white60 : Colors.black54, 
                   fontWeight: FontWeight.w800,
                   fontSize: 13,
                 ),

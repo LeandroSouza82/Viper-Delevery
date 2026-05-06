@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -14,6 +15,7 @@ import 'package:viper_delivery/src/modules/profile/widgets/emergency_contact_mod
 
 class ProfileController extends GetxController {
   final ProfileService _profileService = ProfileService();
+  StreamSubscription? _profileSubscription;
   
   // Observáveis de Dados
   final isLoading = true.obs;
@@ -62,6 +64,7 @@ class ProfileController extends GetxController {
     placaController.dispose();
     emergencyNameController.dispose();
     emergencyPhoneController.dispose();
+    _profileSubscription?.cancel();
     super.onClose();
   }
 
@@ -239,6 +242,9 @@ class ProfileController extends GetxController {
   Future<void> fetchAllData() async {
     try {
       isLoading(true);
+      // Limpeza de cache local (reset) para garantir leitura fresca do banco
+      driverProfile.value = null;
+      
       final userId = Supabase.instance.client.auth.currentUser?.id;
       if (userId == null) return;
 
@@ -278,6 +284,9 @@ class ProfileController extends GetxController {
       // Distribuição de Estrelas
       starDistribution.assignAll(_profileService.getStarDistribution(userId));
 
+      // Iniciar Listener Real-time para o Perfil
+      _startProfileListener(userId);
+
     } catch (e) {
       debugPrint('Erro no ProfileController: $e');
     } finally {
@@ -290,6 +299,24 @@ class ProfileController extends GetxController {
     final total = starDistribution.values.fold(0, (sum, val) => sum + val);
     if (total == 0) return 0.0;
     return (starDistribution[star] ?? 0) / total;
+  }
+
+  void _startProfileListener(String userId) {
+    _profileSubscription?.cancel();
+    _profileSubscription = Supabase.instance.client
+        .from('profiles')
+        .stream(primaryKey: ['id'])
+        .eq('id', userId)
+        .listen((data) {
+          debugPrint('>>> [STREAM] Mudança detectada no banco: $data');
+          if (data.isNotEmpty) {
+            driverProfile.value = DriverModel.fromMap(data.first);
+            // Sincronizar contatos se mudarem
+            emergencyName.value = driverProfile.value?.emergencyContactName ?? '';
+            emergencyPhone.value = driverProfile.value?.emergencyContactPhone ?? '';
+            debugPrint('👤 [PROFILE VIEW] Sincronia Real-time Ativa: ${driverProfile.value?.firstName} (Empresa: ${driverProfile.value?.isCompanyDriver})');
+          }
+        });
   }
 }
 

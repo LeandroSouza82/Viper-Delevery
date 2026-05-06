@@ -1,6 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:google_fonts/google_fonts.dart'; // [VUP UI]
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:viper_delivery/src/models/ride_model.dart';
 import 'package:viper_delivery/src/modules/home/controllers/settings_controller.dart';
@@ -77,11 +78,12 @@ class _ViperMenuCentralState extends State<ViperMenuCentral> {
                               _buildMissionStatic(isDark, textColor),
 
                               const SizedBox(height: 32),
-                              _buildSectionTitle('PERFORMANCE E GANHOS', textColor, isDark),
-                              const SizedBox(height: 16),
-                              _buildPerformanceDashboard(isDark, textColor),
-
-                              const SizedBox(height: 32),
+                              if (!(widget.menuController.driverProfile?.isCompanyDriver ?? false)) ...[
+                                _buildSectionTitle('PERFORMANCE E GANHOS', textColor, isDark),
+                                const SizedBox(height: 16),
+                                _buildPerformanceDashboard(isDark, textColor),
+                                const SizedBox(height: 32),
+                              ],
                               _buildSectionTitle('LOGÍSTICA REVERSA', textColor, isDark),
                               const SizedBox(height: 16),
                               _buildReverseLogisticsSection(isDark, textColor),
@@ -224,6 +226,33 @@ class _ViperMenuCentralState extends State<ViperMenuCentral> {
                     ),
                   ],
                 ),
+                const SizedBox(height: 8),
+                // Label de Status: Empresa vs Freelancer
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: (profile?.isCompanyDriver ?? false)
+                        ? const Color(0xFF0055FF).withValues(alpha: 0.1) // Azul suave
+                        : const Color(0xFF00FF88).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: (profile?.isCompanyDriver ?? false)
+                          ? const Color(0xFF0055FF).withValues(alpha: 0.3)
+                          : const Color(0xFF00FF88).withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Text(
+                    (profile?.isCompanyDriver ?? false) ? 'EMPRESA' : 'FREELANCER',
+                    style: TextStyle(
+                      color: (profile?.isCompanyDriver ?? false)
+                          ? const Color(0xFF0055FF)
+                          : (isDark ? const Color(0xFF00FF88) : Colors.green[800]),
+                      fontSize: 9,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.0,
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -319,11 +348,30 @@ class _ViperMenuCentralState extends State<ViperMenuCentral> {
       isDark, 
       Column(
         children: [
-          _buildInfoItem(Icons.local_shipping_outlined, 'MODELO', vehicle?.model ?? 'NÃO CADASTRADO', textColor, isDark),
-          const SizedBox(height: 12),
-          _buildInfoItem(Icons.palette_outlined, 'COR', (vehicle?.color ?? 'N/A').toUpperCase(), textColor, isDark),
-          const SizedBox(height: 12),
-          _buildInfoItem(Icons.tag, 'PLACA', vehicle?.plate ?? '-- -- --', textColor, isDark, highlight: true),
+          _buildVehicleDetail(
+            icon: Icons.local_shipping_outlined, 
+            label: 'MODELO', 
+            value: vehicle?.model, 
+            textColor: textColor, 
+            isDark: isDark
+          ),
+          const SizedBox(height: 16),
+          _buildVehicleDetail(
+            icon: Icons.palette_outlined, 
+            label: 'COR', 
+            value: vehicle?.color, 
+            textColor: textColor, 
+            isDark: isDark
+          ),
+          const SizedBox(height: 16),
+          _buildVehicleDetail(
+            icon: Icons.tag, 
+            label: 'PLACA', 
+            value: vehicle?.plate, 
+            textColor: textColor, 
+            isDark: isDark, 
+            isPlate: true
+          ),
         ],
       )
     );
@@ -556,6 +604,87 @@ class _ViperMenuCentralState extends State<ViperMenuCentral> {
             children: [
               Text(label, style: TextStyle(color: textColor.withValues(alpha: 0.4), fontSize: 8, fontWeight: FontWeight.bold)),
               Text(value, style: TextStyle(color: highlight ? const Color(0xFF00FF88) : textColor, fontSize: 13, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Widget Modular para exibição de detalhes do veículo (Viper V2)
+  Widget _buildVehicleDetail({
+    required IconData icon,
+    required String label,
+    required String? value,
+    required Color textColor,
+    required bool isDark,
+    bool isPlate = false,
+  }) {
+    // Tratamento de Estados Vazios (VUP CIRÚRGICO)
+    final bool isMissing = value == null || value.trim().isEmpty;
+    
+    // Cor de Alerta: Vermelho se pendente, verde se placa, padrão caso contrário
+    final Color displayValueColor = isMissing 
+        ? Colors.redAccent 
+        : (isPlate ? const Color(0xFF00FF88) : textColor);
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center, // Simetria vertical
+      children: [
+        Icon(
+          icon, 
+          color: isPlate ? const Color(0xFF00FF88) : textColor.withValues(alpha: 0.5), 
+          size: 18
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                label, 
+                style: TextStyle(
+                  color: textColor.withValues(alpha: 0.4), 
+                  fontSize: 8, 
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.5,
+                )
+              ),
+              const SizedBox(height: 2),
+              if (isPlate && !isMissing)
+                IntrinsicWidth(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF00FF88).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: const Color(0xFF00FF88).withValues(alpha: 0.3), width: 1),
+                    ),
+                    child: Text(
+                      value.toUpperCase(),
+                      maxLines: 1,
+                      softWrap: false,
+                      style: GoogleFonts.robotoMono(
+                        color: const Color(0xFF00FF88),
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1.5, 
+                      ),
+                    ),
+                  ),
+                )
+              else
+                Text(
+                  isMissing ? 'Pendente' : value.toUpperCase(),
+                  style: TextStyle(
+                    color: displayValueColor,
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    fontStyle: isMissing ? FontStyle.italic : FontStyle.normal,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
             ],
           ),
         ),

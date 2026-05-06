@@ -15,7 +15,7 @@ class PerformanceService {
           .select('driver_value, created_at')
           .eq('driver_id', driverId)
           .eq('status', 'completed')
-          .gte('created_at', startAt.toIso8601String())
+          .gte('created_at', startAt.toUtc().toIso8601String())
           .order('created_at', ascending: true);
 
       return List<Map<String, dynamic>>.from(response);
@@ -34,7 +34,7 @@ class PerformanceService {
           .select('driver_value, created_at')
           .eq('driver_id', driverId)
           .eq('status', 'completed')
-          .gte('created_at', startOfMonth.toIso8601String())
+          .gte('created_at', startOfMonth.toUtc().toIso8601String())
           .order('created_at', ascending: true);
 
       return List<Map<String, dynamic>>.from(response);

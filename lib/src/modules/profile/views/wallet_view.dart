@@ -100,16 +100,7 @@ class WalletView extends StatelessWidget {
                     children: [
                       Expanded(
                         child: ElevatedButton(
-                          onPressed: () {
-                            // TODO: Implementar saque
-                            Get.snackbar(
-                              'Solicitação de Saque',
-                              'Seu pedido de saque foi enviado para análise.',
-                              backgroundColor: Colors.black,
-                              colorText: Colors.white,
-                              snackPosition: SnackPosition.BOTTOM,
-                            );
-                          },
+                          onPressed: () => menuController.requestWithdrawal(),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: accentColor,
                             foregroundColor: Colors.black,

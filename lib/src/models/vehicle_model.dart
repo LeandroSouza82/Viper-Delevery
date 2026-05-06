@@ -22,9 +22,9 @@ class VehicleModel {
       id: map['id'] ?? '',
       driverId: map['driver_id'] ?? '',
       vehicleType: map['vehicle_type'],
-      plate: map['plate'] ?? '-- -- --',
-      model: map['model'] ?? 'NÃO CADASTRADO',
-      color: map['color'] ?? 'N/A',
+      plate: map['plate'] ?? '', 
+      model: map['model'], 
+      color: map['color'], 
       crlvUrl: map['crlv_url'],
     );
   }

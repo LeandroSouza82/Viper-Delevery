@@ -22,6 +22,10 @@ class _ProfileViewState extends State<ProfileView> {
   void initState() {
     super.initState();
     _enableScreenProtection();
+    // Refresh de dados ao abrir a tela para garantir sincronia com o Supabase
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      controller.fetchAllData();
+    });
   }
 
   @override
@@ -98,6 +102,7 @@ class _ProfileViewState extends State<ProfileView> {
                 name: name, 
                 vehicle: vehicle,
                 avatarUrl: profile?.avatarUrl,
+                isCompanyDriver: profile?.isCompanyDriver ?? false,
               ),
               
               const SizedBox(height: 80),

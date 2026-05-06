@@ -112,7 +112,7 @@ class SettingsController extends GetxController {
         destFilterActive.value = data['dest_filter_active'] ?? false;
         destFilterLocation.value = data['dest_filter_location'] ?? "";
         destinationUses.value = data['destination_uses'] ?? 3;
-        lastReset.value = DateTime.parse(data['last_reset'] ?? DateTime.now().toIso8601String());
+        lastReset.value = DateTime.parse(data['last_reset'] ?? DateTime.now().toUtc().toIso8601String()).toLocal();
         acceptsCash.value = data['accepts_cash'] ?? true;
         acceptsDebit.value = data['accepts_debit'] ?? true;
         acceptsCredit.value = data['accepts_credit'] ?? true;
@@ -144,7 +144,7 @@ class SettingsController extends GetxController {
         'dest_filter_active': destFilterActive.value,
         'dest_filter_location': destFilterLocation.value,
         'destination_uses': destinationUses.value,
-        'last_reset': lastReset.value.toIso8601String(),
+        'last_reset': lastReset.value.toUtc().toIso8601String(),
         'accepts_cash': acceptsCash.value,
         'accepts_debit': acceptsDebit.value,
         'accepts_credit': acceptsCredit.value,

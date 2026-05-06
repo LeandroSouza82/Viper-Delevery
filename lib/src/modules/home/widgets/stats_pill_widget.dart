@@ -99,7 +99,7 @@ class StatsPillWidget extends StatelessWidget {
         break;
       case PillDisplayMode.mission:
         icon = Icons.emoji_events_outlined;
-        color = Colors.blueAccent;
+        color = (homeController.isCompanyDriver) ? Colors.blueGrey : Colors.blueAccent;
         break;
       case PillDisplayMode.rating:
         icon = Icons.star;
@@ -133,9 +133,9 @@ class StatsPillWidget extends StatelessWidget {
         valueColor = Colors.green;
         break;
       case PillDisplayMode.mission:
-        label = 'MISSÃO ATIVA';
-        value = '2/5';
-        valueColor = Colors.blueAccent;
+        label = (homeController.isCompanyDriver) ? 'STATUS FROTA' : 'MISSÃO ATIVA';
+        value = (homeController.isCompanyDriver) ? 'ATIVA' : '2/5';
+        valueColor = (homeController.isCompanyDriver) ? textColor : Colors.blueAccent;
         break;
       case PillDisplayMode.rating:
         label = 'AVALIAÇÃO';

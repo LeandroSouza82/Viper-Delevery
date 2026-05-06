@@ -25,6 +25,7 @@ class HomeController extends GetxController {
   // Real Rides Stream
   final realRides = <RideModel>[].obs;
   StreamSubscription? _ridesSubscription;
+  StreamSubscription? _profileSubscription;
   final RideRepository _rideRepository = RideRepository();
 
   // Gestão do Comprimido (Pill)
@@ -55,7 +56,12 @@ class HomeController extends GetxController {
         setDisplayMode(PillDisplayMode.rating);
         break;
       case PillDisplayMode.rating:
-        setDisplayMode(PillDisplayMode.earnings, startTimer: false);
+        // Se for frotista, pula ganhos e vai direto para missões
+        if (isCompanyDriver) {
+          setDisplayMode(PillDisplayMode.mission, startTimer: false);
+        } else {
+          setDisplayMode(PillDisplayMode.earnings, startTimer: false);
+        }
         break;
     }
   }
@@ -106,6 +112,8 @@ class HomeController extends GetxController {
     try {
       final user = Supabase.instance.client.auth.currentUser;
       if (user != null) {
+        // Limpeza de cache local (reset)
+        driverProfile.value = null;
         final response = await Supabase.instance.client
             .from('profiles')
             .select('*')
@@ -113,15 +121,18 @@ class HomeController extends GetxController {
             .single();
         driverProfile.value = DriverModel.fromMap(response);
         
-        // Ajuste de UI inicial para Frotistas
+        // Ajuste de UI inicial para Frotistas (Empresa)
         if (isCompanyDriver) {
           displayMode.value = PillDisplayMode.mission;
+        } else {
+          displayMode.value = PillDisplayMode.earnings;
         }
 
         update();
 
         // Inicia o listener de corridas em real-time se já logado
         listenRides(user.id);
+        listenProfile(user.id);
       }
     } catch (e) {
       debugPrint('Error fetching profile in HomeController: $e');
@@ -195,10 +206,33 @@ class HomeController extends GetxController {
         );
   }
 
+  /// Inicia o ouvinte em tempo real para o perfil do motorista.
+  void listenProfile(String userId) {
+    _profileSubscription?.cancel();
+    _profileSubscription = Supabase.instance.client
+        .from('profiles')
+        .stream(primaryKey: ['id'])
+        .eq('id', userId)
+        .listen((data) {
+          debugPrint('>>> [STREAM-HOME] Mudança detectada no banco: $data');
+          if (data.isNotEmpty) {
+            driverProfile.value = DriverModel.fromMap(data.first);
+            
+            // Sincronização de UI imediata para frotistas
+            if (isCompanyDriver && displayMode.value == PillDisplayMode.earnings) {
+              displayMode.value = PillDisplayMode.mission;
+            }
+            
+            debugPrint('👤 [PROFILE] Dados atualizados em tempo real: ${driverProfile.value?.firstName} (Empresa: ${driverProfile.value?.isCompanyDriver})');
+            update();
+          }
+        });
+  }
+
   @override
-  void dispose() {
+  void onClose() {
     _ridesSubscription?.cancel();
-    super.dispose();
+    _profileSubscription?.cancel();
+    super.onClose();
   }
 }
-

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:vibration/vibration.dart';
 import 'package:viper_delivery/src/models/ride_model.dart';
 import 'package:viper_delivery/src/modules/home/controllers/home_controller.dart';
@@ -270,13 +271,19 @@ class RideStateMachine extends GetxController {
   }
 
   /// [1.5] RECUSAR OFERTA → Volta para idle e limpa a tela localmente
-  void rejectOffer() {
-    // TODO: Notificar Supabase sobre recusa
-    // A ação deve adicionar o ID do motorista em um array/tabela de rejected_by
-    // (motoristas que ignoraram a rota), para que a Stream pare de enviar essa mesma corrida.
+  Future<void> rejectOffer() async {
+    // [VUP MODULAR] Notificar Supabase sobre recusa
+    try {
+      final userId = Supabase.instance.client.auth.currentUser?.id;
+      
+      if (userId != null && activeOrders.isNotEmpty) {
+        final ids = activeOrders.map((o) => o.id).toList();
+        await _rideRepository.rejectRides(ids, userId);
+      }
+    } catch (e) {
+      debugPrint('Erro ao notificar recusa: $e');
+    }
     
-    // Por enquanto, limpamos a UI localmente.
-    // A Stream pode enviar de novo se o backend não for atualizado.
     activeOrders.clear();
     reset();
   }
@@ -358,11 +365,27 @@ class RideStateMachine extends GetxController {
 
   // ── Internos ──
 
-  /// Mock de webhook/push notification para o painel do gestor.
-  void _dispatchPickupNotification() {
+  /// Webhook/push notification para o painel do gestor via Edge Function.
+  Future<void> _dispatchPickupNotification() async {
     if (activeOrders.isEmpty) return;
 
-    // TODO: Substituir por chamada real ao Supabase Edge Function / API
+    try {
+      // [VUP SENIOR] Chamada real ao Supabase Edge Function para notificar chegada na coleta
+      // Isso dispara o push para o lojista preparar os pacotes.
+      final first = activeOrders.first;
+      await Supabase.instance.client.functions.invoke(
+        'notify-pickup-arrival',
+        body: {
+          'driver_id': first.driverId,
+          'ride_ids': activeOrders.map((o) => o.id).toList(),
+          'timestamp': DateTime.now().toUtc().toIso8601String(),
+        },
+      );
+      debugPrint('>>> [EDGE] Notificação de coleta enviada com sucesso.');
+    } catch (e) {
+      debugPrint('>>> [EDGE] Falha ao notificar coleta (Edge Function): $e');
+      // Não rethrow para não travar o fluxo do motorista se a notificação falhar
+    }
   }
 }
 

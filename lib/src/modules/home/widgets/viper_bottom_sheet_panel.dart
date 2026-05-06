@@ -86,14 +86,22 @@ class ViperBottomSheetPanelState extends State<ViperBottomSheetPanel> {
     );
 
     if (allDone) {
+      // [VUP MODULAR] Cálculo baseado em dados reais de driver_value
+      final totalBaseValue = allOrders.fold<double>(0, (sum, o) => sum + o.driverValue);
+      final countSuccess = allOrders.where((o) => o.status == RideStatus.completed).length;
+      final countFailed = allOrders.where((o) => o.status == RideStatus.failed || o.status == RideStatus.returned).length;
+      
+      // Bônus se houver (ex: taxa de deslocamento extra ou bônus por sucesso total)
+      final bonus = allOrders.every((o) => o.status == RideStatus.completed) ? 5.0 : 0.0;
+
       final summary = RideExecutionSummary(
         rideIds: allOrders.map((o) => o.id).toList(),
-        baseValue: 15.0, // TODO: Calc baseado em dados reais
-        successBonus: 0.0,
+        baseValue: totalBaseValue,
+        successBonus: bonus,
         attemptFee: 0.0,
-        totalValue: 15.0,
-        countSuccess: allOrders.where((o) => o.status == RideStatus.completed).length,
-        countFailed: allOrders.where((o) => o.status == RideStatus.failed || o.status == RideStatus.returned).length,
+        totalValue: totalBaseValue + bonus,
+        countSuccess: countSuccess,
+        countFailed: countFailed,
       );
 
       showModalBottomSheet(

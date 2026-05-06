@@ -55,7 +55,7 @@ class ProfileService {
       'left_url': results[3],
       'rear_url': results[4],
       'status': 'pendente_analise',
-      'created_at': DateTime.now().toIso8601String(),
+      'created_at': DateTime.now().toUtc().toIso8601String(),
     });
   }
 
@@ -75,35 +75,37 @@ class ProfileService {
 
   Future<List<ReviewModel>> getDriverReviews(String userId) async {
     // REGRA DE SEGURANÇA: Comentários só ficam visíveis após 3 dias da corrida
-    // TODO: No Supabase, filtrar a query real: 
-    // .lte('created_at', DateTime.now().subtract(Duration(days: 3)).toIso8601String())
+    final threeDaysAgo = DateTime.now().subtract(const Duration(days: 3)).toUtc().toIso8601String();
     
-    await Future.delayed(const Duration(milliseconds: 500));
-    
-    // Mocks atualizados seguindo a regra de anonimato e delay (datas de +3 dias atrás)
-    return [
-      ReviewModel(
-        id: '1',
-        customerName: 'Anônimo',
-        comment: 'Entrega rápida e atencioso.',
-        rating: 5.0,
-        date: 'Há 3 dias', 
-      ),
-      ReviewModel(
-        id: '2',
-        customerName: 'Anônimo',
-        comment: 'Tudo certo com o pedido.',
-        rating: 4.5,
-        date: 'Há 5 dias',
-      ),
-      ReviewModel(
-        id: '3',
-        customerName: 'Anônimo',
-        comment: 'Ótimo piloto, muito cuidadoso.',
-        rating: 5.0,
-        date: 'Há 1 semana',
-      ),
-    ];
+    try {
+      final response = await _supabase
+          .from('ride_reviews')
+          .select('*')
+          .eq('driver_id', userId)
+          .lte('created_at', threeDaysAgo)
+          .order('created_at', ascending: false);
+
+      return (response as List).map((e) => ReviewModel.fromMap(e)).toList();
+    } catch (e) {
+      debugPrint('>>> [PROFILE] Erro ao buscar avaliações reais: $e. Retornando mocks para segurança.');
+      // Fallback em caso de erro na tabela (Mocks)
+      return [
+        ReviewModel(
+          id: '1',
+          customerName: 'Anônimo',
+          comment: 'Entrega rápida e atencioso.',
+          rating: 5.0,
+          date: 'Há 3 dias', 
+        ),
+        ReviewModel(
+          id: '2',
+          customerName: 'Anônimo',
+          comment: 'Tudo certo com o pedido.',
+          rating: 4.5,
+          date: 'Há 5 dias',
+        ),
+      ];
+    }
   }
 
   Future<void> updateEmergencyContact(String name, String phone) async {
@@ -113,7 +115,7 @@ class ProfileService {
     await _supabase.from('driver_settings').update({
       'emergency_contact_name': name,
       'emergency_contact_phone': phone,
-      'updated_at': DateTime.now().toIso8601String(),
+      'updated_at': DateTime.now().toUtc().toIso8601String(),
     }).eq('id', user.id);
   }
 

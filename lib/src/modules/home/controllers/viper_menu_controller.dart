@@ -1,17 +1,20 @@
+import 'dart:async';
 import 'dart:io';
 
-import 'package:flutter/foundation.dart'; // For debugPrint
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:viper_delivery/src/core/services/location_service.dart';
 import 'package:viper_delivery/src/models/driver_model.dart';
 import 'package:viper_delivery/src/models/ride_model.dart';
+import 'package:viper_delivery/src/models/vehicle_model.dart';
 import 'package:viper_delivery/src/modules/onboarding/services/upload_service.dart';
 
 class ViperMenuController extends GetxController {
   final SupabaseClient _supabase = Supabase.instance.client;
   final UploadService _uploadService = UploadService();
+  StreamSubscription? _profileSubscription;
   
   bool isLoading = false;
   DriverModel? driverProfile;
@@ -35,20 +38,16 @@ class ViperMenuController extends GetxController {
   Future<void> fetchAllData() async {
     debugPrint('[!!! VIPER !!!] MenuController: Iniciando fetchAllData...');
     _setLoading(true);
+    // Limpeza de cache local (reset)
+    driverProfile = null;
     errorMessage = null;
     
     try {
       final user = _supabase.auth.currentUser;
       if (user == null) throw Exception('Sessão expirada. Faça login novamente.');
 
-      // 1. Fetch Profile and Vehicle data (Joined)
-      final profileResponse = await _supabase
-          .from('profiles')
-          .select('*, vehicles(*)')
-           .eq('id', user.id)
-          .single();
-      
-      driverProfile = DriverModel.fromMap(profileResponse);
+      // 1. Fetch Profile and Vehicle data (Surgical Sync)
+      await _updateVehicleInfo(user.id);
       
       // FALLBACK SÊNIOR: Se não estiver no banco, tenta pegar nos metadados do Auth
       if (driverProfile?.avatarUrl == null || driverProfile!.avatarUrl!.isEmpty) {
@@ -82,7 +81,39 @@ class ViperMenuController extends GetxController {
       errorMessage = 'Erro ao carregar dados: ${e.toString()}';
       debugPrint('[!!! VIPER !!!] ERROR no MenuController: $e');
     } finally {
+      // Iniciar Listener Real-time para o Perfil (Sincronia com Dashboard)
+      final user = _supabase.auth.currentUser;
+      if (user != null) {
+        _startProfileListener(user.id);
+      }
       _setLoading(false);
+    }
+  }
+
+  /// Busca dados reais do veículo no Supabase (Surgical Sync)
+  Future<void> _updateVehicleInfo(String userId) async {
+    try {
+      // 1. Busca perfil base
+      final profileRes = await _supabase.from('profiles').select().eq('id', userId).maybeSingle();
+      if (profileRes != null) {
+        driverProfile = DriverModel.fromMap(profileRes);
+      }
+
+      // 2. Busca veículo separadamente para garantir dados reais
+      final vehicleRes = await _supabase
+          .from('vehicles')
+          .select()
+          .eq('driver_id', userId)
+          .maybeSingle();
+      
+      if (vehicleRes != null && driverProfile != null) {
+        final vehicle = VehicleModel.fromMap(vehicleRes);
+        driverProfile = driverProfile!.copyWith(vehicles: [vehicle]);
+      }
+      
+      update();
+    } catch (e) {
+      debugPrint('>>> [SYNC] Erro ao sincronizar veículo: $e');
     }
   }
 
@@ -96,7 +127,7 @@ class ViperMenuController extends GetxController {
           .from('trips')
           .select('amount, completed_at')
           .eq('driver_id', userId)
-          .gte('completed_at', startOfMonth.toIso8601String())
+          .gte('completed_at', startOfMonth.toUtc().toIso8601String())
           .order('completed_at');
 
       final List<dynamic> data = response as List<dynamic>;
@@ -109,14 +140,17 @@ class ViperMenuController extends GetxController {
       monthlyDeliveries = 0;
 
       for (var trip in data) {
-        final date = DateTime.parse(trip['completed_at']);
+        if (trip['completed_at'] == null) continue;
+        
+        // Converte para local para exibição e métricas diárias/semanais
+        final date = DateTime.parse(trip['completed_at']).toLocal();
         final amount = (trip['amount'] as num).toDouble();
 
         // Total Mensal
         monthlyEarnings += amount;
         monthlyDeliveries++;
 
-        // Faturamento Diário (Hoje)
+        // Faturamento Diário (Hoje) - Comparação segura em fuso local
         if (date.day == now.day && date.month == now.month && date.year == now.year) {
           dailyEarnings += amount;
           dailyDeliveries++;
@@ -160,9 +194,74 @@ class ViperMenuController extends GetxController {
     }
   }
 
+  /// Solicita o repasse dos ganhos via PIX.
+  Future<void> requestWithdrawal() async {
+    if (dailyEarnings <= 0) {
+      Get.snackbar('Saldo Insuficiente', 'Você não possui saldo para sacar hoje.',
+          backgroundColor: const Color(0xFFFF4444), colorText: Colors.white);
+      return;
+    }
+
+    _setLoading(true);
+    try {
+      final user = _supabase.auth.currentUser;
+      if (user == null) throw Exception('Sessão expirada.');
+
+      // 1. Inserir solicitação na tabela de saques (ou trips_settlements)
+      await _supabase.from('wallet_withdrawals').insert({
+        'driver_id': user.id,
+        'amount': dailyEarnings,
+        'pix_key': driverProfile?.pixKey,
+        'status': 'pendente',
+        'requested_at': DateTime.now().toUtc().toIso8601String(),
+      });
+
+      // 2. Mock: Reduzir saldo localmente para feedback visual (o banco processará o débito real)
+      final amountRequested = dailyEarnings;
+      dailyEarnings = 0.0;
+      
+      Get.snackbar('Sucesso!', 'Saque de R\$ ${amountRequested.toStringAsFixed(2)} solicitado com sucesso.',
+          backgroundColor: const Color(0xFF00FF88), colorText: Colors.black);
+      
+      update();
+    } catch (e) {
+      debugPrint('[!!! VIPER !!!] Erro ao solicitar saque: $e');
+      Get.snackbar('Erro no Saque', 'Não foi possível processar sua solicitação agora.',
+          backgroundColor: const Color(0xFFFF4444), colorText: Colors.white);
+    } finally {
+      _setLoading(false);
+    }
+  }
+
   void _setLoading(bool value) {
     isLoading = value;
     update();
+  }
+
+  void _startProfileListener(String userId) {
+    _profileSubscription?.cancel();
+    _profileSubscription = _supabase
+        .from('profiles')
+        .stream(primaryKey: ['id'])
+        .eq('id', userId)
+        .listen((data) {
+          if (data.isNotEmpty) {
+            // BLINDAGEM: Preserva veículo antes do stream sobrescrever
+            final currentVehicles = driverProfile?.vehicles;
+            driverProfile = DriverModel.fromMap(data.first);
+            // Devolve o veículo que o stream não carrega (tabela separada)
+            if (currentVehicles != null && currentVehicles.isNotEmpty) {
+              driverProfile = driverProfile?.copyWith(vehicles: currentVehicles);
+            }
+            update();
+          }
+        });
+  }
+
+  @override
+  void onClose() {
+    _profileSubscription?.cancel();
+    super.onClose();
   }
 
   Future<void> finalizeRide({
@@ -197,6 +296,7 @@ class ViperMenuController extends GetxController {
               'receiver_name': receiverName,
               'receiver_cpf': receiverCpf,
               'proof_photo_url': photoUrl,
+              'completed_at': DateTime.now().toUtc().toIso8601String(),
             })
             .inFilter('id', rideIds);
       }

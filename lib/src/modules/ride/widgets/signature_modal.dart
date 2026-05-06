@@ -5,11 +5,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:viper_delivery/src/models/ride_model.dart';
 import 'package:viper_delivery/src/modules/ride/controllers/ride_state_machine.dart';
 import 'package:viper_delivery/src/modules/ride/services/delivery_proof_service.dart';
 import 'package:viper_delivery/src/modules/ride/services/upload_queue_service.dart';
-import 'package:path_provider/path_provider.dart';
 
 /// Modal de assinatura do cliente estruturado em DOIS PASSOS (Padrão Enterprise):
 /// Passo 1: Formulário de Coleta de Dados (Portrait - Vertical).
@@ -128,6 +128,9 @@ class _SignatureDialogState extends State<_SignatureDialog> {
     );
     
     if (photo != null) {
+      final fileSizeKb = (await File(photo.path).length()) / 1024;
+      debugPrint('>>> [MODAL] Foto capturada: ${photo.path} (${fileSizeKb.toStringAsFixed(2)} KB)');
+      
       setState(() {
         _photoFile = photo;
         _step = 3; // Passo 1.5: Preview View
@@ -159,7 +162,7 @@ class _SignatureDialogState extends State<_SignatureDialog> {
       _concluirEFechar('Entrega concluída! Sincronizando comprovante...');
     } else {
       setState(() => _isUploading = false);
-      _mostrarErroEnvio();
+      _mostrarErroEnvio(message: 'Falha no banco de dados. Verifique o sinal ou contate o suporte.');
     }
   }
 
@@ -189,14 +192,15 @@ class _SignatureDialogState extends State<_SignatureDialog> {
     Navigator.of(context).pop(true);
   }
 
-  void _mostrarErroEnvio() {
+  void _mostrarErroEnvio({String? message}) {
     if (!mounted) return;
     Get.snackbar(
       'Erro na Finalização',
-      'Não foi possível atualizar o status da entrega. Verifique sua conexão.',
+      message ?? 'Não foi possível atualizar o status da entrega. Verifique sua conexão.',
       backgroundColor: Colors.red,
       colorText: Colors.white,
       snackPosition: SnackPosition.TOP,
+      duration: const Duration(seconds: 5),
     );
   }
 
@@ -219,7 +223,7 @@ class _SignatureDialogState extends State<_SignatureDialog> {
     }
 
     setState(() => _isUploading = true);
-    debugPrint('>>> [MODAL] Finalização Otimista por ASSINATURA...');
+    debugPrint('>>> [MODAL] Iniciando processamento de assinatura para ID: ${widget.rideId}');
 
     try {
       // 1. Converter Canvas para Imagem (PNG Bytes)
@@ -244,7 +248,8 @@ class _SignatureDialogState extends State<_SignatureDialog> {
       }
 
       final picture = recorder.endRecording();
-      final img = await picture.toImage(1000, 400); 
+      // Resolução ultra reduzida (400x160) para garantir arquivos < 50kb
+      final img = await picture.toImage(400, 160); 
       final byteData = await img.toByteData(format: ui.ImageByteFormat.png);
       final bytes = byteData!.buffer.asUint8List();
 
@@ -252,8 +257,11 @@ class _SignatureDialogState extends State<_SignatureDialog> {
       final tempDir = await getTemporaryDirectory();
       final tempFile = File('${tempDir.path}/temp_sig_${widget.rideId}.png');
       await tempFile.writeAsBytes(bytes);
+      
+      final fileSizeKb = (await tempFile.length()) / 1024;
+      debugPrint('>>> [MODAL] Assinatura salva: ${tempFile.path} (${fileSizeKb.toStringAsFixed(2)} KB)');
 
-      // 3. Update de Status Imediato
+      // 3. Update de Status Imediato (ISOLA ERRO: BANCO PRIMEIRO)
       final success = await _proofService.updateStatusOnly(widget.rideId);
 
       if (success) {
@@ -269,11 +277,11 @@ class _SignatureDialogState extends State<_SignatureDialog> {
 
         _concluirEFechar('Entrega concluída com sucesso!');
       } else {
-        _mostrarErroEnvio();
+        _mostrarErroEnvio(message: 'Erro ao persistir status. Tente novamente.');
       }
     } catch (e) {
       debugPrint('>>> [MODAL] ERRO CRÍTICO NO PROCESSAMENTO: $e');
-      _mostrarErroEnvio();
+      _mostrarErroEnvio(message: 'Erro interno: $e');
     } finally {
       if (mounted) setState(() => _isUploading = false);
     }
