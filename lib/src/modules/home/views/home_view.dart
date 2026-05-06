@@ -21,6 +21,7 @@ import 'package:viper_delivery/src/modules/home/widgets/viper_menu_central.dart'
 import 'package:viper_delivery/src/modules/home/widgets/viper_offer_overlay.dart';
 import 'package:viper_delivery/src/modules/map/controllers/map_controller.dart';
 import 'package:viper_delivery/src/modules/profile/controllers/performance_controller.dart';
+import 'package:viper_delivery/src/modules/profile/controllers/profile_controller.dart';
 import 'package:viper_delivery/src/modules/ride/controllers/ride_state_machine.dart';
 import 'package:viper_delivery/src/modules/ride/services/upload_queue_service.dart';
 
@@ -49,6 +50,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
+    Get.put(ProfileController()); // [SOS] Injeção Cirúrgica
     WidgetsBinding.instance.addObserver(this);
     
     // Wiring: MapController precisa da key do mapa
@@ -450,6 +452,4 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
         );
     });
   }
-
 }
-

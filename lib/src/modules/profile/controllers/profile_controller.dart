@@ -11,7 +11,6 @@ import 'package:viper_delivery/src/core/services/haptic_service.dart';
 import 'package:viper_delivery/src/models/driver_model.dart';
 import 'package:viper_delivery/src/modules/profile/models/profile_reputation_model.dart';
 import 'package:viper_delivery/src/modules/profile/services/profile_service.dart';
-import 'package:viper_delivery/src/modules/profile/widgets/emergency_contact_modal.dart';
 
 class ProfileController extends GetxController {
   final ProfileService _profileService = ProfileService();
@@ -170,72 +169,32 @@ class ProfileController extends GetxController {
 
   Future<void> dispararSosElite() async {
     HapticService.vibrateViperEmergency(); // INICIA VIBRAÇÃO DE EMERGÊNCIA
-    // DIAGNÓSTICO PASSO 1
-    Get.snackbar('DEBUG', '1. Botão pressionado!', 
-      backgroundColor: Colors.blue, colorText: Colors.white, snackPosition: SnackPosition.TOP);
 
-    if (emergencyPhone.value.isEmpty) {
-      Get.snackbar('AVISO', 'Cadastre um contato de emergência primeiro!', 
-        backgroundColor: Colors.orange, colorText: Colors.black);
-      
-      // Abre o modal automaticamente se estiver vazio
-      Get.bottomSheet(
-        EmergencyContactModal(controller: this),
-        isScrollControlled: true,
-      );
-      HapticService.stopVibration(); // PARA SE PRECISAR CADASTRAR
-      return;
-    }
+    // Se não houver telefone, tenta a polícia (190) como fallback absoluto
+    final String targetPhone = emergencyPhone.value.isNotEmpty ? emergencyPhone.value : '190';
 
     try {
-      // DIAGNÓSTICO PASSO 2
-      Get.snackbar('DEBUG', '2. Pedindo permissão de GPS...', 
-        backgroundColor: Colors.blue, colorText: Colors.white, snackPosition: SnackPosition.TOP);
-
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) {
-          Get.snackbar('ERRO', 'Permissão de GPS negada pelo usuário.', 
-            backgroundColor: Colors.red, colorText: Colors.white);
-          HapticService.stopVibration();
-          return;
-        }
       }
 
-      if (permission == LocationPermission.deniedForever) {
-        Get.snackbar('ERRO', 'Permissão de GPS bloqueada permanentemente. Vá em Ajustes.', 
-          backgroundColor: Colors.red, colorText: Colors.white);
-        HapticService.stopVibration();
-        return;
-      }
-
-      Position position = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.high,
-        ),
-      );
-
-      String mapLink = 'https://www.google.com/maps?q=${position.latitude},${position.longitude}';
-      String mensagem = '🚨 SOS VIPER! Preciso de ajuda urgente. Minha localização: $mapLink';
+      // Abre o discador (Dialer) conforme solicitado
+      final Uri telUri = Uri(scheme: 'tel', path: targetPhone);
       
-      // DIAGNÓSTICO PASSO 3
-      Get.snackbar('DEBUG', '3. GPS OK! Abrindo SMS...', 
-        backgroundColor: Colors.green, colorText: Colors.white, snackPosition: SnackPosition.TOP);
-
-      // PADRÃO ANDROID 14 EXCLUSIVO
-      final Uri smsUri = Uri(
-        scheme: 'sms',
-        path: emergencyPhone.value,
-        queryParameters: <String, String>{'body': mensagem},
-      );
-
-      await launchUrl(smsUri, mode: LaunchMode.externalApplication);
+      if (await canLaunchUrl(telUri)) {
+        await launchUrl(telUri, mode: LaunchMode.externalApplication);
+      } else {
+        Get.snackbar('ERRO', 'Não foi possível abrir o discador.', 
+          backgroundColor: Colors.red, colorText: Colors.white);
+      }
 
     } catch (e) {
       debugPrint("🔥 [SOS] ERRO FATAL: $e");
       Get.snackbar('ERRO CRÍTICO', 'Falha no disparo: $e', 
         backgroundColor: Colors.red, colorText: Colors.white);
+    } finally {
+      HapticService.stopVibration();
     }
   }
 
