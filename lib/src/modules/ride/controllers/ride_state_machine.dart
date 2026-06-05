@@ -122,41 +122,40 @@ class RideStateMachine extends GetxController {
     // Se houver novas corridas e for frotista, processamos silenciosamente
     try {
       final isRegistered = Get.isRegistered<HomeController>();
-      if (isRegistered) {
-        final homeController = Get.find<HomeController>();
-        if (homeController.isCompanyDriver && newRides.isNotEmpty) {
-          debugPrint('>>> [VUP SILENT] Novas rotas detectadas para Frotista. Processando...');
-          
-          // Alerta Sonoro e Vibratório (Beep Curto + Haptic)
-          SystemSound.play(SystemSoundType.click);
-          Vibration.vibrate(duration: 100);
+      final isCompanyDriver = isRegistered ? Get.find<HomeController>().isCompanyDriver : false;
+      if (isCompanyDriver && newRides.isNotEmpty) {
+        debugPrint('>>> [VUP SILENT] Novas rotas detectadas para Frotista. Processando...');
+        
+        // Alerta Sonoro e Vibratório (Beep Curto + Haptic)
+        SystemSound.play(SystemSoundType.click);
+        Vibration.vibrate(duration: 100);
 
-          // Notificação Visual (Mini-Card / Toast)
-          _showSilentNotification(newRides.first);
+        // Notificação Visual (Mini-Card / Toast)
+        _showSilentNotification(newRides.first);
 
-          // Integração Automática: Reordenar Rota (Vizinho Mais Próximo)
-          if (currentState.value == RideState.onDeliveryRoute || currentState.value == RideState.goingToPickup) {
-            final mapController = Get.find<MapController>();
-            final first = rides.first;
-            final optimized = await mapController.optimizeAndTraceDeliveries(
-              pickupLat: first.pickupLat,
-              pickupLng: first.pickupLng,
-              orders: rides,
-            );
-            activeOrders.assignAll(optimized);
-          } else if (currentState.value == RideState.idle || currentState.value == RideState.offerReceived) {
-            // Se estava parado, aceita a oferta automaticamente
-            final first = rides.first;
-            acceptOffer(first.lat.toString(), first.lng.toString());
-          }
+        // Integração Automática: Reordenar Rota (Vizinho Mais Próximo)
+        if (currentState.value == RideState.onDeliveryRoute || currentState.value == RideState.goingToPickup) {
+          final mapController = Get.find<MapController>();
+          final first = rides.first;
+          final optimized = await mapController.optimizeAndTraceDeliveries(
+            pickupLat: first.pickupLat,
+            pickupLng: first.pickupLng,
+            orders: rides,
+          );
+          activeOrders.assignAll(optimized);
+        } else if (currentState.value == RideState.idle || currentState.value == RideState.offerReceived) {
+          // Se estava parado, aceita a oferta automaticamente
+          final first = rides.first;
+          acceptOffer(first.lat.toString(), first.lng.toString());
         }
       }
     } catch (e) {
       debugPrint('Erro ao processar silent assignment: $e');
     }
 
+    final String currentDriverId = Supabase.instance.client.auth.currentUser?.id ?? '';
     final hasAssignedOrSearching = rides.any(
-      (r) => r.status == RideStatus.assigned || r.status == RideStatus.searching,
+      (r) => r.status == RideStatus.searching || (r.status == RideStatus.assigned && r.driverId == currentDriverId),
     );
     final isGoingToPickup = rides.any(
       (r) => r.status == RideStatus.goingToPickup,
@@ -174,8 +173,20 @@ class RideStateMachine extends GetxController {
           r.status == RideStatus.returned,
     );
 
-    if (isReturnedOrCompleted) {
-      if (currentState.value != RideState.routeCompleted) {
+    if (hasAssignedOrSearching) {
+      // CONVITE: Entra em modo oferta em vez de ir direto para coleta
+      final isRegistered = Get.isRegistered<HomeController>();
+      final isCompanyDriver = isRegistered ? Get.find<HomeController>().isCompanyDriver : false;
+      if (!isCompanyDriver && currentState.value != RideState.offerReceived) {
+        final ride = rides.firstWhere((r) => r.status == RideStatus.searching || (r.status == RideStatus.assigned && r.driverId == currentDriverId));
+        debugPrint('🚨 [UI GATILHO] Tentando abrir o Card para a corrida: ${ride.id}');
+        currentState.value = RideState.offerReceived;
+        onOfferReceived?.call();
+      }
+    } else if (isReturnedOrCompleted) {
+      if (currentState.value != RideState.routeCompleted &&
+          currentState.value != RideState.idle &&
+          currentState.value != RideState.offerReceived) {
         completeRoute();
       }
     } else if (isOnDeliveryRoute) {
@@ -184,16 +195,6 @@ class RideStateMachine extends GetxController {
       currentState.value = RideState.arrivedAtPickup;
     } else if (isGoingToPickup) {
       currentState.value = RideState.goingToPickup;
-    } else if (hasAssignedOrSearching && currentState.value == RideState.idle) {
-      // CONVITE: Entra em modo oferta em vez de ir direto para coleta
-      final isRegistered = Get.isRegistered<HomeController>();
-      if (isRegistered) {
-        final homeController = Get.find<HomeController>();
-        if (!homeController.isCompanyDriver) {
-          currentState.value = RideState.offerReceived;
-          onOfferReceived?.call();
-        }
-      }
     }
   }
 

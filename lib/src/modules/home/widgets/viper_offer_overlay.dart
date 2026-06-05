@@ -53,6 +53,20 @@ class _ViperOfferOverlayState extends State<ViperOfferOverlay> with SingleTicker
     super.dispose();
   }
 
+  String _safeFormat(double? value) {
+    if (value == null || value.isNaN || value.isInfinite || value <= 0.0) {
+      return '0,00';
+    }
+    return value.toStringAsFixed(2).replaceAll('.', ',');
+  }
+
+  String _safeFormatDistance(double? value) {
+    if (value == null || value.isNaN || value.isInfinite || value <= 0.0) {
+      return '0,0';
+    }
+    return value.toStringAsFixed(1).replaceAll('.', ',');
+  }
+
   @override
   Widget build(BuildContext context) {
     final bgColor = widget.isDark ? const Color(0xFF1E1E1E) : Colors.white;
@@ -162,7 +176,7 @@ class _ViperOfferOverlayState extends State<ViperOfferOverlay> with SingleTicker
                     
                     // VALOR (Destaque Máximo)
                     Text(
-                      'R\$ ${widget.offer.valorTotal.toStringAsFixed(2)}',
+                      'R\$ ${_safeFormat(widget.offer.valorTotal)}',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: widget.offer.isSuper ? 54 : 32,
@@ -176,7 +190,7 @@ class _ViperOfferOverlayState extends State<ViperOfferOverlay> with SingleTicker
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
-                          'Ida: R\$ 0,85/km  |  Rota: R\$ ${widget.offer.valorKmRota.toStringAsFixed(2)}/km',
+                          'Ida: R\$ 0,85/km  |  Rota: R\$ ${_safeFormat(widget.offer.valorKmRota)}/km',
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 11,
@@ -189,7 +203,7 @@ class _ViperOfferOverlayState extends State<ViperOfferOverlay> with SingleTicker
                           const SizedBox(width: 8),
                           const Icon(Icons.bolt, color: Colors.greenAccent, size: 14),
                           Text(
-                            '+ R\$ ${widget.offer.priorityBoost.toStringAsFixed(2)}',
+                            '+ R\$ ${_safeFormat(widget.offer.priorityBoost)}',
                             style: const TextStyle(color: Colors.greenAccent, fontWeight: FontWeight.bold, fontSize: 11),
                           ),
                         ],
@@ -198,9 +212,9 @@ class _ViperOfferOverlayState extends State<ViperOfferOverlay> with SingleTicker
                     const SizedBox(height: 12),
   
                     // Print Style Body
-                    _buildStatRow('Distância Total', '${widget.offer.distanciaTotal.toStringAsFixed(1)} KM', widget.isDark),
-                    _buildStatRow('Deslocamento até Coleta', '${widget.offer.distanciaDeslocamento.toStringAsFixed(1)} KM', widget.isDark),
-                    _buildStatRow('Valor por KM', 'R\$ ${widget.offer.valorPorKm.toStringAsFixed(2)}', widget.isDark),
+                    _buildStatRow('Distância Total', '${_safeFormatDistance(widget.offer.distanciaTotal)} KM', widget.isDark),
+                    _buildStatRow('Deslocamento até Coleta', '${_safeFormatDistance(widget.offer.distanciaDeslocamento)} KM', widget.isDark),
+                    _buildStatRow('Valor por KM', 'R\$ ${_safeFormat(widget.offer.valorPorKm)}', widget.isDark),
                     const Divider(height: 32),
   
                     // Locations
@@ -387,7 +401,7 @@ class _ViperOfferOverlayState extends State<ViperOfferOverlay> with SingleTicker
                         const Icon(Icons.priority_high, color: Colors.white, size: 14),
                         const SizedBox(width: 4),
                         Text(
-                          'URGENTE + R\$ ${widget.offer.priorityBoost.toStringAsFixed(2)}',
+                          'URGENTE + R\$ ${_safeFormat(widget.offer.priorityBoost)}',
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 12,

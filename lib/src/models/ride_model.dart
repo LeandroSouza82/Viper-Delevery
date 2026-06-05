@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 
 enum RideType { entrega, coleta, outros }
@@ -46,6 +47,7 @@ class RideModel {
   final RideStatus status;
   final String? observations;
   final String? failureReason;
+  final dynamic destinationPoints;
 
   RideModel({
     required this.id,
@@ -63,7 +65,10 @@ class RideModel {
     this.status = RideStatus.searching,
     this.observations,
     this.failureReason,
+    this.destinationPoints,
   });
+
+  factory RideModel.fromJson(Map<String, dynamic> json) => RideModel.fromMap(json);
 
   factory RideModel.fromMap(Map<String, dynamic> map) {
     // Parser for RideType
@@ -86,6 +91,13 @@ class RideModel {
       case 'returned': rStatus = RideStatus.returned; break;
     }
 
+    dynamic destPoints = map['destination_points'];
+    if (destPoints is String && destPoints.isNotEmpty) {
+      try {
+        destPoints = jsonDecode(destPoints);
+      } catch (_) {}
+    }
+
     return RideModel(
       id: map['id']?.toString() ?? '',
       driverId: map['driver_id']?.toString() ?? '',
@@ -102,12 +114,14 @@ class RideModel {
       status: rStatus,
       observations: map['observations']?.toString(),
       failureReason: map['failure_reason']?.toString(),
+      destinationPoints: destPoints,
     );
   }
 
   RideModel copyWith({
     RideStatus? status,
     String? failureReason,
+    dynamic destinationPoints,
   }) {
     return RideModel(
       id: id,
@@ -125,6 +139,7 @@ class RideModel {
       status: status ?? this.status,
       observations: observations,
       failureReason: failureReason ?? this.failureReason,
+      destinationPoints: destinationPoints ?? this.destinationPoints,
     );
   }
 }

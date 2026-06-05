@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 
@@ -56,7 +57,7 @@ class PermissionHelper {
     }
 
     // 3. Localização (Background) - "Sempre permitir"
-    if (await Permission.location.isGranted) {
+    if (!kIsWeb && await Permission.location.isGranted) {
       var bgStatus = await Permission.locationAlways.status;
       if (!context.mounted) return false;
 
@@ -73,33 +74,37 @@ class PermissionHelper {
     }
 
     // 4. Otimização de Bateria
-    var batteryStatus = await Permission.ignoreBatteryOptimizations.status;
-    if (!context.mounted) return false;
-
-    if (!batteryStatus.isGranted) {
-      await showExplanationDialog(
-        context,
-        title: 'Desempenho da Bateria',
-        message: 'Para garantir que o app não seja suspenso pelo sistema, desative a otimização de bateria para o Viper Delivery.',
-      );
+    if (!kIsWeb) {
+      var batteryStatus = await Permission.ignoreBatteryOptimizations.status;
       if (!context.mounted) return false;
 
-      await Permission.ignoreBatteryOptimizations.request();
+      if (!batteryStatus.isGranted) {
+        await showExplanationDialog(
+          context,
+          title: 'Desempenho da Bateria',
+          message: 'Para garantir que o app não seja suspenso pelo sistema, desative a otimização de bateria para o Viper Delivery.',
+        );
+        if (!context.mounted) return false;
+
+        await Permission.ignoreBatteryOptimizations.request();
+      }
     }
 
     // 5. Sobreposição de Sistema (Overlay)
-    var overlayStatus = await Permission.systemAlertWindow.status;
-    if (!context.mounted) return false;
-
-    if (!overlayStatus.isGranted) {
-      await showExplanationDialog(
-        context,
-        title: 'Sobreposição de Tela',
-        message: 'Para receber ofertas enquanto usa o Waze ou Google Maps, ative a sobreposição para o Viper Delivery na próxima tela.',
-      );
+    if (!kIsWeb) {
+      var overlayStatus = await Permission.systemAlertWindow.status;
       if (!context.mounted) return false;
 
-      await Permission.systemAlertWindow.request();
+      if (!overlayStatus.isGranted) {
+        await showExplanationDialog(
+          context,
+          title: 'Sobreposição de Tela',
+          message: 'Para receber ofertas enquanto usa o Waze ou Google Maps, ative a sobreposição para o Viper Delivery na próxima tela.',
+        );
+        if (!context.mounted) return false;
+
+        await Permission.systemAlertWindow.request();
+      }
     }
 
     return true;

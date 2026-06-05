@@ -187,7 +187,10 @@ class ViperBottomSheetPanelState extends State<ViperBottomSheetPanel> {
               ),
               child: Obx(() {
                   final allOrders = widget.rideStateMachine.activeOrders;
-                  final activeOrders = allOrders.where((o) => o.status != RideStatus.completed && o.status != RideStatus.failed && o.status != RideStatus.returned).toList();
+                  final activeOrders = (widget.rideStateMachine.currentState.value == RideState.idle ||
+                          widget.rideStateMachine.currentState.value == RideState.offerReceived)
+                      ? <RideModel>[]
+                      : allOrders.where((o) => o.status != RideStatus.completed && o.status != RideStatus.failed && o.status != RideStatus.returned).toList();
                   final failedOrders = allOrders.where((o) => o.status == RideStatus.failed).toList();
                   
                   return Builder(builder: (context) {

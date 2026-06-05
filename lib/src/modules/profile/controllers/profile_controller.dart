@@ -70,9 +70,9 @@ class ProfileController extends GetxController {
   Future<void> escolherFotoVistoria(String side, bool isCrlv) async {
     final XFile? image = await _picker.pickImage(
       source: ImageSource.camera, // Preferência por câmera para vistoria
-      imageQuality: 70,           // Compressão agressiva conforme solicitado
-      maxWidth: 1024,
-      maxHeight: 1024,
+      imageQuality: 25,           // Compressão extrema (exigência de banda Supabase)
+      maxWidth: 800,
+      maxHeight: 800,
     );
 
     if (image != null) {

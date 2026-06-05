@@ -17,10 +17,26 @@ class RideRepository {
         .stream(primaryKey: ['id'])
         .neq('status', 'pending')
         .order('created_at')
-        .map((data) => data
-            .map((e) => RideModel.fromMap(e))
-            .where((r) => r.status == RideStatus.searching || r.driverId == driverId)
-            .toList());
+        .map((data) {
+          debugPrint('🚨 [REALTIME] Evento bruto do Supabase (Total de linhas: ${data.length}): $data');
+          return data;
+        })
+        .map((data) {
+          final List<RideModel> rides = [];
+          for (final json in data) {
+            debugPrint('🚨 [STREAM CELULAR] Recebeu JSON: $json');
+            try {
+              final model = RideModel.fromMap(json);
+              rides.add(model);
+            } catch (e, stack) {
+              debugPrint('🚨 [ERRO FATAL PARSE MODELO]: $e \n $stack');
+              // Trate o erro para não quebrar o stream inteiro
+            }
+          }
+          return rides
+              .where((r) => r.status == RideStatus.searching || r.driverId == driverId)
+              .toList();
+        });
   }
 
   Future<void> updateRideStatus(String rideId, RideStatus status, {String? failureReason}) async {
@@ -90,6 +106,7 @@ class RideRepository {
       // ou um campo específico de rejeição.
       await _supabase.from('rides').update({
         'status': 'searching', // Volta para o radar
+        'driver_id': null, // Devolve a corrida liberando-a
         'rejected_by': [driverId], // Idealmente seria um append no Postgres
       }).inFilter('id', rideIds);
       

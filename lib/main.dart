@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:viper_delivery/src/core/config/env.dart';
 import 'package:viper_delivery/src/core/services/foreground_service_manager.dart';
 import 'package:viper_delivery/src/modules/auth/guards/auth_guard_view.dart';
 import 'package:viper_delivery/src/modules/auth/views/login_view.dart';
@@ -34,6 +36,9 @@ void callbackDispatcher() {
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Inicializa o token do Mapbox globalmente antes do build
+  MapboxOptions.setAccessToken(Env.mapboxPublicToken);
 
   // [VUP SYNC] Inicialização antecipada e segura do Workmanager
   try {

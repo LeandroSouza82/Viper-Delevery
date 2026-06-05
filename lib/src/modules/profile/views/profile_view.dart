@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:viper_delivery/src/modules/home/controllers/settings_controller.dart';
 import 'package:viper_delivery/src/modules/profile/controllers/profile_controller.dart';
+import 'package:viper_delivery/src/modules/profile/widgets/vehicle_exchange_modal.dart';
 
 import '../widgets/profile_header.dart';
 
@@ -231,15 +232,10 @@ class _ProfileViewState extends State<ProfileView> {
   }
 
   void _showTrocaVeiculoModal(BuildContext context) {
-    final theme = Theme.of(context);
-    Get.snackbar(
-      'Troca de Veículo',
-      'Funcionalidade em desenvolvimento para a próxima versão.',
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: theme.colorScheme.surface,
-      colorText: theme.colorScheme.onSurface,
-      borderWidth: 1,
-      borderColor: theme.colorScheme.onSurface.withValues(alpha: 0.1),
+    Get.bottomSheet(
+      VehicleExchangeModal(controller: controller),
+      isScrollControlled: true,
+      ignoreSafeArea: false,
     );
   }
 }
