@@ -30,11 +30,23 @@ class DeliveryProofService {
         debugPrint('>>> [PAYLOAD-STATUS] Enviando: ${jsonEncode(updateData)}');
         
         // 1. Update na tabela RIDES
-        final response = await _supabase
-            .from('rides')
-            .update(updateData)
-            .eq('id', rideId)
-            .select();
+        final List<dynamic> response;
+        try {
+          response = await _supabase
+              .from('rides')
+              .update(updateData)
+              .eq('id', rideId)
+              .select();
+        } on PostgrestException catch (e) {
+          debugPrint('🚨 [ERRO SUPABASE] Message: ${e.message}');
+          debugPrint('🚨 [ERRO SUPABASE] Code: ${e.code}');
+          debugPrint('🚨 [ERRO SUPABASE] Details: ${e.details}');
+          // Continue exibindo o erro na UI, mas agora com o log detalhado
+          rethrow;
+        } catch (e) {
+          debugPrint('🚨 [ERRO GERAL]: $e');
+          rethrow;
+        }
 
         if (response.isEmpty) {
           debugPrint('>>> [SYNC] Alerta: Update em rides retornou vazio para ID: $rideId');
@@ -132,13 +144,14 @@ class DeliveryProofService {
     }
   }
 
-  /// ESTÁGIO 3: Atualiza metadados e URL
+  /// ESTÁGIO 3: Atualiza metadados e URLs (Assinatura e Foto)
   Future<bool> updateMetadata({
     required String rideId,
     required String receiverName,
     required String document,
     required String relation,
-    String? publicUrl,
+    String? signatureUrl,
+    String? photoUrl,
   }) async {
     try {
       debugPrint('>>> [DB] Iniciando update da rides (completed_at)...');
@@ -150,27 +163,46 @@ class DeliveryProofService {
         'completed_at': DateTime.now().toUtc().toIso8601String(), // Garantindo completed_at aqui também
       };
 
-      if (publicUrl != null && publicUrl.isNotEmpty) {
-        metadata['signature_url'] = publicUrl;
+      if (signatureUrl != null && signatureUrl.isNotEmpty) {
+        metadata['signature_url'] = signatureUrl;
+      }
+      if (photoUrl != null && photoUrl.isNotEmpty) {
+        metadata['proof_photo_url'] = photoUrl;
       }
 
       debugPrint('>>> [PAYLOAD-METADATA] Enviando: ${jsonEncode(metadata)}');
 
-      await _supabase.from('rides').update(metadata).eq('id', rideId);
+      try {
+        await _supabase.from('rides').update(metadata).eq('id', rideId);
+      } on PostgrestException catch (e) {
+        debugPrint('🚨 [ERRO SUPABASE] Message: ${e.message}');
+        debugPrint('🚨 [ERRO SUPABASE] Code: ${e.code}');
+        debugPrint('🚨 [ERRO SUPABASE] Details: ${e.details}');
+        rethrow;
+      } catch (e) {
+        debugPrint('🚨 [ERRO GERAL]: $e');
+        rethrow;
+      }
       debugPrint('>>> [DB] Update finalizado com sucesso para ID: $rideId');
       return true;
     } on PostgrestException catch (e) {
       debugPrint('>>> [ERRO DB] PostgrestException: ${e.code} - ${e.message}');
-      // Fallback para proof_photo_url
-      if (e.message.contains('signature_url') || e.message.contains('column does not exist')) {
-        try {
-          await _supabase
-              .from('rides')
-              .update({'proof_photo_url': publicUrl})
-              .eq('id', rideId);
-          return true;
-        } catch (_) {}
-      }
+      // Fallback: se uma das colunas falhou por não existir no schema cache, tenta com o que der
+      try {
+        final Map<String, dynamic> fallbackData = {
+          'receiver_name': receiverName,
+          'receiver_cpf': document,
+          'receiver_vincule': relation,
+          'updated_at': DateTime.now().toUtc().toIso8601String(),
+          'completed_at': DateTime.now().toUtc().toIso8601String(),
+        };
+        final urlToUse = signatureUrl ?? photoUrl;
+        if (urlToUse != null) {
+          fallbackData['proof_photo_url'] = urlToUse;
+        }
+        await _supabase.from('rides').update(fallbackData).eq('id', rideId);
+        return true;
+      } catch (_) {}
       return false;
     } catch (e) {
       debugPrint('>>> [ERRO DB] Genérico: $e');
@@ -203,7 +235,7 @@ class DeliveryProofService {
       receiverName: receiverName,
       document: document,
       relation: relation,
-      publicUrl: url,
+      signatureUrl: url,
     );
 
     return true;

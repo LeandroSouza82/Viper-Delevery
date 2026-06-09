@@ -97,6 +97,26 @@ class RideStateMachine extends GetxController {
   final activeOrders = <RideModel>[].obs; // LISTA REATIVA GLOBAL
   final RideRepository _rideRepository = RideRepository();
 
+  // ── Dados do Recebedor (persistem entre SignatureModal e ReceiptBottomSheet) ──
+  final lastReceiverName = ''.obs;
+  final lastReceiverCpf = ''.obs;
+  final lastReceiverRelation = ''.obs;
+
+  /// Salva dados do recebedor coletados no SignatureModal para reutilizar no checkout.
+  void saveReceiverData({required String name, required String cpf, String? relation}) {
+    lastReceiverName.value = name;
+    lastReceiverCpf.value = cpf;
+    lastReceiverRelation.value = relation ?? '';
+    debugPrint('>>> [SM] Dados do recebedor salvos: $name / $cpf / $relation');
+  }
+
+  /// Limpa dados do recebedor ao resetar a máquina.
+  void _clearReceiverData() {
+    lastReceiverName.value = '';
+    lastReceiverCpf.value = '';
+    lastReceiverRelation.value = '';
+  }
+
   // ── Callbacks — injetados pelo integrador (HomeView) ──
   VoidCallback? onOfferReceived;
   VoidCallback? onPickupRouteReady;
@@ -359,6 +379,7 @@ class RideStateMachine extends GetxController {
   /// Reseta a máquina para o estado inicial.
   void reset() {
     currentState.value = RideState.idle;
+    _clearReceiverData();
 
     final mapController = Get.find<MapController>();
     mapController.clearRoute();

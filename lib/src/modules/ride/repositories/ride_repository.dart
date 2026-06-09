@@ -61,10 +61,20 @@ class RideRepository {
         
         debugPrint('>>> [PAYLOAD] Enviando para o banco: ${jsonEncode(updateData)}');
         
-        await _supabase
-            .from('rides')
-            .update(updateData)
-            .eq('id', rideId);
+        try {
+          await _supabase
+              .from('rides')
+              .update(updateData)
+              .eq('id', rideId);
+        } on PostgrestException catch (e) {
+          debugPrint('🚨 [ERRO SUPABASE] Message: ${e.message}');
+          debugPrint('🚨 [ERRO SUPABASE] Code: ${e.code}');
+          debugPrint('🚨 [ERRO SUPABASE] Details: ${e.details}');
+          rethrow;
+        } catch (e) {
+          debugPrint('🚨 [ERRO GERAL]: $e');
+          rethrow;
+        }
 
         // [AUDITORIA] Inserção no histórico de mudanças
         try {

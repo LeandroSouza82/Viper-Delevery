@@ -8,6 +8,8 @@ class DeliveryProofStep extends StatefulWidget {
   final Function(String) onCpfChanged;
   final Function(File?) onPhotoChanged;
   final bool isDark;
+  final String? initialName;
+  final String? initialCpf;
 
   const DeliveryProofStep({
     super.key,
@@ -15,6 +17,8 @@ class DeliveryProofStep extends StatefulWidget {
     required this.onCpfChanged,
     required this.onPhotoChanged,
     required this.isDark,
+    this.initialName,
+    this.initialCpf,
   });
 
   @override
@@ -31,6 +35,31 @@ class _DeliveryProofStepState extends State<DeliveryProofStep> {
   
   File? _photo;
   final _picker = ImagePicker();
+
+  @override
+  void initState() {
+    super.initState();
+    // Pré-popula com dados do recebedor já coletados na etapa anterior (SignatureModal)
+    if (widget.initialName != null && widget.initialName!.isNotEmpty) {
+      _nameController.text = widget.initialName!;
+      // Dispara callback para o pai já receber o valor
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        widget.onNameChanged(widget.initialName!);
+      });
+    }
+    if (widget.initialCpf != null && widget.initialCpf!.isNotEmpty) {
+      // Formata o CPF se for apenas dígitos
+      final raw = widget.initialCpf!.replaceAll(RegExp(r'[^0-9]'), '');
+      _cpfFormatter.formatEditUpdate(
+        TextEditingValue.empty,
+        TextEditingValue(text: raw),
+      );
+      _cpfController.text = _cpfFormatter.getMaskedText();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        widget.onCpfChanged(raw);
+      });
+    }
+  }
 
   Future<void> _takePhoto() async {
     final XFile? image = await _picker.pickImage(

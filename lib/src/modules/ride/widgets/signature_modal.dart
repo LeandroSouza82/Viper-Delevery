@@ -74,7 +74,6 @@ class _SignatureDialogState extends State<_SignatureDialog> {
   bool _isUploading = false;
 
   bool get _hasSignature => _strokes.isNotEmpty || _currentStroke.isNotEmpty;
-  bool get _isPhotoFlow => _selectedRelation == 'Locker' || _selectedRelation == 'Correio';
 
   @override
   void initState() {
@@ -98,24 +97,66 @@ class _SignatureDialogState extends State<_SignatureDialog> {
     super.dispose();
   }
 
-  void _avancarParaAcao() async {
+  void _avancarParaAcao() {
     FocusScope.of(context).unfocus(); // Oculta o teclado virtual
 
-    if (_isPhotoFlow) {
-      // Fluxo B (Prova Fotográfica)
-      await _capturarFoto();
-    } else {
-      // Fluxo A (Assinatura)
-      setState(() {
-        _step = 2; // Avança fluxo
-      });
-      
-      // Libera / Força a tela deitada para assinatura (Maximização)
-      SystemChrome.setPreferredOrientations([
-        DeviceOrientation.landscapeLeft,
-        DeviceOrientation.landscapeRight,
-      ]);
+    if (_nameController.text.trim().isEmpty) {
+      Get.snackbar(
+        'Dados Incompletos',
+        'O nome do recebedor é obrigatório.',
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+        snackPosition: SnackPosition.TOP,
+        icon: const Icon(Icons.warning_amber, color: Colors.white),
+      );
+      return;
     }
+
+    if (_documentController.text.trim().isEmpty) {
+      Get.snackbar(
+        'Dados Incompletos',
+        'O RG ou CPF do recebedor é obrigatório.',
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+        snackPosition: SnackPosition.TOP,
+        icon: const Icon(Icons.warning_amber, color: Colors.white),
+      );
+      return;
+    }
+
+    if (_selectedRelation == null || _selectedRelation!.isEmpty) {
+      Get.snackbar(
+        'Dados Incompletos',
+        'Por favor, selecione o vínculo com o destinatário.',
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+        snackPosition: SnackPosition.TOP,
+        icon: const Icon(Icons.warning_amber, color: Colors.white),
+      );
+      return;
+    }
+
+    if (_photoFile == null) {
+      Get.snackbar(
+        'Falta a Foto',
+        'Por favor, registre a prova física (foto da entrega).',
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+        snackPosition: SnackPosition.TOP,
+        icon: const Icon(Icons.camera_alt, color: Colors.white),
+      );
+      return;
+    }
+
+    setState(() {
+      _step = 2; // Avança para Canvas
+    });
+    
+    // Libera / Força a tela deitada para assinatura (Maximização)
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
   }
 
   Future<void> _capturarFoto() async {
@@ -133,36 +174,7 @@ class _SignatureDialogState extends State<_SignatureDialog> {
       
       setState(() {
         _photoFile = photo;
-        _step = 3; // Passo 1.5: Preview View
       });
-    }
-  }
-
-  Future<void> _enviarProvaFotografica() async {
-    if (_photoFile == null) return;
-
-    setState(() => _isUploading = true);
-    debugPrint('>>> [MODAL] Finalização Otimista por FOTO para ID: ${widget.rideId}');
-
-    // 1. Update de Status Imediato (Garante a entrega no banco)
-    final success = await _proofService.updateStatusOnly(widget.rideId);
-
-    if (success) {
-      // 2. Enfileirar Upload em Background
-      final queue = Get.find<UploadQueueService>();
-      await queue.addTask(
-        rideId: widget.rideId,
-        filePath: _photoFile!.path,
-        receiverName: _nameController.text,
-        document: _documentController.text,
-        relation: _selectedRelation == 'Morador' ? 'Morador (${_aptoController.text})' : (_selectedRelation ?? 'Locker'),
-      );
-
-      // 3. Fechar Imediatamente
-      _concluirEFechar('Entrega concluída! Sincronizando comprovante...');
-    } else {
-      setState(() => _isUploading = false);
-      _mostrarErroEnvio(message: 'Falha no banco de dados. Verifique o sinal ou contate o suporte.');
     }
   }
 
@@ -265,14 +277,25 @@ class _SignatureDialogState extends State<_SignatureDialog> {
       final success = await _proofService.updateStatusOnly(widget.rideId);
 
       if (success) {
-        // 4. Enfileirar Background Sync
+        // 4. Persistir dados do recebedor no controller para reutilização no checkout
+        try {
+          final rideSM = Get.find<RideStateMachine>();
+          rideSM.saveReceiverData(
+            name: _nameController.text,
+            cpf: _documentController.text,
+            relation: _selectedRelation,
+          );
+        } catch (_) {}
+
+        // 5. Enfileirar Background Sync (Enviando a assinatura e a foto!)
         final queue = Get.find<UploadQueueService>();
         await queue.addTask(
           rideId: widget.rideId,
-          filePath: tempFile.path,
+          filePath: tempFile.path, // signature file
+          photoPath: _photoFile?.path, // photo file
           receiverName: _nameController.text,
           document: _documentController.text,
-          relation: _selectedRelation ?? 'Próprio',
+          relation: _selectedRelation == 'Morador' ? 'Morador (${_aptoController.text})' : (_selectedRelation ?? 'Próprio'),
         );
 
         _concluirEFechar('Entrega concluída com sucesso!');
@@ -357,9 +380,7 @@ class _SignatureDialogState extends State<_SignatureDialog> {
                 duration: const Duration(milliseconds: 300),
                 child: _step == 1 
                     ? _buildPasso1(theme, textColor, canvasBg) 
-                    : _step == 3 
-                        ? _buildPassoPhotoPreview(theme, textColor, canvasBg)
-                        : _buildPasso2(theme, textColor, canvasBg),
+                    : _buildPasso2(theme, textColor, canvasBg),
               ),
             ),
           ),
@@ -369,7 +390,7 @@ class _SignatureDialogState extends State<_SignatureDialog> {
   }
 
   // =========================================================================
-  // PASSO 1: Formulário Compacto de Coleta em (Portrait)
+  // PASSO 1: Formulário Compacto de Coleta em (Portrait) com Foto
   // =========================================================================
   Widget _buildPasso1(ThemeData theme, Color textColor, Color canvasBg) {
     return Padding(
@@ -476,130 +497,66 @@ class _SignatureDialogState extends State<_SignatureDialog> {
 
           const SizedBox(height: 12),
 
-          // Botão de Avanço Dinâmico (Dual Flux)
+          // Prova Física (Foto do Pacote)
+          const Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              'PROVA FÍSICA',
+              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Colors.blueAccent, letterSpacing: 0.8),
+            ),
+          ),
+          const SizedBox(height: 8),
+          GestureDetector(
+            onTap: _capturarFoto,
+            child: Container(
+              height: 120,
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: canvasBg,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: _photoFile != null ? Colors.green : Colors.grey.withValues(alpha: 0.3),
+                  width: 1.5,
+                ),
+              ),
+              child: _photoFile != null
+                  ? ClipRRect(
+                      borderRadius: BorderRadius.circular(15),
+                      child: Image.file(File(_photoFile!.path), fit: BoxFit.cover),
+                    )
+                  : const Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.camera_alt_outlined, color: Colors.blueAccent, size: 32),
+                        SizedBox(height: 8),
+                        Text(
+                          'FOTOGRAFAR PACOTE ENTREGUE',
+                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.blueAccent),
+                        ),
+                      ],
+                    ),
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // Botão de Avanço
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
               onPressed: _avancarParaAcao,
-              icon: Icon(_isPhotoFlow ? Icons.camera_alt : Icons.draw, size: 20),
-              label: Text(
-                _isPhotoFlow ? 'ABRIR CÂMERA E FINALIZAR' : 'AVANÇAR PARA ASSINATURA', 
-                style: const TextStyle(fontWeight: FontWeight.w900)
+              icon: const Icon(Icons.draw, size: 20),
+              label: const Text(
+                'AVANÇAR PARA ASSINATURA', 
+                style: TextStyle(fontWeight: FontWeight.w900)
               ),
               style: ElevatedButton.styleFrom(
-                backgroundColor: _isPhotoFlow ? const Color(0xFF0055FF) : const Color(0xFF00C853),
+                backgroundColor: const Color(0xFF00C853),
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 elevation: 4,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
               ),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // =========================================================================
-  // PASSO 1.5: Preview e Garantia da Câmera (Supabase Engine)
-  // =========================================================================
-  Widget _buildPassoPhotoPreview(ThemeData theme, Color textColor, Color canvasBg) {
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Row(
-                  children: [
-                    const Icon(Icons.camera_alt, color: Color(0xFF0055FF), size: 22),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'PRÉVIA DA FOTOGRAFIA',
-                        style: TextStyle(
-                          color: textColor,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 1.0,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              IconButton(
-                icon: Icon(Icons.close, color: textColor.withValues(alpha: 0.5)),
-                onPressed: () => Navigator.pop(context),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          if (_photoFile != null)
-            ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: Image.file(
-                File(_photoFile!.path),
-                height: 220,
-                width: double.infinity,
-                fit: BoxFit.cover,
-              ),
-            ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: _isUploading ? null : _capturarFoto,
-                  icon: const Icon(Icons.refresh, size: 16),
-                  label: const Text('NOVA FOTO', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: textColor,
-                    side: BorderSide(color: theme.dividerColor, width: 1.5),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                flex: 2,
-                child: ElevatedButton(
-                  onPressed: _isUploading ? null : _enviarProvaFotografica,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF0055FF),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                    elevation: 4,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  ),
-                  child: _isUploading 
-                      ? const SizedBox(
-                          height: 20, width: 20, 
-                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5)
-                        )
-                      : const Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.cloud_upload, size: 18),
-                            SizedBox(width: 6),
-                            Flexible(
-                              child: Text('ENVIAR PROVA DIGITAL', 
-                                style: TextStyle(fontWeight: FontWeight.w900, fontSize: 11),
-                                overflow: TextOverflow.fade,
-                                maxLines: 1,
-                                softWrap: false,
-                              ),
-                            ),
-                          ],
-                        ),
-                ),
-              ),
-            ],
           ),
         ],
       ),

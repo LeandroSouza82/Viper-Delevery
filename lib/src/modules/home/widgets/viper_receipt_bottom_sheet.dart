@@ -1,9 +1,8 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:viper_delivery/src/models/ride_model.dart';
 import 'package:viper_delivery/src/modules/home/controllers/viper_menu_controller.dart';
-import 'package:viper_delivery/src/modules/ride/widgets/delivery_proof_step.dart';
+import 'package:viper_delivery/src/modules/ride/controllers/ride_state_machine.dart';
 import 'package:viper_delivery/src/modules/ride/widgets/payment_selector.dart';
 import 'package:viper_delivery/src/shared/widgets/pix_qr_dialog.dart';
 
@@ -32,7 +31,18 @@ class _ViperReceiptBottomSheetState extends State<ViperReceiptBottomSheet> {
   
   String? _receiverName;
   String? _receiverCpf;
-  File? _proofPhoto;
+  String? _receiverRelation;
+
+  @override
+  void initState() {
+    super.initState();
+    try {
+      final rideSM = Get.find<RideStateMachine>();
+      _receiverName = rideSM.lastReceiverName.value.isNotEmpty ? rideSM.lastReceiverName.value : null;
+      _receiverCpf = rideSM.lastReceiverCpf.value.isNotEmpty ? rideSM.lastReceiverCpf.value : null;
+      _receiverRelation = rideSM.lastReceiverRelation.value.isNotEmpty ? rideSM.lastReceiverRelation.value : null;
+    } catch (_) {}
+  }
 
   void _showPixQR() {
     final pixKey = widget.menuController.driverProfile?.pixKey;
@@ -55,47 +65,147 @@ class _ViperReceiptBottomSheetState extends State<ViperReceiptBottomSheet> {
     );
   }
 
-  bool _shouldBlockFinalization() {
-    if (widget.isClt) return false;
-
-    return _receiverName == null || 
-           _receiverName!.isEmpty || 
-           _receiverCpf == null || 
-           _receiverCpf!.length < 11 || 
-           _proofPhoto == null;
-  }
-
   Future<void> _handleFinalization() async {
-    if (_shouldBlockFinalization()) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('É necessário preencher Nome, CPF e Foto da entrega.'),
-          backgroundColor: Colors.orange,
-        ),
-      );
-      return;
+    // ── Guard Clauses com feedback visual explícito ──
+    if (!widget.isClt) {
+      if (_receiverName == null || _receiverName!.trim().isEmpty) {
+        Get.snackbar(
+          'Dados Incompletos',
+          'O nome do recebedor é obrigatório.',
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+          snackPosition: SnackPosition.TOP,
+          icon: const Icon(Icons.warning_amber, color: Colors.white),
+        );
+        return;
+      }
+      if (_receiverCpf == null || _receiverCpf!.replaceAll(RegExp(r'[^0-9]'), '').length < 11) {
+        Get.snackbar(
+          'Dados Incompletos',
+          'O CPF/RG do recebedor precisa ter no mínimo 11 dígitos.',
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+          snackPosition: SnackPosition.TOP,
+          icon: const Icon(Icons.warning_amber, color: Colors.white),
+        );
+        return;
+      }
     }
 
     setState(() => _isLoading = true);
+    debugPrint('>>> [RECEIPT] PASSO 1: Botão CONCLUIR E SAIR pressionado.');
     
     try {
+      debugPrint('>>> [RECEIPT] PASSO 2: Chamando finalizeRide...');
       await widget.menuController.finalizeRide(
         summary: widget.summary,
-        rideIds: widget.summary.rideIds, // Sincronização em massa
+        rideIds: widget.summary.rideIds,
         receiverName: _receiverName,
         receiverCpf: _receiverCpf,
-        proofPhoto: _proofPhoto,
+        proofPhoto: null,
       );
-      widget.onFinish();
-    } catch (e) {
+      
+      debugPrint('>>> [RECEIPT] PASSO 3: finalizeRide retornou com sucesso!');
+      
+      // Feedback visual
+      Get.snackbar(
+        'Sucesso',
+        'Entrega finalizada com sucesso!',
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+        snackPosition: SnackPosition.TOP,
+        duration: const Duration(seconds: 3),
+      );
+
+      debugPrint('>>> [RECEIPT] PASSO 4: Navegando para /home...');
+      
+      // Navegação definitiva — Get.offAllNamed destrói a widget tree,
+      // então o código abaixo deste ponto NÃO executa no contexto deste widget.
+      Get.offAllNamed('/home');
+
+    } catch (e, stacktrace) {
+      debugPrint('🚨 [RECEIPT] ERRO CRÍTICO: $e');
+      debugPrint('🚨 [RECEIPT] STACKTRACE: $stacktrace');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro ao finalizar: $e'), backgroundColor: Colors.red),
+        Get.snackbar(
+          'Erro',
+          'Não foi possível finalizar. Tente novamente.',
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+          snackPosition: SnackPosition.TOP,
         );
       }
     } finally {
+      debugPrint('>>> [RECEIPT] PASSO FINAL: Liberando botão (finally).');
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  Widget _buildReadOnlyProofCard(Color textColor, bool isDark, String? name, String? cpf, String? relation) {
+    final cardBg = isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05);
+    final labelColor = isDark ? Colors.white54 : Colors.black54;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isDark ? Colors.white10 : Colors.black12,
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.verified_user_outlined, color: Colors.blueAccent, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'DADOS DO COMPROVANTE (COLETADOS)',
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 2,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.blueAccent,
+                    letterSpacing: 0.8,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          _buildReadOnlyField('Recebedor', name ?? 'Não informado', textColor, labelColor),
+          const SizedBox(height: 12),
+          _buildReadOnlyField('Documento (CPF/RG)', cpf ?? 'Não informado', textColor, labelColor),
+          if (relation != null && relation.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            _buildReadOnlyField('Vínculo', relation, textColor, labelColor),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildReadOnlyField(String label, String value, Color textColor, Color labelColor) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label.toUpperCase(),
+          style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: labelColor, letterSpacing: 0.5),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: textColor),
+        ),
+      ],
+    );
   }
 
   @override
@@ -150,13 +260,8 @@ class _ViperReceiptBottomSheetState extends State<ViperReceiptBottomSheet> {
             // Resumo de Super Rota (Paradas)
             _buildStopsSummary(textColor, widget.isDark),
             const SizedBox(height: 24),
-            // NOVO: Check-out Blindado
-            DeliveryProofStep(
-              isDark: widget.isDark,
-              onNameChanged: (val) => setState(() => _receiverName = val),
-              onCpfChanged: (val) => setState(() => _receiverCpf = val),
-              onPhotoChanged: (val) => setState(() => _proofPhoto = val),
-            ),
+            // Comprovante de entrega em modo leitura
+            _buildReadOnlyProofCard(textColor, widget.isDark, _receiverName, _receiverCpf, _receiverRelation),
             const SizedBox(height: 24),
             PaymentSelector(menuController: widget.menuController),
           ],

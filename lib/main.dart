@@ -18,9 +18,18 @@ final navigatorKey = GlobalKey<NavigatorState>();
 @pragma('vm:entry-point')
 void callbackDispatcher() {
   Workmanager().executeTask((task, inputData) async {
+    WidgetsFlutterBinding.ensureInitialized();
     debugPrint('>>> [BG] Iniciando Background Sync Task: $task');
     try {
       // Inicializa Supabase em segundo plano se necessário
+      try {
+        Supabase.instance;
+      } catch (_) {
+        await Supabase.initialize(
+          url: 'https://jribfmilbdzxisaajqgm.supabase.co',
+          anonKey: 'sb_publishable_jEeo93Wu3PB0kiwMevbDuw_Vm1Ngwr4',
+        );
+      }
       final session = Supabase.instance.client.auth.currentSession;
       if (session != null && !session.isExpired) {
         final queue = Get.put(UploadQueueService());
