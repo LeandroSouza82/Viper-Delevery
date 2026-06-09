@@ -153,6 +153,7 @@ class HomeController extends GetxController {
         .getMyRidesStream(driverId)
         .listen(
           (rides) async {
+            debugPrint('🚨 [REALTIME] Evento recebido no HomeController listen (Total: ${rides.length}): $rides');
             // [VUP MODULAR] Obtém localização atual para filtro geográfico
             Position? currentPos;
             try {
@@ -167,26 +168,25 @@ class HomeController extends GetxController {
               debugPrint('Erro ao obter localização para filtro: $e');
             }
 
-            // Aplica filtro de raio (5km) rigoroso
             final filteredRides = rides.where((r) {
-              // Se a corrida já está atribuída a este motorista, ela deve aparecer independente da distância
-              if (r.driverId == driverId && r.status != RideStatus.searching) {
+              if (r.status == RideStatus.searching) {
+                if (currentPos != null) {
+                  final distance = Geolocator.distanceBetween(
+                    currentPos.latitude,
+                    currentPos.longitude,
+                    r.pickupLat,
+                    r.pickupLng,
+                  );
+                  return distance <= 5000;
+                }
+                return true; // Exibe se não tiver GPS/localização ainda
+              }
+
+              if (r.status == RideStatus.assigned && r.driverId == driverId) {
                 return true;
               }
 
-              // Se a corrida está em 'searching' (Radar), filtramos pelo raio de 5km
-              if (currentPos != null) {
-                final distance = Geolocator.distanceBetween(
-                  currentPos.latitude,
-                  currentPos.longitude,
-                  r.pickupLat,
-                  r.pickupLng,
-                );
-                return distance <= 5000; // 5000 metros = 5km
-              }
-
-              // Fallback: se não tiver GPS, por segurança não exibe radar genérico
-              return false;
+              return r.driverId == driverId;
             }).toList();
 
             realRides.assignAll(filteredRides);

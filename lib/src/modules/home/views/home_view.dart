@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:get/get.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:viper_delivery/src/models/ride_model.dart';
 import 'package:viper_delivery/src/modules/home/controllers/home_controller.dart';
 import 'package:viper_delivery/src/modules/home/controllers/settings_controller.dart';
@@ -34,7 +35,7 @@ class HomeView extends StatefulWidget {
 
 class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
   final SettingsController _settingsController = Get.put(SettingsController());
-  final HomeController _homeController = HomeController();
+  final HomeController _homeController = Get.put(HomeController());
   final ViperMenuController _menuController = Get.put(ViperMenuController());
   final PerformanceController _performanceController = Get.put(PerformanceController());
   final MapController _mapController = Get.put(MapController());
@@ -369,7 +370,13 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                   // 8. O REI DA TELA: Card de Convite (Super Rota)
                   Obx(() {
                     if (_rideStateMachine.currentState.value == RideState.offerReceived && _rideStateMachine.activeOrders.isNotEmpty) {
-                      final orders = _rideStateMachine.activeOrders;
+                      final String currentDriverId = Supabase.instance.client.auth.currentUser?.id ?? '';
+                      final orders = _rideStateMachine.activeOrders
+                          .where((o) => o.status == RideStatus.searching || (o.status == RideStatus.assigned && o.driverId == currentDriverId))
+                          .toList();
+                      
+                      if (orders.isEmpty) return const SizedBox.shrink();
+                      
                       final first = orders.first;
                       final pos = _homeController.currentPosition.value;
 
@@ -382,15 +389,23 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                         orders: orders,
                       );
 
-                      // Bloqueio de Rota Inválida (0.0 KM)
-                      if (routeResult.totalDistance <= 0) return const SizedBox.shrink();
-
                       final firstRide = routeResult.optimizedOrders.first;
                       final lastRide = routeResult.optimizedOrders.last;
                       final totalValue = orders.fold(0.0, (sum, r) => sum + r.driverValue);
                       
                       // Regra de Negócio: Frotista (Company) vs Freelancer
                       final canDeclineOffer = !_homeController.isCompanyDriver;
+
+                      final totalDistance = routeResult.totalDistance;
+                      final distancePickupToDeliveries = routeResult.distancePickupToDeliveries;
+
+                      final safeValorPorKm = (totalDistance <= 0.0 || totalDistance.isNaN || totalDistance.isInfinite || totalValue <= 0.0 || totalValue.isNaN || totalValue.isInfinite)
+                          ? 0.0
+                          : (totalValue / totalDistance);
+
+                      final safeValorKmRota = (distancePickupToDeliveries <= 0.0 || distancePickupToDeliveries.isNaN || distancePickupToDeliveries.isInfinite || totalValue <= 0.0 || totalValue.isNaN || totalValue.isInfinite)
+                          ? 0.0
+                          : (totalValue / distancePickupToDeliveries);
 
                       final offer = ViperOffer(
                         id: firstRide.id,
@@ -407,9 +422,9 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                           lng: r.lng,
                           status: ViperOrderStatus.pending,
                         )).toList(),
-                        distanciaTotal: routeResult.totalDistance,
+                        distanciaTotal: totalDistance,
                         valorTotal: totalValue,
-                        valorPorKm: totalValue / routeResult.totalDistance, 
+                        valorPorKm: safeValorPorKm, 
                         isSuper: orders.length > 1,
                         pickupNeighborhood: 'Ponto de Coleta',
                         pickupStreet: firstRide.pickupAddress,
@@ -417,7 +432,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                         dropoffStreet: lastRide.deliveryAddress,
                         distanciaDeslocamento: routeResult.distanceDriverToPickup,
                         valorKmIda: 0.85,
-                        valorKmRota: routeResult.distancePickupToDeliveries > 0 ? (totalValue / routeResult.distancePickupToDeliveries) : 0.0,
+                        valorKmRota: safeValorKmRota,
                         pickupLat: firstRide.pickupLat,
                         pickupLng: firstRide.pickupLng,
                       );

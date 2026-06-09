@@ -271,41 +271,79 @@ class ViperMenuController extends GetxController {
     String? receiverCpf,
     File? proofPhoto,
   }) async {
-    debugPrint('>>> [CHECKOUT] Iniciando persistência final para ${rideIds.length} corridas');
+    debugPrint('>>> [CHECKOUT] PASSO 1: Iniciando persistência final para ${rideIds.length} corridas');
     
-    try {
-      final user = _supabase.auth.currentUser;
-      if (user == null) throw Exception('Sessão expirada.');
+    final user = _supabase.auth.currentUser;
+    if (user == null) throw Exception('Sessão expirada.');
 
-      String? photoUrl;
-      if (proofPhoto != null) {
+    // PASSO 2: Upload da foto (não-bloqueante: falha aqui NÃO impede a finalização)
+    String? photoUrl;
+    if (proofPhoto != null) {
+      try {
+        debugPrint('>>> [CHECKOUT] PASSO 2: Iniciando upload de foto...');
         photoUrl = await _uploadService.uploadFile(
           bucket: 'driver_documents',
           userId: user.id,
           docType: 'delivery_proof_${DateTime.now().millisecondsSinceEpoch}',
           file: proofPhoto,
+        ).timeout(
+          const Duration(seconds: 15),
+          onTimeout: () {
+            debugPrint('🚨 [CHECKOUT] TIMEOUT: Upload excedeu 15s. Prosseguindo sem foto.');
+            return '';
+          },
         );
+        debugPrint('>>> [CHECKOUT] PASSO 2: Upload concluído. URL: $photoUrl');
+      } catch (e, stacktrace) {
+        debugPrint('🚨 [CHECKOUT] PASSO 2 FALHOU (upload): $e');
+        debugPrint('🚨 [STACKTRACE]: $stacktrace');
+        // Continua sem foto — a entrega é mais importante que o comprovante
       }
+    } else {
+      debugPrint('>>> [CHECKOUT] PASSO 2: Sem foto para enviar.');
+    }
 
-      // 1. Atualizar status e metadados de todas as rotas do lote (Sweep Update)
+    // PASSO 3: Atualizar status no Supabase (CRÍTICO)
+    try {
       if (rideIds.isNotEmpty) {
+        debugPrint('>>> [CHECKOUT] PASSO 3: Enviando update para ${rideIds.length} rides...');
+        
+        final payload = {
+          'status': 'completed',
+          'receiver_name': receiverName,
+          'receiver_cpf': receiverCpf,
+          'completed_at': DateTime.now().toUtc().toIso8601String(),
+          'updated_at': DateTime.now().toUtc().toIso8601String(),
+        };
+        
+        // Só inclui a URL se o upload teve sucesso
+        if (photoUrl != null && photoUrl.isNotEmpty) {
+          payload['proof_photo_url'] = photoUrl;
+        }
+
         await _supabase
             .from('rides')
-            .update({
-              'status': 'completed',
-              'receiver_name': receiverName,
-              'receiver_cpf': receiverCpf,
-              'proof_photo_url': photoUrl,
-              'completed_at': DateTime.now().toUtc().toIso8601String(),
-            })
+            .update(payload)
             .inFilter('id', rideIds);
+        
+        debugPrint('>>> [CHECKOUT] PASSO 3: Supabase atualizado com SUCESSO!');
+      } else {
+        debugPrint('🚨 [CHECKOUT] PASSO 3: rideIds está vazio! Nada a atualizar.');
       }
-
-      debugPrint('[!!! VIPER !!!] Checkout finalizado e persistido com sucesso.');
-    } catch (e) {
-      debugPrint('[!!! VIPER !!!] ERRO NO CHECKOUT: $e');
+    } on PostgrestException catch (e, stacktrace) {
+      debugPrint('🚨 [CHECKOUT] PASSO 3 FALHOU (PostgrestException):');
+      debugPrint('🚨 [ERRO SUPABASE] Message: ${e.message}');
+      debugPrint('🚨 [ERRO SUPABASE] Code: ${e.code}');
+      debugPrint('🚨 [ERRO SUPABASE] Details: ${e.details}');
+      debugPrint('🚨 [STACKTRACE]: $stacktrace');
+      rethrow;
+    } catch (e, stacktrace) {
+      debugPrint('🚨 [CHECKOUT] PASSO 3 FALHOU (Genérico): $e');
+      debugPrint('🚨 [STACKTRACE]: $stacktrace');
       rethrow;
     }
+
+    debugPrint('>>> [CHECKOUT] PASSO 4: finalizeRide concluído com sucesso.');
   }
 }
 

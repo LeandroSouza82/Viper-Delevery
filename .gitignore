@@ -50,3 +50,7 @@ app.*.map.json
 android/local.properties
 android/key.properties
 ios/Flutter/Generated.xcconfig
+
+# Mapbox sensitive resources
+android/app/src/main/res/values/developer-config.xml
+

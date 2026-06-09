@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:viper_delivery/src/models/ride_model.dart';
 import 'package:viper_delivery/src/modules/home/services/external_navigation_service.dart';
-import 'package:viper_delivery/src/modules/home/widgets/modals/failure_modal.dart';
+import 'package:viper_delivery/src/modules/ride/widgets/failure_modal.dart';
 
 class ViperOrderCard extends StatelessWidget {
   final RideModel ride;
@@ -49,7 +49,15 @@ class ViperOrderCard extends StatelessWidget {
       }
 
       if (context.mounted) {
-        await FailureModal.show(context, rideId: ride.id);
+        final failureResult = await FailureModal.show(
+          context,
+          isDark: isDark,
+          clienteName: ride.clientName,
+        );
+
+        if (failureResult != null) {
+          onFailure(ride, failureResult.motivo);
+        }
       }
     } catch (e) {
       if (context.mounted) {
